@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus, Trash2, Calculator, Loader2, ArrowLeft, TrendingUp, DollarSign, Wallet } from "lucide-react";
+import { Plus, Trash2, Calculator, Loader2, ArrowLeft, TrendingUp, DollarSign, Wallet, CheckSquare, Square } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,6 +22,7 @@ interface ConceptOption {
   name: string;
   defaultCurrency: string;
   defaultPrice: number | null;
+  isTaxable?: boolean;
 }
 
 interface QuotationFormProps {
@@ -52,6 +53,7 @@ export function QuotationForm({ clients, concepts }: QuotationFormProps) {
           unitCost: 120,
           unitPrice: 200,
           quantity: 1,
+          isTaxable: true,
         },
       ],
     },
@@ -104,6 +106,9 @@ export function QuotationForm({ clients, concepts }: QuotationFormProps) {
         setValue(`items.${index}.unitPrice`, matched.defaultPrice);
         // Default unitCost estimate at 65% of price if unspecified
         setValue(`items.${index}.unitCost`, Number((matched.defaultPrice * 0.65).toFixed(2)));
+      }
+      if (matched.isTaxable !== undefined) {
+        setValue(`items.${index}.isTaxable`, matched.isTaxable);
       }
     }
   }
@@ -207,7 +212,7 @@ export function QuotationForm({ clients, concepts }: QuotationFormProps) {
             type="button"
             variant="outline"
             size="sm"
-            onClick={() => append({ description: "", currency: "USD", unitCost: 0, unitPrice: 0, quantity: 1 })}
+            onClick={() => append({ description: "", currency: "USD", unitCost: 0, unitPrice: 0, quantity: 1, isTaxable: true })}
             className="text-blue-600 border-blue-200 hover:bg-blue-50"
           >
             <Plus className="mr-1.5 h-4 w-4" /> Agregar Ítem
@@ -261,7 +266,7 @@ export function QuotationForm({ clients, concepts }: QuotationFormProps) {
                       </option>
                       {concepts.map((conc) => (
                         <option key={conc.id} value={conc.name}>
-                          {conc.name} ({conc.defaultCurrency})
+                          {conc.name} ({conc.defaultCurrency}) - {conc.isTaxable ? "Afecto IGV" : "Inafecto"}
                         </option>
                       ))}
                     </select>
@@ -270,8 +275,8 @@ export function QuotationForm({ clients, concepts }: QuotationFormProps) {
 
                 {/* Mobile-First Stacked Grid */}
                 <div className="grid gap-4 sm:grid-cols-12 sm:items-end">
-                  {/* Concept Description (sm:col-span-4) */}
-                  <div className="sm:col-span-4 space-y-1.5">
+                  {/* Concept Description (sm:col-span-3) */}
+                  <div className="sm:col-span-3 space-y-1.5">
                     <Label className="text-xs font-semibold text-slate-700">Concepto / Servicio *</Label>
                     <Input
                       placeholder="Ej: Flete Internacional, Handling, Visto Bueno..."
@@ -298,7 +303,7 @@ export function QuotationForm({ clients, concepts }: QuotationFormProps) {
 
                   {/* Unit Cost (sm:col-span-2) */}
                   <div className="sm:col-span-2 space-y-1.5">
-                    <Label className="text-xs font-semibold text-slate-700">Costo Unit. (Proveedor)</Label>
+                    <Label className="text-xs font-semibold text-slate-700">Costo Unit.</Label>
                     <Input
                       type="number"
                       step="0.01"
@@ -310,7 +315,7 @@ export function QuotationForm({ clients, concepts }: QuotationFormProps) {
 
                   {/* Unit Price (sm:col-span-2) */}
                   <div className="sm:col-span-2 space-y-1.5">
-                    <Label className="text-xs font-semibold text-blue-700">Precio Venta Unit. *</Label>
+                    <Label className="text-xs font-semibold text-blue-700">Precio Venta *</Label>
                     <Input
                       type="number"
                       step="0.01"
@@ -320,15 +325,32 @@ export function QuotationForm({ clients, concepts }: QuotationFormProps) {
                     />
                   </div>
 
-                  {/* Quantity (sm:col-span-2) */}
-                  <div className="sm:col-span-2 space-y-1.5">
-                    <Label className="text-xs font-semibold text-slate-700">Cantidad</Label>
+                  {/* Quantity (sm:col-span-1) */}
+                  <div className="sm:col-span-1 space-y-1.5">
+                    <Label className="text-xs font-semibold text-slate-700">Cant.</Label>
                     <Input
                       type="number"
                       min="1"
-                      className="text-center font-medium"
+                      className="text-center font-medium px-1"
                       {...register(`items.${index}.quantity` as const, { valueAsNumber: true })}
                     />
+                  </div>
+
+                  {/* Taxable Toggle (sm:col-span-2) */}
+                  <div className="sm:col-span-2 space-y-1.5">
+                    <Label className="text-xs font-semibold text-slate-700">Afecto IGV</Label>
+                    <button
+                      type="button"
+                      onClick={() => setValue(`items.${index}.isTaxable`, !(currentItem.isTaxable !== false))}
+                      className={`flex h-9 w-full items-center justify-center gap-1.5 px-2 rounded-md text-xs font-bold border transition-colors ${
+                        currentItem.isTaxable !== false
+                          ? "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100"
+                          : "bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100"
+                      }`}
+                    >
+                      {currentItem.isTaxable !== false ? <CheckSquare className="h-3.5 w-3.5 text-blue-600 shrink-0" /> : <Square className="h-3.5 w-3.5 text-amber-600 shrink-0" />}
+                      <span className="truncate">{currentItem.isTaxable !== false ? "Afecto 18%" : "Inafecto"}</span>
+                    </button>
                   </div>
                 </div>
 

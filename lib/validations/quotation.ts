@@ -6,6 +6,7 @@ export const quotationItemSchema = z.object({
   unitCost: z.coerce.number().min(0, "El costo unitario debe ser mayor o igual a 0."),
   unitPrice: z.coerce.number().min(0, "El precio de venta debe ser mayor o igual a 0."),
   quantity: z.coerce.number().int().min(1, "La cantidad debe ser al menos 1."),
+  isTaxable: z.boolean(),
 });
 
 export const quotationSchema = z.object({

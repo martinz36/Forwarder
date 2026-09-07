@@ -40,6 +40,7 @@ export async function createQuotationAction(data: QuotationFormValues) {
       unitPrice: item.unitPrice,
       quantity: item.quantity,
       total: saleTotal,
+      isTaxable: item.isTaxable ?? true,
     };
   });
 

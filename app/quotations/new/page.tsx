@@ -11,7 +11,7 @@ export default async function NewQuotationPage() {
       orderBy: { name: "asc" },
     }),
     prisma.conceptCatalog.findMany({
-      select: { id: true, name: true, defaultCurrency: true, defaultPrice: true },
+      select: { id: true, name: true, defaultCurrency: true, defaultPrice: true, isTaxable: true },
       orderBy: { name: "asc" },
     }),
   ]);

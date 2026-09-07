@@ -82,6 +82,7 @@ model QuotationItem {
   unitPrice   Float
   quantity    Int
   total       Float
+  isTaxable   Boolean   @default(true)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 }
@@ -91,6 +92,7 @@ model ConceptCatalog {
   name            String   @unique
   defaultCurrency String   @default("USD")
   defaultPrice    Float?
+  isTaxable       Boolean  @default(true)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 }

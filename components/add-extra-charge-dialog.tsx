@@ -35,6 +35,7 @@ export function AddExtraChargeDialog({ operationId }: AddExtraChargeDialogProps)
     const unitCost = Number(formData.get("unitCost")) || 0;
     const unitPrice = Number(formData.get("unitPrice")) || 0;
     const quantity = Number(formData.get("quantity")) || 1;
+    const isTaxable = formData.get("isTaxable") === "true";
 
     startTransition(async () => {
       try {
@@ -44,6 +45,7 @@ export function AddExtraChargeDialog({ operationId }: AddExtraChargeDialogProps)
           unitCost,
           unitPrice,
           quantity,
+          isTaxable,
         });
         setOpen(false);
       } catch (err: any) {
@@ -130,6 +132,19 @@ export function AddExtraChargeDialog({ operationId }: AddExtraChargeDialogProps)
                 required
               />
             </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="isTaxable">Afectación Fiscal (IGV 18%) *</Label>
+            <select
+              id="isTaxable"
+              name="isTaxable"
+              defaultValue="true"
+              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring font-semibold"
+            >
+              <option value="true">Afecto a IGV (18% Servicios)</option>
+              <option value="false">Inafecto / Reembolso (Terceros)</option>
+            </select>
           </div>
 
           <DialogFooter className="pt-4">

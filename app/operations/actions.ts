@@ -64,6 +64,7 @@ export async function createOperationFromQuotationAction(quotationId: string) {
           totalCost,
           totalPrice,
           isExtraCharge: false,
+          isTaxable: item.isTaxable,
         };
       });
 
@@ -120,6 +121,7 @@ export async function addExtraChargeAction(
       totalCost,
       totalPrice,
       isExtraCharge: true,
+      isTaxable: validated.isTaxable ?? true,
     },
   });
 

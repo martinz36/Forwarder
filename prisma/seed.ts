@@ -3,15 +3,15 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 const defaultConcepts = [
-  { name: "Flete Internacional (FCL/LCL)", defaultCurrency: "USD", defaultPrice: 1200.0 },
-  { name: "Visto Bueno (V.B.)", defaultCurrency: "USD", defaultPrice: 150.0 },
-  { name: "Handling / Gastos Administrativos", defaultCurrency: "USD", defaultPrice: 80.0 },
-  { name: "Despacho Aduanero (Comisión Agente)", defaultCurrency: "USD", defaultPrice: 200.0 },
-  { name: "Almacenaje Temporal / Depósito", defaultCurrency: "USD", defaultPrice: 350.0 },
-  { name: "Transporte Local / Carga Interna", defaultCurrency: "PEN", defaultPrice: 850.0 },
-  { name: "Cuadrilla / Estiba y Desestiba", defaultCurrency: "PEN", defaultPrice: 250.0 },
-  { name: "Precinto de Seguridad / Candado", defaultCurrency: "USD", defaultPrice: 25.0 },
-  { name: "Emisión de BL / HBL", defaultCurrency: "USD", defaultPrice: 60.0 },
+  { name: "Flete Internacional (FCL/LCL)", defaultCurrency: "USD", defaultPrice: 1200.0, isTaxable: true },
+  { name: "Visto Bueno (V.B.)", defaultCurrency: "USD", defaultPrice: 150.0, isTaxable: true },
+  { name: "Handling / Gastos Administrativos", defaultCurrency: "USD", defaultPrice: 80.0, isTaxable: true },
+  { name: "Despacho Aduanero (Comisión Agente)", defaultCurrency: "USD", defaultPrice: 200.0, isTaxable: true },
+  { name: "Almacenaje Temporal / Depósito", defaultCurrency: "USD", defaultPrice: 350.0, isTaxable: false },
+  { name: "Transporte Local / Carga Interna", defaultCurrency: "PEN", defaultPrice: 850.0, isTaxable: true },
+  { name: "Cuadrilla / Estiba y Desestiba", defaultCurrency: "PEN", defaultPrice: 250.0, isTaxable: false },
+  { name: "Precinto de Seguridad / Candado", defaultCurrency: "USD", defaultPrice: 25.0, isTaxable: true },
+  { name: "Emisión de BL / HBL", defaultCurrency: "USD", defaultPrice: 60.0, isTaxable: true },
 ];
 
 async function main() {
