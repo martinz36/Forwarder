@@ -14,6 +14,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
+import { EmitInvoiceButton } from "@/components/emit-invoice-button";
+
 export const dynamic = "force-dynamic";
 
 interface LiquidationPageProps {
@@ -74,17 +76,17 @@ export default async function LiquidationDetailPage({ params }: LiquidationPageP
             </p>
           </div>
         </div>
-
-        <div className="flex items-center gap-3">
-          <Button
-            type="button"
-            disabled
-            className="bg-purple-700 hover:bg-purple-600 text-white font-bold text-xs shadow"
-          >
-            <Sparkles className="mr-1.5 h-4 w-4 text-purple-300" /> Emitir Comprobante (Próximamente SUNAT)
-          </Button>
-        </div>
       </div>
+
+      {/* Interactive SUNAT Invoicing Card */}
+      <EmitInvoiceButton
+        liquidationId={liquidation.id}
+        status={liquidation.status}
+        invoiceNumber={liquidation.invoiceNumber}
+        sunatPdfUrl={liquidation.sunatPdfUrl}
+        sunatCdrStatus={liquidation.sunatCdrStatus}
+        sunatNotes={liquidation.sunatNotes}
+      />
 
       {/* Official Liquidation Document Card */}
       <div className="rounded-2xl border bg-white p-8 shadow-sm space-y-8">

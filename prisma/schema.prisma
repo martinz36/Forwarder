@@ -157,6 +157,11 @@ model Liquidation {
   totalNonTaxablePen Float             @default(0)
   grandTotalPen      Float             @default(0)
 
+  invoiceNumber      String?
+  sunatPdfUrl        String?
+  sunatCdrStatus     String?           @default("PENDING")
+  sunatNotes          String?
+
   createdAt          DateTime          @default(now())
   updatedAt          DateTime          @updatedAt
 }

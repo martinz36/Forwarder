@@ -104,3 +104,65 @@ export async function generateLiquidationAction(operationId: string) {
   revalidatePath(`/liquidations/${liquidation.id}`);
   redirect(`/liquidations/${liquidation.id}`);
 }
+
+export async function emitInvoiceAction(liquidationId: string) {
+  const { emitirComprobanteMock } = await import("@/lib/sunat");
+
+  const liquidation = await prisma.liquidation.findUnique({
+    where: { id: liquidationId },
+    select: { operationId: true, status: true },
+  });
+
+  if (!liquidation) {
+    throw new Error("Liquidación no encontrada.");
+  }
+
+  // Call SUNAT mock PSE service
+  const result = await emitirComprobanteMock(liquidationId);
+
+  if (!result.success || !result.invoiceNumber) {
+    throw new Error(result.notes || "Error al emitir el comprobante en SUNAT.");
+  }
+
+  // Update liquidation status and SUNAT details
+  const updatedLiquidation = await prisma.liquidation.update({
+    where: { id: liquidationId },
+    data: {
+      status: "BILLED",
+      invoiceNumber: result.invoiceNumber,
+      sunatPdfUrl: result.pdfUrl,
+      sunatCdrStatus: result.cdrStatus,
+      sunatNotes: result.notes,
+    },
+  });
+
+  // Automatically insert invoice PDF document into Operation Shared Portal
+  if (result.pdfUrl) {
+    await prisma.document.create({
+      data: {
+        operationId: liquidation.operationId,
+        name: `Factura SUNAT (${result.invoiceNumber})`,
+        fileUrl: result.pdfUrl,
+        documentType: "LIQUIDACION",
+        uploadedBy: "BROKER",
+      },
+    });
+
+    // Also mark operation status as LIQUIDADO
+    await prisma.operation.update({
+      where: { id: liquidation.operationId },
+      data: { status: "LIQUIDADO" },
+    });
+  }
+
+  revalidatePath(`/liquidations/${liquidationId}`);
+  revalidatePath(`/operations/${liquidation.operationId}`);
+
+  return {
+    success: true,
+    invoiceNumber: result.invoiceNumber,
+    pdfUrl: result.pdfUrl,
+    cdrStatus: result.cdrStatus,
+  };
+}
+
