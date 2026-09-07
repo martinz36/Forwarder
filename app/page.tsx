@@ -3,7 +3,7 @@ import { Users, FileText, Ship, ArrowRight, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import prisma from "@/lib/prisma";
 
-export const revalidate = 0;
+export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
   const [clientCount, quotationCount] = await Promise.all([
