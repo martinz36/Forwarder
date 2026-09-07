@@ -37,6 +37,12 @@ enum DocumentType {
   OTRO
 }
 
+enum LiquidationStatus {
+  DRAFT
+  FINAL
+  BILLED
+}
+
 model Client {
   id         String      @id @default(cuid())
   name       String
@@ -101,6 +107,7 @@ model Operation {
   sharedToken    String          @unique @default(uuid())
   charges        OperationCharge[]
   documents      Document[]
+  liquidation    Liquidation?
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
 }
@@ -117,6 +124,7 @@ model OperationCharge {
   totalCost     Float
   totalPrice    Float
   isExtraCharge Boolean   @default(false)
+  isTaxable     Boolean   @default(true)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 }
@@ -130,4 +138,25 @@ model Document {
   documentType DocumentType @default(OTRO)
   uploadedBy   String       @default("BROKER")
   uploadedAt   DateTime     @default(now())
+}
+
+model Liquidation {
+  id                 String            @id @default(cuid())
+  operationId        String            @unique
+  operation          Operation         @relation(fields: [operationId], references: [id], onDelete: Cascade)
+  status             LiquidationStatus @default(DRAFT)
+  subtotalTaxableUsd Float             @default(0)
+  igvUsd             Float             @default(0)
+  totalTaxableUsd    Float             @default(0)
+  totalNonTaxableUsd Float             @default(0)
+  grandTotalUsd      Float             @default(0)
+
+  subtotalTaxablePen Float             @default(0)
+  igvPen             Float             @default(0)
+  totalTaxablePen    Float             @default(0)
+  totalNonTaxablePen Float             @default(0)
+  grandTotalPen      Float             @default(0)
+
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
 }

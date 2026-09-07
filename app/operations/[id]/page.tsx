@@ -1,19 +1,12 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Ship, ShieldAlert, DollarSign, Wallet, FileText, CheckCircle2, TrendingUp, AlertCircle, FolderOpen } from "lucide-react";
+import { ArrowLeft, Ship, ShieldAlert, DollarSign, Wallet, FileText, CheckCircle2, TrendingUp, AlertCircle, Receipt } from "lucide-react";
 import prisma from "@/lib/prisma";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { OperationHeaderForm } from "@/components/operation-header-form";
 import { AddExtraChargeDialog } from "@/components/add-extra-charge-dialog";
 import { BrokerDocumentSection } from "@/components/broker-document-section";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { OperationChargesManager } from "@/components/operation-charges-manager";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
@@ -38,15 +31,13 @@ export default async function OperationDetailPage({ params }: OperationDetailPag
       documents: {
         orderBy: { uploadedAt: "desc" },
       },
+      liquidation: true,
     },
   });
 
   if (!operation) {
     notFound();
   }
-
-  const baseCharges = operation.charges.filter((c) => !c.isExtraCharge);
-  const extraCharges = operation.charges.filter((c) => c.isExtraCharge);
 
   // Financial totals calculation
   let realCostUsd = 0;
@@ -101,6 +92,14 @@ export default async function OperationDetailPage({ params }: OperationDetailPag
             </p>
           </div>
         </div>
+
+        {operation.liquidation && (
+          <Link href={`/liquidations/${operation.liquidation.id}`}>
+            <Button className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs">
+              <Receipt className="mr-1.5 h-4 w-4" /> Ver Liquidación Final
+            </Button>
+          </Link>
+        )}
       </div>
 
       {/* Operation Header Form Component */}
@@ -124,157 +123,18 @@ export default async function OperationDetailPage({ params }: OperationDetailPag
         />
       </div>
 
-      {/* Base Charges Section */}
-      <div className="space-y-3 pt-2">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-            <FileText className="h-5 w-5 text-blue-600" /> Cargos Base (Cotización Heredada)
-          </h2>
-          <span className="text-xs text-slate-500 font-medium">{baseCharges.length} conceptos iniciales</span>
-        </div>
-
-        {/* Mobile View: Base Charges Cards */}
-        <div className="grid gap-3 md:hidden">
-          {baseCharges.map((charge) => (
-            <div key={charge.id} className="rounded-xl border bg-white p-3.5 shadow-sm space-y-2">
-              <div className="flex justify-between items-start">
-                <span className="font-semibold text-slate-900 text-sm">{charge.description}</span>
-                <Badge variant="outline" className="text-xs">
-                  {charge.currency}
-                </Badge>
-              </div>
-              <div className="grid grid-cols-2 gap-2 text-xs text-slate-600 border-t pt-2">
-                <div>
-                  <span className="text-slate-400">Costo: </span>
-                  <span className="font-medium">{formatCurrency(charge.totalCost, charge.currency as any)}</span>
-                </div>
-                <div className="text-right">
-                  <span className="text-slate-400">Venta: </span>
-                  <span className="font-bold text-slate-900">{formatCurrency(charge.totalPrice, charge.currency as any)}</span>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Desktop View: Base Charges Table */}
-        <div className="hidden md:block rounded-xl border bg-white shadow-sm overflow-hidden">
-          <Table>
-            <TableHeader className="bg-slate-50">
-              <TableRow>
-                <TableHead className="font-semibold text-slate-700 text-left">Concepto Base</TableHead>
-                <TableHead className="font-semibold text-slate-700 text-center">Moneda</TableHead>
-                <TableHead className="font-semibold text-slate-700 text-center">Cant.</TableHead>
-                <TableHead className="font-semibold text-slate-700 text-right">Costo Total</TableHead>
-                <TableHead className="font-semibold text-slate-700 text-right">Venta Total</TableHead>
-                <TableHead className="font-semibold text-emerald-700 text-right">Profit Línea</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {baseCharges.map((charge) => {
-                const lineProfit = charge.totalPrice - charge.totalCost;
-                return (
-                  <TableRow key={charge.id} className="hover:bg-slate-50/80">
-                    <TableCell className="font-medium text-slate-900 text-left">{charge.description}</TableCell>
-                    <TableCell className="text-center font-bold text-xs">{charge.currency}</TableCell>
-                    <TableCell className="text-center">{charge.quantity}</TableCell>
-                    <TableCell className="text-right text-slate-600 font-medium">
-                      {formatCurrency(charge.totalCost, charge.currency as any)}
-                    </TableCell>
-                    <TableCell className="text-right font-bold text-slate-900">
-                      {formatCurrency(charge.totalPrice, charge.currency as any)}
-                    </TableCell>
-                    <TableCell className="text-right font-black text-emerald-600">
-                      {formatCurrency(lineProfit, charge.currency as any)}
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </div>
+      {/* Operation Charges & IGV Manager (Taxable Toggles & Liquidation Generator) */}
+      <div className="pt-2">
+        <OperationChargesManager
+          operationId={operation.id}
+          charges={operation.charges}
+          existingLiquidationId={operation.liquidation?.id}
+        />
       </div>
 
-      {/* Extra Charges (Sobrecostos) Section */}
-      <div className="space-y-3 pt-2">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div>
-            <h2 className="text-lg font-bold text-amber-900 flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 text-amber-600" /> Cargos Adicionales y Sobrecostos (Canal Rojo / Aforos / Almacenaje)
-            </h2>
-            <p className="text-xs text-slate-500">Gastos imprevistos surgidos durante el despacho aduanero.</p>
-          </div>
-          <AddExtraChargeDialog operationId={operation.id} />
-        </div>
-
-        {extraCharges.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center text-sm text-slate-500">
-            No se han registrado sobrecostos adicionales en esta operación.
-          </div>
-        ) : (
-          <>
-            {/* Mobile View: Extra Charges Cards */}
-            <div className="grid gap-3 md:hidden">
-              {extraCharges.map((charge) => (
-                <div key={charge.id} className="rounded-xl border border-amber-200 bg-amber-50/40 p-3.5 shadow-sm space-y-2">
-                  <div className="flex justify-between items-start">
-                    <span className="font-bold text-amber-950 text-sm">{charge.description}</span>
-                    <Badge className="bg-amber-600 text-white text-xs">
-                      SOBRECOSTO ({charge.currency})
-                    </Badge>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2 text-xs border-t border-amber-200/60 pt-2">
-                    <div>
-                      <span className="text-slate-500">Costo: </span>
-                      <span className="font-semibold text-slate-800">{formatCurrency(charge.totalCost, charge.currency as any)}</span>
-                    </div>
-                    <div className="text-right">
-                      <span className="text-slate-500">Venta: </span>
-                      <span className="font-bold text-amber-900">{formatCurrency(charge.totalPrice, charge.currency as any)}</span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Desktop View: Extra Charges Table */}
-            <div className="hidden md:block rounded-xl border border-amber-200 bg-white shadow-sm overflow-hidden">
-              <Table>
-                <TableHeader className="bg-amber-50/70">
-                  <TableRow>
-                    <TableHead className="font-semibold text-amber-900 text-left">Sobrecosto</TableHead>
-                    <TableHead className="font-semibold text-amber-900 text-center">Moneda</TableHead>
-                    <TableHead className="font-semibold text-amber-900 text-center">Cant.</TableHead>
-                    <TableHead className="font-semibold text-amber-900 text-right">Costo Total</TableHead>
-                    <TableHead className="font-semibold text-amber-900 text-right">Venta Total</TableHead>
-                    <TableHead className="font-semibold text-emerald-700 text-right">Profit Línea</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {extraCharges.map((charge) => {
-                    const lineProfit = charge.totalPrice - charge.totalCost;
-                    return (
-                      <TableRow key={charge.id} className="hover:bg-amber-50/30">
-                        <TableCell className="font-semibold text-slate-900 text-left">{charge.description}</TableCell>
-                        <TableCell className="text-center font-bold text-xs">{charge.currency}</TableCell>
-                        <TableCell className="text-center">{charge.quantity}</TableCell>
-                        <TableCell className="text-right text-slate-600 font-medium">
-                          {formatCurrency(charge.totalCost, charge.currency as any)}
-                        </TableCell>
-                        <TableCell className="text-right font-bold text-amber-950">
-                          {formatCurrency(charge.totalPrice, charge.currency as any)}
-                        </TableCell>
-                        <TableCell className="text-right font-black text-emerald-600">
-                          {formatCurrency(lineProfit, charge.currency as any)}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-          </>
-        )}
+      {/* Extra Charges Adder Button Section */}
+      <div className="flex justify-end pt-2">
+        <AddExtraChargeDialog operationId={operation.id} />
       </div>
 
       {/* Real Financial Profit Panel (Base + Extra Charges) */}
