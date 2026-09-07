@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { UploadCloud, FileText, Download, ShieldCheck, UserCheck, Loader2, Anchor, Calendar, Ship } from "lucide-react";
+import { useState } from "react";
+import { UploadCloud, FileText, Download, ShieldCheck, UserCheck, Anchor, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { UploadDropzone } from "@/lib/uploadthing";
 import { createDocumentAction } from "@/app/operations/documents-actions";
 import { formatDate } from "@/lib/format";
 
@@ -50,39 +51,14 @@ export function ClientDocumentPortal({
   customsChannel,
   documents,
 }: ClientDocumentPortalProps) {
-  const [isPending, startTransition] = useTransition();
-
   const [docName, setDocName] = useState("");
-  const [fileUrl, setFileUrl] = useState("");
   const [docType, setDocType] = useState<"FACTURA_COMERCIAL" | "PACKING_LIST" | "BL" | "OTRO">("FACTURA_COMERCIAL");
-
-  function handleUpload(e: React.FormEvent) {
-    e.preventDefault();
-    if (!docName || !fileUrl) {
-      alert("Por favor ingresa el nombre del documento y la URL.");
-      return;
-    }
-
-    startTransition(async () => {
-      try {
-        await createDocumentAction({
-          operationId,
-          name: docName,
-          fileUrl,
-          documentType: docType,
-          uploadedBy: "CLIENT",
-        });
-        setDocName("");
-        setFileUrl("");
-        alert("Documento subido correctamente.");
-      } catch (err: any) {
-        alert(err.message || "Error al subir el documento.");
-      }
-    });
-  }
+  const [isUploading, setIsUploading] = useState(false);
 
   const brokerDocs = documents.filter((d) => d.uploadedBy === "BROKER");
   const clientDocs = documents.filter((d) => d.uploadedBy === "CLIENT");
+
+  const isMetadataValid = docName.trim().length > 0;
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 pb-12 antialiased">
@@ -106,7 +82,7 @@ export function ClientDocumentPortal({
 
       {/* Main Container */}
       <main className="max-w-5xl mx-auto px-4 pt-6 space-y-6">
-        {/* Status Card Banner */}
+        {/* Status Card Banner (Zero financial info) */}
         <div className="rounded-2xl border bg-white p-6 shadow-sm space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-4">
             <div>
@@ -194,65 +170,92 @@ export function ClientDocumentPortal({
           )}
         </div>
 
-        {/* Client Upload Section */}
+        {/* Real UploadThing Dropzone Section (Client Upload) */}
         <div className="rounded-2xl border bg-white p-6 shadow-sm space-y-4">
           <h3 className="font-bold text-slate-900 text-lg flex items-center gap-2 border-b pb-3">
-            <UploadCloud className="h-5 w-5 text-blue-600" /> Adjuntar Documentación de Importación / Exportación
+            <UploadCloud className="h-5 w-5 text-blue-600" /> Adjuntar Comprobantes y Documentos de Importación
           </h3>
 
-          <form onSubmit={handleUpload} className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-12 items-end">
-              <div className="sm:col-span-5 space-y-1.5">
-                <Label className="text-xs font-semibold text-slate-700">Nombre del Archivo *</Label>
-                <Input
-                  placeholder="Ej: Factura Comercial #1234, Packing List..."
-                  value={docName}
-                  onChange={(e) => setDocName(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="sm:col-span-3 space-y-1.5">
-                <Label className="text-xs font-semibold text-slate-700">Tipo Documento</Label>
-                <select
-                  value={docType}
-                  onChange={(e) => setDocType(e.target.value as any)}
-                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-xs font-semibold shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                >
-                  <option value="FACTURA_COMERCIAL">Factura Comercial</option>
-                  <option value="PACKING_LIST">Packing List</option>
-                  <option value="BL">BL / Conocimiento</option>
-                  <option value="OTRO">Otro Adjunto</option>
-                </select>
-              </div>
-
-              <div className="sm:col-span-4 space-y-1.5">
-                <Label className="text-xs font-semibold text-slate-700">URL del Archivo *</Label>
-                <Input
-                  placeholder="https://..."
-                  value={fileUrl}
-                  onChange={(e) => setFileUrl(e.target.value)}
-                  required
-                />
-              </div>
+          {/* Step 1: Client Metadata */}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold text-slate-700">1. Nombre del Archivo *</Label>
+              <Input
+                placeholder="Ej: Factura Comercial #1234, Packing List..."
+                value={docName}
+                onChange={(e) => setDocName(e.target.value)}
+              />
             </div>
 
-            <div className="flex justify-end pt-2 border-t">
-              <Button
-                type="submit"
-                disabled={isPending}
-                className="bg-blue-600 hover:bg-blue-500 text-white font-medium text-xs"
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold text-slate-700">2. Tipo Documento *</Label>
+              <select
+                value={docType}
+                onChange={(e) => setDocType(e.target.value as any)}
+                className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-2 text-xs font-semibold shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               >
-                {isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Subiendo...
-                  </>
-                ) : (
-                  "Subir Documento al Agente"
-                )}
-              </Button>
+                <option value="FACTURA_COMERCIAL">Factura Comercial</option>
+                <option value="PACKING_LIST">Packing List</option>
+                <option value="BL">BL / Conocimiento de Embarque</option>
+                <option value="OTRO">Otro Adjunto</option>
+              </select>
             </div>
-          </form>
+          </div>
+
+          {/* Step 2: UploadDropzone (Conditional Locking) */}
+          <div className="pt-2">
+            {!isMetadataValid ? (
+              <div className="rounded-xl border border-dashed border-amber-300 bg-amber-50/60 p-6 text-center text-xs text-amber-800 flex flex-col items-center gap-1.5">
+                <AlertCircle className="h-5 w-5 text-amber-600" />
+                <span className="font-semibold">Escribe primero el Nombre del Archivo arriba para habilitar la zona de subida.</span>
+              </div>
+            ) : (
+              <div className="border border-blue-100 rounded-xl bg-slate-50 p-2">
+                <UploadDropzone
+                  endpoint="documentUploader"
+                  onUploadBegin={() => setIsUploading(true)}
+                  onClientUploadComplete={async (res) => {
+                    setIsUploading(false);
+                    if (res && res[0]) {
+                      const uploadedUrl = res[0].url;
+                      try {
+                        await createDocumentAction({
+                          operationId,
+                          name: docName.trim(),
+                          fileUrl: uploadedUrl,
+                          documentType: docType,
+                          uploadedBy: "CLIENT",
+                        });
+                        setDocName("");
+                        alert("Documento subido y enviado al agente exitosamente.");
+                      } catch (err: any) {
+                        alert(err.message || "Error al enviar el documento.");
+                      }
+                    }
+                  }}
+                  onUploadError={(error: Error) => {
+                    setIsUploading(false);
+                    alert(`Error en la carga: ${error.message}`);
+                  }}
+                  appearance={{
+                    container: "border-2 border-dashed border-blue-400 bg-white hover:bg-blue-50/40 rounded-xl p-4 transition-colors cursor-pointer",
+                    label: "text-blue-600 font-bold text-sm",
+                    allowedContent: "text-slate-500 text-xs",
+                    button: "bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold px-4 py-2 rounded-md transition-colors",
+                  }}
+                  content={{
+                    label: `Arrastra aquí tu documento "${docName.trim()}"`,
+                    allowedContent: "Formatos permitidos: PDF, Imagen o Excel (Máx 8MB)",
+                    button({ ready, isUploading }) {
+                      if (isUploading) return "Subiendo archivo...";
+                      if (ready) return "Seleccionar desde dispositivo";
+                      return "Cargando...";
+                    },
+                  }}
+                />
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Client Own Uploaded Documents */}
@@ -278,7 +281,7 @@ export function ClientDocumentPortal({
                     className="shrink-0"
                   >
                     <Button size="sm" variant="outline" className="text-xs">
-                      <Download className="mr-1.5 h-3.5 w-3.5" /> Ver
+                      <Download className="mr-1.5 h-3.5 w-3.5" /> Ver Archivo
                     </Button>
                   </a>
                 </div>

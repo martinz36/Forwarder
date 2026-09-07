@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Link2, Copy, Check, FileText, Download, Trash2, UploadCloud, Loader2, ShieldCheck, UserCheck } from "lucide-react";
+import { Link2, Copy, Check, FileText, Download, Trash2, UploadCloud, ShieldCheck, UserCheck, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { UploadDropzone } from "@/lib/uploadthing";
 import { createDocumentAction, deleteDocumentAction } from "@/app/operations/documents-actions";
 import { formatDate } from "@/lib/format";
 
@@ -32,10 +33,9 @@ export function BrokerDocumentSection({
   const [copied, setCopied] = useState(false);
   const [isPending, startTransition] = useTransition();
 
-  // Manual or UploadThing File State
   const [docName, setDocName] = useState("");
-  const [fileUrl, setFileUrl] = useState("");
   const [docType, setDocType] = useState<"BL" | "FACTURA_COMERCIAL" | "PACKING_LIST" | "DAM" | "LIQUIDACION" | "OTRO">("BL");
+  const [isUploading, setIsUploading] = useState(false);
 
   const sharedLink = typeof window !== "undefined"
     ? `${window.location.origin}/shared/${sharedToken}`
@@ -47,36 +47,14 @@ export function BrokerDocumentSection({
     setTimeout(() => setCopied(false), 3000);
   }
 
-  function handleAddDocument(e: React.FormEvent) {
-    e.preventDefault();
-    if (!docName || !fileUrl) {
-      alert("Ingresa el nombre del documento y la URL del archivo.");
-      return;
-    }
-
-    startTransition(async () => {
-      try {
-        await createDocumentAction({
-          operationId,
-          name: docName,
-          fileUrl,
-          documentType: docType,
-          uploadedBy: "BROKER",
-        });
-        setDocName("");
-        setFileUrl("");
-      } catch (err: any) {
-        alert(err.message || "Error al subir documento.");
-      }
-    });
-  }
-
   function handleDelete(documentId: string) {
     if (!confirm("¿Deseas eliminar este documento del expediente?")) return;
     startTransition(async () => {
       await deleteDocumentAction(documentId, operationId);
     });
   }
+
+  const isMetadataValid = docName.trim().length > 0;
 
   return (
     <div className="space-y-6">
@@ -119,29 +97,29 @@ export function BrokerDocumentSection({
         </div>
       </div>
 
-      {/* Broker Upload Form */}
+      {/* UploadThing Upload Zone (Broker) */}
       <div className="rounded-xl border bg-white p-5 shadow-sm space-y-4">
         <h3 className="font-bold text-slate-900 text-base flex items-center gap-2 border-b pb-3">
-          <UploadCloud className="h-5 w-5 text-blue-600" /> Subir Documento al Expediente (Broker)
+          <UploadCloud className="h-5 w-5 text-blue-600" /> Subida de Archivo Real al Expediente (Broker)
         </h3>
 
-        <form onSubmit={handleAddDocument} className="grid gap-4 sm:grid-cols-12 items-end">
-          <div className="sm:col-span-4 space-y-1.5">
-            <Label className="text-xs font-semibold text-slate-700">Nombre del Documento *</Label>
+        {/* Step 1: Input Metadata */}
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold text-slate-700">1. Nombre del Documento *</Label>
             <Input
-              placeholder="Ej: Bill of Lading (BL) Final, DAM Definitiva..."
+              placeholder="Ej: Bill of Lading (BL) Final, DUA Aduanera, Liquidación..."
               value={docName}
               onChange={(e) => setDocName(e.target.value)}
-              required
             />
           </div>
 
-          <div className="sm:col-span-3 space-y-1.5">
-            <Label className="text-xs font-semibold text-slate-700">Tipo de Documento</Label>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold text-slate-700">2. Tipo de Documento *</Label>
             <select
               value={docType}
               onChange={(e) => setDocType(e.target.value as any)}
-              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-xs font-semibold shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-2 text-xs font-semibold shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             >
               <option value="BL">BL (Bill of Lading)</option>
               <option value="DAM">DAM / DUA Aduanera</option>
@@ -151,27 +129,62 @@ export function BrokerDocumentSection({
               <option value="OTRO">Otro Documento</option>
             </select>
           </div>
+        </div>
 
-          <div className="sm:col-span-3 space-y-1.5">
-            <Label className="text-xs font-semibold text-slate-700">URL del Archivo *</Label>
-            <Input
-              placeholder="https://... o enlace de archivo"
-              value={fileUrl}
-              onChange={(e) => setFileUrl(e.target.value)}
-              required
-            />
-          </div>
-
-          <div className="sm:col-span-2">
-            <Button
-              type="submit"
-              disabled={isPending}
-              className="w-full bg-blue-600 hover:bg-blue-500 text-white font-medium text-xs h-9"
-            >
-              {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Guardar Archivo"}
-            </Button>
-          </div>
-        </form>
+        {/* Step 2: UploadDropzone (Conditional Locking) */}
+        <div className="pt-2">
+          {!isMetadataValid ? (
+            <div className="rounded-xl border border-dashed border-amber-300 bg-amber-50/60 p-6 text-center text-xs text-amber-800 flex flex-col items-center gap-1.5">
+              <AlertCircle className="h-5 w-5 text-amber-600" />
+              <span className="font-semibold">Escribe primero el Nombre del Documento arriba para habilitar la zona de carga de archivo.</span>
+            </div>
+          ) : (
+            <div className="border border-blue-100 rounded-xl bg-slate-50 p-2">
+              <UploadDropzone
+                endpoint="documentUploader"
+                onUploadBegin={() => setIsUploading(true)}
+                onClientUploadComplete={async (res) => {
+                  setIsUploading(false);
+                  if (res && res[0]) {
+                    const uploadedUrl = res[0].url;
+                    try {
+                      await createDocumentAction({
+                        operationId,
+                        name: docName.trim(),
+                        fileUrl: uploadedUrl,
+                        documentType: docType,
+                        uploadedBy: "BROKER",
+                      });
+                      setDocName("");
+                      alert("Documento subido y registrado exitosamente.");
+                    } catch (err: any) {
+                      alert(err.message || "Error al registrar el documento.");
+                    }
+                  }
+                }}
+                onUploadError={(error: Error) => {
+                  setIsUploading(false);
+                  alert(`Error en UploadThing: ${error.message}`);
+                }}
+                appearance={{
+                  container: "border-2 border-dashed border-blue-400 bg-white hover:bg-blue-50/40 rounded-xl p-4 transition-colors cursor-pointer",
+                  label: "text-blue-600 font-bold text-sm",
+                  allowedContent: "text-slate-500 text-xs",
+                  button: "bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold px-4 py-2 rounded-md transition-colors",
+                }}
+                content={{
+                  label: `Arrastra aquí el archivo para "${docName.trim()}"`,
+                  allowedContent: "Archivos PDF, Imágenes o Excel (Máx 8MB)",
+                  button({ ready, isUploading }) {
+                    if (isUploading) return "Subiendo a la nube...";
+                    if (ready) return "Seleccionar Archivo";
+                    return "Cargando...";
+                  },
+                }}
+              />
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Uploaded Documents List */}
@@ -183,7 +196,7 @@ export function BrokerDocumentSection({
 
         {documents.length === 0 ? (
           <div className="rounded-xl border border-dashed bg-slate-50 p-8 text-center text-sm text-slate-500">
-            No se han subido documentos aún. Usa el formulario de arriba para cargar el BL, DAM o Liquidaciones.
+            No se han subido documentos aún. Escribe el nombre del documento y usa la zona de carga de arriba.
           </div>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
