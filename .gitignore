@@ -1,3 +1,9 @@
+# Next.js build output
+.next/
+out/
+build/
+dist/
+
 # Environment variables
 .env
 .env.local
