@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { Link2, Copy, Check, FileText, Download, Trash2, UploadCloud, ShieldCheck, UserCheck, AlertCircle } from "lucide-react";
+import { useState } from "react";
+import { Link2, Copy, Check, FileText, Download, Trash2, UploadCloud, ShieldCheck, UserCheck, AlertCircle, FileUp, CheckCircle2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { UploadDropzone } from "@/lib/uploadthing";
+import { useUploadThing } from "@/lib/uploadthing";
 import { createDocumentAction, deleteDocumentAction } from "@/app/operations/documents-actions";
 import { formatDate } from "@/lib/format";
 
@@ -31,11 +31,34 @@ export function BrokerDocumentSection({
   documents,
 }: BrokerDocumentSectionProps) {
   const [copied, setCopied] = useState(false);
-  const [isPending, startTransition] = useTransition();
-
   const [docName, setDocName] = useState("");
   const [docType, setDocType] = useState<"BL" | "FACTURA_COMERCIAL" | "PACKING_LIST" | "DAM" | "LIQUIDACION" | "OTRO">("BL");
-  const [isUploading, setIsUploading] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
+  const { startUpload, isUploading } = useUploadThing("documentUploader", {
+    onClientUploadComplete: async (res) => {
+      if (res && res[0]) {
+        const uploadedUrl = res[0].url;
+        try {
+          await createDocumentAction({
+            operationId,
+            name: docName.trim(),
+            fileUrl: uploadedUrl,
+            documentType: docType,
+            uploadedBy: "BROKER",
+          });
+          setSelectedFile(null);
+          setDocName("");
+          alert("✓ Documento registrado e integrado al expediente exitosamente.");
+        } catch (err: any) {
+          alert(err.message || "Error al registrar el documento.");
+        }
+      }
+    },
+    onUploadError: (error: Error) => {
+      alert(`Error en UploadThing: ${error.message}`);
+    },
+  });
 
   const sharedLink = typeof window !== "undefined"
     ? `${window.location.origin}/shared/${sharedToken}`
@@ -49,9 +72,32 @@ export function BrokerDocumentSection({
 
   function handleDelete(documentId: string) {
     if (!confirm("¿Deseas eliminar este documento del expediente?")) return;
-    startTransition(async () => {
-      await deleteDocumentAction(documentId, operationId);
-    });
+    deleteDocumentAction(documentId, operationId);
+  }
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    if (e.target.files && e.target.files[0]) {
+      setSelectedFile(e.target.files[0]);
+    }
+  }
+
+  async function handleUploadClick() {
+    if (!docName.trim()) {
+      alert("Por favor ingresa primero el nombre del documento.");
+      return;
+    }
+    if (!selectedFile) {
+      alert("Por favor selecciona un archivo.");
+      return;
+    }
+    await startUpload([selectedFile]);
+  }
+
+  function formatFileSize(bytes: number) {
+    if (bytes < 1024 * 1024) {
+      return (bytes / 1024).toFixed(1) + " KB";
+    }
+    return (bytes / (1024 * 1024)).toFixed(1) + " MB";
   }
 
   const isMetadataValid = docName.trim().length > 0;
@@ -97,10 +143,10 @@ export function BrokerDocumentSection({
         </div>
       </div>
 
-      {/* UploadThing Upload Zone (Broker) */}
-      <div className="rounded-xl border bg-white p-5 shadow-sm space-y-4">
+      {/* Upload Zone (Broker) */}
+      <div className="rounded-xl border bg-white p-5 shadow-sm space-y-6">
         <h3 className="font-bold text-slate-900 text-base flex items-center gap-2 border-b pb-3">
-          <UploadCloud className="h-5 w-5 text-blue-600" /> Subida de Archivo Real al Expediente (Broker)
+          <UploadCloud className="h-5 w-5 text-blue-600" /> Subir Archivo al Expediente (Broker)
         </h3>
 
         {/* Step 1: Input Metadata */}
@@ -131,57 +177,82 @@ export function BrokerDocumentSection({
           </div>
         </div>
 
-        {/* Step 2: UploadDropzone (Conditional Locking) */}
-        <div className="pt-2">
+        {/* Step 2: File Picker & Action Area */}
+        <div className="space-y-4 pt-2">
+          <Label className="text-xs font-semibold text-slate-700">3. Selecciona el archivo físico *</Label>
+
           {!isMetadataValid ? (
             <div className="rounded-xl border border-dashed border-amber-300 bg-amber-50/60 p-6 text-center text-xs text-amber-800 flex flex-col items-center gap-1.5">
               <AlertCircle className="h-5 w-5 text-amber-600" />
-              <span className="font-semibold">Escribe primero el Nombre del Documento arriba para habilitar la zona de carga de archivo.</span>
+              <span className="font-semibold">Escribe primero el Nombre del Documento arriba para habilitar la selección de archivo.</span>
             </div>
           ) : (
-            <div className="border border-blue-100 rounded-xl bg-slate-50 p-2">
-              <UploadDropzone
-                endpoint="documentUploader"
-                onUploadBegin={() => setIsUploading(true)}
-                onClientUploadComplete={async (res) => {
-                  setIsUploading(false);
-                  if (res && res[0]) {
-                    const uploadedUrl = res[0].url;
-                    try {
-                      await createDocumentAction({
-                        operationId,
-                        name: docName.trim(),
-                        fileUrl: uploadedUrl,
-                        documentType: docType,
-                        uploadedBy: "BROKER",
-                      });
-                      setDocName("");
-                      alert("Documento subido y registrado exitosamente.");
-                    } catch (err: any) {
-                      alert(err.message || "Error al registrar el documento.");
-                    }
-                  }
-                }}
-                onUploadError={(error: Error) => {
-                  setIsUploading(false);
-                  alert(`Error en UploadThing: ${error.message}`);
-                }}
-                appearance={{
-                  container: "border-2 border-dashed border-blue-400 bg-white hover:bg-blue-50/40 rounded-xl p-4 transition-colors cursor-pointer",
-                  label: "text-blue-600 font-bold text-sm",
-                  allowedContent: "text-slate-500 text-xs",
-                  button: "bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold px-4 py-2 rounded-md transition-colors",
-                }}
-                content={{
-                  label: `Arrastra aquí el archivo para "${docName.trim()}"`,
-                  allowedContent: "Archivos PDF, Imágenes o Excel (Máx 8MB)",
-                  button({ ready, isUploading }) {
-                    if (isUploading) return "Subiendo a la nube...";
-                    if (ready) return "Seleccionar Archivo";
-                    return "Cargando...";
-                  },
-                }}
+            <div className="space-y-4">
+              <input
+                type="file"
+                id="brokerFileInput"
+                className="hidden"
+                accept=".pdf,.png,.jpg,.jpeg,.webp,.xlsx,.xls"
+                onChange={handleFileChange}
               />
+
+              {!selectedFile ? (
+                <label
+                  htmlFor="brokerFileInput"
+                  className="flex flex-col items-center justify-center border-2 border-dashed border-blue-400 bg-blue-50/30 hover:bg-blue-50/70 rounded-xl p-8 cursor-pointer transition-colors text-center"
+                >
+                  <FileUp className="h-10 w-10 text-blue-600 mb-2" />
+                  <span className="font-bold text-blue-900 text-sm">
+                    Haz clic aquí para seleccionar el archivo desde tu equipo
+                  </span>
+                  <span className="text-xs text-slate-500 mt-1">
+                    PDF, Imágenes o Excel (Máx 8MB)
+                  </span>
+                </label>
+              ) : (
+                <div className="rounded-xl border-2 border-emerald-300 bg-emerald-50/50 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="rounded-lg bg-emerald-600 text-white p-2 shrink-0">
+                      <CheckCircle2 className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <span className="text-xs font-bold text-emerald-800 uppercase block">Archivo Seleccionado</span>
+                      <p className="font-bold text-slate-900 text-sm truncate max-w-md">
+                        {selectedFile.name}
+                      </p>
+                      <span className="text-xs text-slate-500">{formatFileSize(selectedFile.size)}</span>
+                    </div>
+                  </div>
+
+                  <label
+                    htmlFor="brokerFileInput"
+                    className="text-xs font-bold text-blue-600 hover:text-blue-800 cursor-pointer underline text-right"
+                  >
+                    Cambiar archivo
+                  </label>
+                </div>
+              )}
+
+              {selectedFile && (
+                <div className="flex justify-end pt-2">
+                  <Button
+                    type="button"
+                    onClick={handleUploadClick}
+                    disabled={isUploading}
+                    className="bg-blue-600 hover:bg-blue-500 text-white font-bold px-6 py-2.5 text-sm w-full sm:w-auto shadow-md"
+                  >
+                    {isUploading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Subiendo a la nube...
+                      </>
+                    ) : (
+                      <>
+                        <UploadCloud className="mr-2 h-4 w-4" /> 📤 Guardar Documento en Expediente
+                      </>
+                    )}
+                  </Button>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -196,7 +267,7 @@ export function BrokerDocumentSection({
 
         {documents.length === 0 ? (
           <div className="rounded-xl border border-dashed bg-slate-50 p-8 text-center text-sm text-slate-500">
-            No se han subido documentos aún. Escribe el nombre del documento y usa la zona de carga de arriba.
+            No se han subido documentos aún. Escribe el nombre del documento y usa el seleccionador de arriba.
           </div>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
