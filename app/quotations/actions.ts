@@ -14,29 +14,39 @@ export async function createQuotationAction(data: QuotationFormValues) {
   const sequence = String(count + 1).padStart(4, "0");
   const code = `COT-${year}-${sequence}`;
 
-  // Process items and calculate totals by currency
+  // Process items and calculate totals and profits by currency
   let totalUsd = 0;
   let totalPen = 0;
+  let profitUsd = 0;
+  let profitPen = 0;
 
   const itemsWithTotal = validated.items.map((item) => {
-    const total = Number((item.unitPrice * item.quantity).toFixed(2));
+    const saleTotal = Number((item.unitPrice * item.quantity).toFixed(2));
+    const costTotal = Number((item.unitCost * item.quantity).toFixed(2));
+    const itemProfit = Number((saleTotal - costTotal).toFixed(2));
+
     if (item.currency === "USD") {
-      totalUsd += total;
+      totalUsd += saleTotal;
+      profitUsd += itemProfit;
     } else {
-      totalPen += total;
+      totalPen += saleTotal;
+      profitPen += itemProfit;
     }
 
     return {
       description: item.description.trim(),
       currency: item.currency,
+      unitCost: item.unitCost,
       unitPrice: item.unitPrice,
       quantity: item.quantity,
-      total,
+      total: saleTotal,
     };
   });
 
   totalUsd = Number(totalUsd.toFixed(2));
   totalPen = Number(totalPen.toFixed(2));
+  profitUsd = Number(profitUsd.toFixed(2));
+  profitPen = Number(profitPen.toFixed(2));
 
   // Atomic Prisma Transaction
   await prisma.$transaction(async (tx) => {
@@ -48,6 +58,8 @@ export async function createQuotationAction(data: QuotationFormValues) {
         validUntil: validated.validUntil ? new Date(validated.validUntil) : null,
         totalUsd,
         totalPen,
+        profitUsd,
+        profitPen,
         items: {
           createMany: {
             data: itemsWithTotal,

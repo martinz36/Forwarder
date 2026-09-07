@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { FileText, Plus, Calendar, User, DollarSign, Coins } from "lucide-react";
+import { FileText, Plus, Calendar, User, TrendingUp } from "lucide-react";
 import prisma from "@/lib/prisma";
 import { formatCurrency, formatDate } from "@/lib/format";
 import {
@@ -40,9 +40,9 @@ export default async function QuotationsPage() {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Cotizaciones de Servicios</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Cotizaciones & Rentabilidad</h1>
           <p className="text-sm text-slate-500">
-            Cotizaciones bimonetarias (USD/PEN) creadas para agenciamiento de aduanas y transporte internacional.
+            Control de cotizaciones bimonetarias (USD/PEN) y rentabilidad proyectada (Profit Broker).
           </p>
         </div>
         <Link href="/quotations/new">
@@ -60,7 +60,7 @@ export default async function QuotationsPage() {
           </div>
           <h3 className="text-lg font-medium text-slate-900">No hay cotizaciones registradas</h3>
           <p className="mt-1 text-sm text-slate-500 max-w-sm">
-            Empieza registrando tu primera cotización bimonetaria con ítems en dólares o soles.
+            Empieza registrando tu primera cotización bimonetaria calculando tu margen de profit en tiempo real.
           </p>
           <div className="mt-4">
             <Link href="/quotations/new">
@@ -92,11 +92,23 @@ export default async function QuotationsPage() {
                     <span>Válida hasta: {formatDate(item.validUntil)}</span>
                   </div>
                 </div>
-                <div className="pt-2 border-t flex justify-between items-center bg-slate-50 -mx-4 -mb-4 p-3 rounded-b-xl">
-                  <div className="text-xs text-slate-500 font-medium">Totales</div>
-                  <div className="text-right space-y-0.5">
-                    <div className="font-bold text-slate-900 text-sm">{formatCurrency(item.totalUsd, "USD")}</div>
-                    <div className="font-semibold text-emerald-700 text-xs">{formatCurrency(item.totalPen, "PEN")}</div>
+
+                <div className="pt-2 border-t bg-slate-50 -mx-4 -mb-4 p-3 rounded-b-xl space-y-2">
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-slate-500">Venta Total USD:</span>
+                    <span className="font-bold text-slate-900">{formatCurrency(item.totalUsd, "USD")}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-slate-500">Venta Total PEN:</span>
+                    <span className="font-bold text-slate-900">{formatCurrency(item.totalPen, "PEN")}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs pt-1 border-t border-slate-200">
+                    <span className="font-bold text-emerald-700 flex items-center gap-1">
+                      <TrendingUp className="h-3.5 w-3.5" /> Profit Est.:
+                    </span>
+                    <span className="font-black text-emerald-700">
+                      {formatCurrency(item.profitUsd, "USD")} / {formatCurrency(item.profitPen, "PEN")}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -113,8 +125,10 @@ export default async function QuotationsPage() {
                     <TableHead className="font-semibold text-slate-700 text-left">Cliente / Razón Social</TableHead>
                     <TableHead className="font-semibold text-slate-700 text-left">Estado</TableHead>
                     <TableHead className="font-semibold text-slate-700 text-left">Válida Hasta</TableHead>
-                    <TableHead className="font-semibold text-slate-700 text-right">Total USD ($)</TableHead>
-                    <TableHead className="font-semibold text-slate-700 text-right">Total PEN (S/)</TableHead>
+                    <TableHead className="font-semibold text-slate-700 text-right">Venta USD ($)</TableHead>
+                    <TableHead className="font-semibold text-emerald-700 text-right">Profit USD ($)</TableHead>
+                    <TableHead className="font-semibold text-slate-700 text-right">Venta PEN (S/)</TableHead>
+                    <TableHead className="font-semibold text-emerald-700 text-right">Profit PEN (S/)</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -137,8 +151,14 @@ export default async function QuotationsPage() {
                       <TableCell className="text-right font-bold text-slate-900">
                         {formatCurrency(item.totalUsd, "USD")}
                       </TableCell>
-                      <TableCell className="text-right font-semibold text-emerald-700">
+                      <TableCell className="text-right font-black text-emerald-600">
+                        {formatCurrency(item.profitUsd, "USD")}
+                      </TableCell>
+                      <TableCell className="text-right font-bold text-slate-900">
                         {formatCurrency(item.totalPen, "PEN")}
+                      </TableCell>
+                      <TableCell className="text-right font-black text-emerald-600">
+                        {formatCurrency(item.profitPen, "PEN")}
                       </TableCell>
                     </TableRow>
                   ))}

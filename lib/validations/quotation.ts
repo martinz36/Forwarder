@@ -3,7 +3,8 @@ import { z } from "zod";
 export const quotationItemSchema = z.object({
   description: z.string().min(1, "La descripción del concepto es requerida."),
   currency: z.enum(["USD", "PEN"]),
-  unitPrice: z.coerce.number().min(0, "El precio unitario debe ser mayor o igual a 0."),
+  unitCost: z.coerce.number().min(0, "El costo unitario debe ser mayor o igual a 0."),
+  unitPrice: z.coerce.number().min(0, "El precio de venta debe ser mayor o igual a 0."),
   quantity: z.coerce.number().int().min(1, "La cantidad debe ser al menos 1."),
 });
 
