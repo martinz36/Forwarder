@@ -15,6 +15,28 @@ enum QuotationStatus {
   REJECTED
 }
 
+enum OperationStatus {
+  EN_TRANSITO
+  EN_ADUANA
+  RETIRADO
+  LIQUIDADO
+}
+
+enum CustomsChannel {
+  VERDE
+  NARANJA
+  ROJO
+}
+
+enum DocumentType {
+  BL
+  FACTURA_COMERCIAL
+  PACKING_LIST
+  DAM
+  LIQUIDACION
+  OTRO
+}
+
 model Client {
   id         String      @id @default(cuid())
   name       String
@@ -39,6 +61,7 @@ model Quotation {
   profitUsd   Float           @default(0)
   profitPen   Float           @default(0)
   items       QuotationItem[]
+  operation   Operation?
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
 }
@@ -64,4 +87,47 @@ model ConceptCatalog {
   defaultPrice    Float?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+}
+
+model Operation {
+  id             String          @id @default(cuid())
+  quotationId    String          @unique
+  quotation      Quotation       @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  status         OperationStatus @default(EN_TRANSITO)
+  blNumber       String?
+  etd            DateTime?
+  eta            DateTime?
+  customsChannel CustomsChannel?
+  sharedToken    String          @unique @default(uuid())
+  charges        OperationCharge[]
+  documents      Document[]
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+}
+
+model OperationCharge {
+  id            String    @id @default(cuid())
+  operationId   String
+  operation     Operation @relation(fields: [operationId], references: [id], onDelete: Cascade)
+  description   String
+  currency      String    @default("USD")
+  unitCost      Float
+  unitPrice     Float
+  quantity      Int
+  totalCost     Float
+  totalPrice    Float
+  isExtraCharge Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Document {
+  id           String       @id @default(cuid())
+  operationId  String
+  operation    Operation    @relation(fields: [operationId], references: [id], onDelete: Cascade)
+  name         String
+  fileUrl      String
+  documentType DocumentType @default(OTRO)
+  uploadedBy   String       @default("BROKER")
+  uploadedAt   DateTime     @default(now())
 }

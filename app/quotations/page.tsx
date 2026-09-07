@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ConvertQuotationButton } from "@/components/convert-quotation-button";
 
 export const dynamic = "force-dynamic";
 
@@ -25,13 +26,13 @@ const statusVariantMap: Record<string, "default" | "secondary" | "success" | "de
 const statusLabelMap: Record<string, string> = {
   DRAFT: "Borrador",
   SENT: "Enviada",
-  ACCEPTED: "Aceptada",
+  ACCEPTED: "Aceptada / Operación",
   REJECTED: "Rechazada",
 };
 
 export default async function QuotationsPage() {
   const quotations = await prisma.quotation.findMany({
-    include: { client: true },
+    include: { client: true, operation: true },
     orderBy: { createdAt: "desc" },
   });
 
@@ -42,7 +43,7 @@ export default async function QuotationsPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900">Cotizaciones & Rentabilidad</h1>
           <p className="text-sm text-slate-500">
-            Control de cotizaciones bimonetarias (USD/PEN) y rentabilidad proyectada (Profit Broker).
+            Control de cotizaciones bimonetarias (USD/PEN) y conversión a Operaciones Logísticas.
           </p>
         </div>
         <Link href="/quotations/new">
@@ -60,7 +61,7 @@ export default async function QuotationsPage() {
           </div>
           <h3 className="text-lg font-medium text-slate-900">No hay cotizaciones registradas</h3>
           <p className="mt-1 text-sm text-slate-500 max-w-sm">
-            Empieza registrando tu primera cotización bimonetaria calculando tu margen de profit en tiempo real.
+            Empieza registrando tu primera cotización bimonetaria para generar operaciones de despacho.
           </p>
           <div className="mt-4">
             <Link href="/quotations/new">
@@ -110,6 +111,13 @@ export default async function QuotationsPage() {
                       {formatCurrency(item.profitUsd, "USD")} / {formatCurrency(item.profitPen, "PEN")}
                     </span>
                   </div>
+
+                  <div className="pt-2">
+                    <ConvertQuotationButton
+                      quotationId={item.id}
+                      existingOperationId={item.operation?.id}
+                    />
+                  </div>
                 </div>
               </div>
             ))}
@@ -124,11 +132,11 @@ export default async function QuotationsPage() {
                     <TableHead className="font-semibold text-slate-700 text-left">Código</TableHead>
                     <TableHead className="font-semibold text-slate-700 text-left">Cliente / Razón Social</TableHead>
                     <TableHead className="font-semibold text-slate-700 text-left">Estado</TableHead>
-                    <TableHead className="font-semibold text-slate-700 text-left">Válida Hasta</TableHead>
                     <TableHead className="font-semibold text-slate-700 text-right">Venta USD ($)</TableHead>
                     <TableHead className="font-semibold text-emerald-700 text-right">Profit USD ($)</TableHead>
                     <TableHead className="font-semibold text-slate-700 text-right">Venta PEN (S/)</TableHead>
                     <TableHead className="font-semibold text-emerald-700 text-right">Profit PEN (S/)</TableHead>
+                    <TableHead className="font-semibold text-slate-700 text-center">Acción</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -145,9 +153,6 @@ export default async function QuotationsPage() {
                           {statusLabelMap[item.status] || item.status}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-left text-sm text-slate-600">
-                        {formatDate(item.validUntil)}
-                      </TableCell>
                       <TableCell className="text-right font-bold text-slate-900">
                         {formatCurrency(item.totalUsd, "USD")}
                       </TableCell>
@@ -159,6 +164,12 @@ export default async function QuotationsPage() {
                       </TableCell>
                       <TableCell className="text-right font-black text-emerald-600">
                         {formatCurrency(item.profitPen, "PEN")}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <ConvertQuotationButton
+                          quotationId={item.id}
+                          existingOperationId={item.operation?.id}
+                        />
                       </TableCell>
                     </TableRow>
                   ))}
