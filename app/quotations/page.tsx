@@ -112,7 +112,12 @@ export default async function QuotationsPage() {
                     </span>
                   </div>
 
-                  <div className="pt-2">
+                  <div className="pt-2 flex items-center justify-between gap-2">
+                    <Link href={`/quotations/${item.id}`}>
+                      <Button variant="outline" size="sm" className="text-xs font-semibold text-blue-600 border-blue-200">
+                        <FileText className="mr-1 h-3.5 w-3.5" /> Ver / PDF
+                      </Button>
+                    </Link>
                     <ConvertQuotationButton
                       quotationId={item.id}
                       existingOperationId={item.operation?.id}
@@ -143,7 +148,9 @@ export default async function QuotationsPage() {
                   {quotations.map((item) => (
                     <TableRow key={item.id} className="hover:bg-slate-50/80 transition-colors">
                       <TableCell className="font-bold text-slate-900 text-left">
-                        {item.code}
+                        <Link href={`/quotations/${item.id}`} className="text-blue-600 hover:underline">
+                          {item.code}
+                        </Link>
                       </TableCell>
                       <TableCell className="text-left font-medium text-slate-800">
                         {item.client.name}
@@ -166,10 +173,17 @@ export default async function QuotationsPage() {
                         {formatCurrency(item.profitPen, "PEN")}
                       </TableCell>
                       <TableCell className="text-center">
-                        <ConvertQuotationButton
-                          quotationId={item.id}
-                          existingOperationId={item.operation?.id}
-                        />
+                        <div className="flex items-center justify-center gap-2">
+                          <Link href={`/quotations/${item.id}`}>
+                            <Button variant="outline" size="sm" className="h-8 text-xs font-semibold text-blue-600 border-blue-200 hover:bg-blue-50">
+                              <FileText className="mr-1 h-3.5 w-3.5" /> PDF
+                            </Button>
+                          </Link>
+                          <ConvertQuotationButton
+                            quotationId={item.id}
+                            existingOperationId={item.operation?.id}
+                          />
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}

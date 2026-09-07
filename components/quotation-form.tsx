@@ -66,16 +66,22 @@ export function QuotationForm({ clients, concepts }: QuotationFormProps) {
 
   const watchedItems = watch("items") || [];
 
-  // Live calculations for Summary (Cost, Sale, Profit for USD & PEN)
+  // Live calculations for Summary (Cost, Sale, Profit, Taxable & IGV 18% for USD & PEN)
   let liveCostUsd = 0;
   let liveSaleUsd = 0;
+  let liveTaxableUsd = 0;
+  let liveNonTaxableUsd = 0;
+
   let liveCostPen = 0;
   let liveSalePen = 0;
+  let liveTaxablePen = 0;
+  let liveNonTaxablePen = 0;
 
   watchedItems.forEach((item) => {
     const cost = Number(item.unitCost) || 0;
     const price = Number(item.unitPrice) || 0;
     const qty = Number(item.quantity) || 0;
+    const isTaxable = item.isTaxable !== false;
 
     const lineCost = cost * qty;
     const lineSale = price * qty;
@@ -83,14 +89,32 @@ export function QuotationForm({ clients, concepts }: QuotationFormProps) {
     if (item.currency === "PEN") {
       liveCostPen += lineCost;
       liveSalePen += lineSale;
+      if (isTaxable) {
+        liveTaxablePen += lineSale;
+      } else {
+        liveNonTaxablePen += lineSale;
+      }
     } else {
       liveCostUsd += lineCost;
       liveSaleUsd += lineSale;
+      if (isTaxable) {
+        liveTaxableUsd += lineSale;
+      } else {
+        liveNonTaxableUsd += lineSale;
+      }
     }
   });
 
   const liveProfitUsd = liveSaleUsd - liveCostUsd;
   const liveProfitPen = liveSalePen - liveCostPen;
+
+  const liveIgvUsd = Number((liveTaxableUsd * 0.18).toFixed(2));
+  const liveTotalTaxableUsd = Number((liveTaxableUsd + liveIgvUsd).toFixed(2));
+  const liveGrandTotalUsd = Number((liveTotalTaxableUsd + liveNonTaxableUsd).toFixed(2));
+
+  const liveIgvPen = Number((liveTaxablePen * 0.18).toFixed(2));
+  const liveTotalTaxablePen = Number((liveTaxablePen + liveIgvPen).toFixed(2));
+  const liveGrandTotalPen = Number((liveTotalTaxablePen + liveNonTaxablePen).toFixed(2));
 
   const marginUsdPct = liveSaleUsd > 0 ? ((liveProfitUsd / liveSaleUsd) * 100).toFixed(1) : "0.0";
   const marginPenPct = liveSalePen > 0 ? ((liveProfitPen / liveSalePen) * 100).toFixed(1) : "0.0";
@@ -392,6 +416,73 @@ export function QuotationForm({ clients, concepts }: QuotationFormProps) {
               </div>
             );
           })}
+        </div>
+      </div>
+
+      {/* Client Financial Summary Card (Desglose de Impuestos IGV 18% para el Cliente) */}
+      <div className="rounded-2xl border bg-white p-6 shadow-sm space-y-6">
+        <div className="flex items-center justify-between border-b pb-4">
+          <div className="flex items-center gap-3">
+            <div className="rounded-xl bg-blue-100 p-3 text-blue-700">
+              <Calculator className="h-6 w-6" />
+            </div>
+            <div>
+              <h3 className="font-bold text-xl leading-tight text-slate-900">Resumen Propuesta Comercial (Vista Cliente)</h3>
+              <p className="text-xs text-slate-500">Desglose oficial con impuestos (IGV 18%) y montos inafectos a facturar al cliente</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid gap-6 md:grid-cols-2">
+          {/* USD Client Summary */}
+          <div className="rounded-xl bg-blue-50/50 p-5 border border-blue-100 space-y-3">
+            <span className="font-bold text-sm text-blue-900 flex items-center gap-1.5 border-b border-blue-200 pb-2">
+              <DollarSign className="h-4 w-4 text-blue-600" /> Cobro en Dólares (USD $)
+            </span>
+            <div className="space-y-2 text-xs sm:text-sm">
+              <div className="flex justify-between items-center text-slate-600">
+                <span>Subtotal Servicios (Afectos IGV):</span>
+                <span className="font-semibold text-slate-800 text-right">{formatCurrency(liveTaxableUsd, "USD")}</span>
+              </div>
+              <div className="flex justify-between items-center text-blue-700 font-bold">
+                <span>IGV (18% Ley Peruana):</span>
+                <span className="text-right">{formatCurrency(liveIgvUsd, "USD")}</span>
+              </div>
+              <div className="flex justify-between items-center text-slate-600">
+                <span>Subtotal Reembolsos (Inafectos):</span>
+                <span className="font-semibold text-slate-800 text-right">{formatCurrency(liveNonTaxableUsd, "USD")}</span>
+              </div>
+              <div className="flex justify-between items-center pt-2 border-t border-blue-200">
+                <span className="font-black text-slate-900 text-sm sm:text-base">TOTAL A PAGAR USD:</span>
+                <span className="font-black text-blue-700 text-lg sm:text-xl text-right">{formatCurrency(liveGrandTotalUsd, "USD")}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* PEN Client Summary */}
+          <div className="rounded-xl bg-purple-50/50 p-5 border border-purple-100 space-y-3">
+            <span className="font-bold text-sm text-purple-900 flex items-center gap-1.5 border-b border-purple-200 pb-2">
+              <Wallet className="h-4 w-4 text-purple-600" /> Cobro en Soles (PEN S/)
+            </span>
+            <div className="space-y-2 text-xs sm:text-sm">
+              <div className="flex justify-between items-center text-slate-600">
+                <span>Subtotal Servicios (Afectos IGV):</span>
+                <span className="font-semibold text-slate-800 text-right">{formatCurrency(liveTaxablePen, "PEN")}</span>
+              </div>
+              <div className="flex justify-between items-center text-purple-700 font-bold">
+                <span>IGV (18% Ley Peruana):</span>
+                <span className="text-right">{formatCurrency(liveIgvPen, "PEN")}</span>
+              </div>
+              <div className="flex justify-between items-center text-slate-600">
+                <span>Subtotal Reembolsos (Inafectos):</span>
+                <span className="font-semibold text-slate-800 text-right">{formatCurrency(liveNonTaxablePen, "PEN")}</span>
+              </div>
+              <div className="flex justify-between items-center pt-2 border-t border-purple-200">
+                <span className="font-black text-slate-900 text-sm sm:text-base">TOTAL A PAGAR PEN:</span>
+                <span className="font-black text-purple-700 text-lg sm:text-xl text-right">{formatCurrency(liveGrandTotalPen, "PEN")}</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
