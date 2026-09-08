@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Link2, Copy, Check, FileText, Download, Trash2, UploadCloud, ShieldCheck, UserCheck, AlertCircle, FileUp, CheckCircle2, Loader2 } from "lucide-react";
+import { Link2, Copy, Check, FileText, Download, Eye, Trash2, UploadCloud, ShieldCheck, UserCheck, AlertCircle, FileUp, CheckCircle2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -300,20 +300,35 @@ export function BrokerDocumentSection({
                   </p>
                 </div>
 
-                <div className="pt-2 border-t flex items-center justify-between">
-                  <a
-                    href={doc.fileUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 hover:text-blue-800 hover:underline"
-                  >
-                    <Download className="h-3.5 w-3.5" /> Descargar
-                  </a>
+                <div className="pt-2 border-t flex items-center justify-between gap-1">
+                  <div className="flex items-center gap-2">
+                    <a
+                      href={doc.fileUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-800 hover:underline"
+                      title="Ver Online"
+                    >
+                      <Eye className="h-3.5 w-3.5" /> Ver Online
+                    </a>
+
+                    <a
+                      href={doc.fileUrl}
+                      download={doc.name}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-xs font-semibold text-slate-600 hover:text-slate-800 hover:underline"
+                      title="Descargar Archivo"
+                    >
+                      <Download className="h-3.5 w-3.5" /> Descargar
+                    </a>
+                  </div>
 
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => handleDelete(doc.id)}
+                    title="Borrar documento"
                     className="text-red-500 hover:bg-red-50 hover:text-red-600 h-7 w-7 p-0"
                   >
                     <Trash2 className="h-3.5 w-3.5" />

@@ -138,15 +138,24 @@ export async function emitInvoiceAction(liquidationId: string) {
 
   // Automatically insert invoice PDF document into Operation Shared Portal
   if (result.pdfUrl) {
-    await prisma.document.create({
-      data: {
+    const existingDoc = await prisma.document.findFirst({
+      where: {
         operationId: liquidation.operationId,
-        name: `Factura SUNAT (${result.invoiceNumber})`,
-        fileUrl: result.pdfUrl,
-        documentType: "LIQUIDACION",
-        uploadedBy: "BROKER",
+        name: { contains: result.invoiceNumber },
       },
     });
+
+    if (!existingDoc) {
+      await prisma.document.create({
+        data: {
+          operationId: liquidation.operationId,
+          name: `Factura Electrónica SUNAT (${result.invoiceNumber})`,
+          fileUrl: result.pdfUrl,
+          documentType: "LIQUIDACION",
+          uploadedBy: "BROKER",
+        },
+      });
+    }
 
     // Also mark operation status as LIQUIDADO
     await prisma.operation.update({
@@ -155,8 +164,16 @@ export async function emitInvoiceAction(liquidationId: string) {
     });
   }
 
+  const operation = await prisma.operation.findUnique({
+    where: { id: liquidation.operationId },
+    include: { quotation: true },
+  });
+
   revalidatePath(`/liquidations/${liquidationId}`);
   revalidatePath(`/operations/${liquidation.operationId}`);
+  if (operation?.quotation?.clientId) {
+    revalidatePath(`/clients/${operation.quotation.clientId}`);
+  }
 
   return {
     success: true,
@@ -196,8 +213,36 @@ export async function generateReceiptAction(liquidationId: string) {
     },
   });
 
+  // Automatically register Recibo Interno in Operation Document Repository
+  const existingDoc = await prisma.document.findFirst({
+    where: {
+      operationId: liquidation.operationId,
+      name: { contains: receiptNumber },
+    },
+  });
+
+  if (!existingDoc) {
+    await prisma.document.create({
+      data: {
+        operationId: liquidation.operationId,
+        name: `Recibo Interno de Reembolso (${receiptNumber})`,
+        fileUrl: `/liquidations/${liquidationId}`,
+        documentType: "LIQUIDACION",
+        uploadedBy: "BROKER",
+      },
+    });
+  }
+
+  const operation = await prisma.operation.findUnique({
+    where: { id: liquidation.operationId },
+    include: { quotation: true },
+  });
+
   revalidatePath(`/liquidations/${liquidationId}`);
   revalidatePath(`/operations/${liquidation.operationId}`);
+  if (operation?.quotation?.clientId) {
+    revalidatePath(`/clients/${operation.quotation.clientId}`);
+  }
 
   return { success: true, receiptNumber };
 }

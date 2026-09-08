@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { UploadCloud, FileText, Download, ShieldCheck, UserCheck, Anchor, AlertCircle, CheckCircle2, FileUp, Loader2, X } from "lucide-react";
+import { UploadCloud, FileText, Download, Eye, ShieldCheck, UserCheck, Anchor, AlertCircle, CheckCircle2, FileUp, Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -204,16 +204,27 @@ export function ClientDocumentPortal({
                     <h4 className="font-semibold text-slate-900 text-sm truncate">{doc.name}</h4>
                     <p className="text-[11px] text-slate-400">Fecha: {formatDate(doc.uploadedAt)}</p>
                   </div>
-                  <a
-                    href={doc.fileUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="shrink-0"
-                  >
-                    <Button size="sm" className="bg-blue-600 hover:bg-blue-500 text-white font-medium text-xs">
-                      <Download className="mr-1.5 h-3.5 w-3.5" /> Descargar
-                    </Button>
-                  </a>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <a
+                      href={doc.fileUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <Button size="sm" variant="outline" className="border-blue-200 text-blue-700 hover:bg-blue-50 font-medium text-xs">
+                        <Eye className="mr-1 h-3.5 w-3.5" /> Ver Online
+                      </Button>
+                    </a>
+                    <a
+                      href={doc.fileUrl}
+                      download={doc.name}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <Button size="sm" className="bg-blue-600 hover:bg-blue-500 text-white font-medium text-xs">
+                        <Download className="mr-1 h-3.5 w-3.5" /> Descargar
+                      </Button>
+                    </a>
+                  </div>
                 </div>
               ))}
             </div>

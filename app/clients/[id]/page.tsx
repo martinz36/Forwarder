@@ -32,6 +32,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EditClientDialog } from "@/components/edit-client-dialog";
 import { ClientNotesSection } from "@/components/client-notes-section";
+import { ClientDocumentsRepository } from "@/components/client-documents-repository";
 
 export const dynamic = "force-dynamic";
 
@@ -50,6 +51,9 @@ export default async function ClientDetailPage({ params }: ClientDetailPageProps
           operation: {
             include: {
               liquidation: true,
+              documents: {
+                orderBy: { uploadedAt: "desc" },
+              },
             },
           },
         },
@@ -85,6 +89,16 @@ export default async function ClientDetailPage({ params }: ClientDetailPageProps
       quotationCode: op.quotationCode,
       blNumber: op.blNumber,
     }));
+
+  const allClientDocuments = operations
+    .flatMap((op) =>
+      (op.documents || []).map((doc) => ({
+        ...doc,
+        operationCode: op.quotationCode,
+        blNumber: op.blNumber,
+      }))
+    )
+    .sort((a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime());
 
   // KPI Calculations
   const activeOpsCount = activeOperations.length;
@@ -402,6 +416,9 @@ export default async function ClientDetailPage({ params }: ClientDetailPageProps
               </div>
             )}
           </div>
+
+          {/* Block C: Integrated Client Document Repository */}
+          <ClientDocumentsRepository documents={allClientDocuments} />
         </div>
 
         {/* Right Column (1 Col wide on Desktop) */}
