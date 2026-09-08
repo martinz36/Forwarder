@@ -31,6 +31,99 @@ interface QuotationFormProps {
   concepts: ConceptOption[];
 }
 
+function ConceptSearchInput({
+  index,
+  register,
+  setValue,
+  concepts,
+  errors,
+  handleSelectConcept,
+  placeholder = "Escribe cualquier concepto libre...",
+}: {
+  index: number;
+  register: any;
+  setValue: any;
+  concepts: ConceptOption[];
+  errors: any;
+  handleSelectConcept: (index: number, conceptName: string) => void;
+  placeholder?: string;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [filterQuery, setFilterQuery] = useState("");
+
+  const filteredConcepts = concepts.filter((c) =>
+    c.name.toLowerCase().includes(filterQuery.toLowerCase())
+  );
+
+  return (
+    <div className="relative w-full">
+      <div className="flex items-center gap-1.5">
+        <Input
+          placeholder={placeholder}
+          className="h-8 text-xs font-medium w-full"
+          {...register(`items.${index}.description` as const, {
+            onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+              setFilterQuery(e.target.value);
+            },
+          })}
+          onFocus={() => setIsOpen(true)}
+          onBlur={() => setTimeout(() => setIsOpen(false), 200)}
+        />
+        {concepts.length > 0 && (
+          <button
+            type="button"
+            tabIndex={-1}
+            onClick={() => setIsOpen((prev) => !prev)}
+            className="h-8 px-2 text-[11px] font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded hover:bg-blue-100 shrink-0 flex items-center gap-1 cursor-pointer transition-colors"
+            title="Ver catálogo de plantillas"
+          >
+            ⚡ Catálogo
+          </button>
+        )}
+      </div>
+
+      {/* Floating Dropdown Suggestion List */}
+      {isOpen && filteredConcepts.length > 0 && (
+        <div className="absolute z-50 left-0 right-0 mt-1 max-h-48 overflow-y-auto bg-white border border-slate-200 rounded-lg shadow-xl divide-y divide-slate-100">
+          <div className="p-1.5 bg-slate-50 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+            Plantillas del Catálogo (Clic para autocompletar)
+          </div>
+          {filteredConcepts.map((c) => (
+            <button
+              key={c.id}
+              type="button"
+              onMouseDown={(e) => {
+                e.preventDefault(); // prevent blur before click registers
+                handleSelectConcept(index, c.name);
+                setIsOpen(false);
+              }}
+              className="w-full text-left px-3 py-2 hover:bg-blue-50 transition-colors flex items-center justify-between text-xs cursor-pointer"
+            >
+              <div>
+                <span className="font-semibold text-slate-800">{c.name}</span>
+                <span className="text-[10px] text-slate-400 ml-2">
+                  {c.isTaxable ? "Afecto 18%" : "Inafecto"}
+                </span>
+              </div>
+              <div className="text-right shrink-0 ml-2">
+                <span className="font-bold text-blue-600">
+                  {c.defaultCurrency === "PEN" ? "S/" : "$"} {c.defaultPrice ?? 0}
+                </span>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {errors.items?.[index]?.description && (
+        <p className="text-[11px] text-red-500 font-medium mt-1">
+          {errors.items[index]?.description?.message}
+        </p>
+      )}
+    </div>
+  );
+}
+
 export function QuotationForm({ clients, concepts }: QuotationFormProps) {
   const [isPending, startTransition] = useTransition();
   const [serverError, setServerError] = useState<string | null>(null);
@@ -115,25 +208,25 @@ export function QuotationForm({ clients, concepts }: QuotationFormProps) {
 
   const liveIgvPen = Number((liveTaxablePen * 0.18).toFixed(2));
   const liveTotalTaxablePen = Number((liveTaxablePen + liveIgvPen).toFixed(2));
-  const liveGrandTotalPen = Number((liveTotalTaxablePen + liveNonTaxablePen).toFixed(2));
+  const liveGrandTotalPen = Number((liveTotalTaxablePen + liveIgvPen).toFixed(2));
 
   const marginUsdPct = liveSaleUsd > 0 ? ((liveProfitUsd / liveSaleUsd) * 100).toFixed(1) : "0.0";
   const marginPenPct = liveSalePen > 0 ? ((liveProfitPen / liveSalePen) * 100).toFixed(1) : "0.0";
 
   function handleSelectConcept(index: number, conceptName: string) {
-    setValue(`items.${index}.description`, conceptName);
+    setValue(`items.${index}.description`, conceptName, { shouldValidate: true, shouldDirty: true });
     const matched = concepts.find((c) => c.name === conceptName);
     if (matched) {
       if (matched.defaultCurrency === "PEN" || matched.defaultCurrency === "USD") {
-        setValue(`items.${index}.currency`, matched.defaultCurrency as "USD" | "PEN");
+        setValue(`items.${index}.currency`, matched.defaultCurrency as "USD" | "PEN", { shouldValidate: true, shouldDirty: true });
       }
       if (matched.defaultPrice !== null && matched.defaultPrice !== undefined) {
-        setValue(`items.${index}.unitPrice`, matched.defaultPrice);
+        setValue(`items.${index}.unitPrice`, matched.defaultPrice, { shouldValidate: true, shouldDirty: true });
         // Default unitCost estimate at 65% of price if unspecified
-        setValue(`items.${index}.unitCost`, Number((matched.defaultPrice * 0.65).toFixed(2)));
+        setValue(`items.${index}.unitCost`, Number((matched.defaultPrice * 0.65).toFixed(2)), { shouldValidate: true, shouldDirty: true });
       }
       if (matched.isTaxable !== undefined) {
-        setValue(`items.${index}.isTaxable`, matched.isTaxable);
+        setValue(`items.${index}.isTaxable`, matched.isTaxable, { shouldValidate: true, shouldDirty: true });
       }
     }
   }
@@ -234,7 +327,7 @@ export function QuotationForm({ clients, concepts }: QuotationFormProps) {
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-bold text-slate-900">Conceptos y Costos Operativos</h2>
           <span className="text-xs text-slate-500 font-medium hidden sm:inline">
-            Escribe directamente cualquier concepto libre o selecciona una plantilla del catálogo
+            Escribe directamente cualquier concepto libre o haz clic en ⚡ Catálogo para autocompletar
           </span>
         </div>
 
@@ -277,38 +370,16 @@ export function QuotationForm({ clients, concepts }: QuotationFormProps) {
                       {index + 1}
                     </td>
 
-                    {/* Free-text Concept Input + Smart Catalog Dropdown */}
+                    {/* Free-text Concept Input + Smart Catalog Suggestions */}
                     <td className="py-2 px-3">
-                      <div className="flex items-center gap-1.5">
-                        <Input
-                          placeholder="Escribe cualquier concepto o servicio..."
-                          className="h-8 text-xs font-medium w-full"
-                          {...register(`items.${index}.description` as const)}
-                        />
-                        {concepts.length > 0 && (
-                          <select
-                            className="text-[11px] h-8 text-blue-700 bg-blue-50 border border-blue-200 rounded px-1.5 font-semibold cursor-pointer shrink-0 max-w-[130px]"
-                            onChange={(e) => {
-                              if (e.target.value) {
-                                handleSelectConcept(index, e.target.value);
-                              }
-                            }}
-                            value=""
-                          >
-                            <option value="" disabled>⚡ Catálogo...</option>
-                            {concepts.map((c) => (
-                              <option key={c.id} value={c.name}>
-                                {c.name}
-                              </option>
-                            ))}
-                          </select>
-                        )}
-                      </div>
-                      {errors.items?.[index]?.description && (
-                        <p className="text-[11px] text-red-500 font-medium mt-1">
-                          {errors.items[index]?.description?.message}
-                        </p>
-                      )}
+                      <ConceptSearchInput
+                        index={index}
+                        register={register}
+                        setValue={setValue}
+                        concepts={concepts}
+                        errors={errors}
+                        handleSelectConcept={handleSelectConcept}
+                      />
                     </td>
 
                     {/* Currency */}
@@ -435,27 +506,6 @@ export function QuotationForm({ clients, concepts }: QuotationFormProps) {
                       Línea #{index + 1}
                     </span>
                   </div>
-
-                  {concepts.length > 0 && (
-                    <select
-                      className="text-xs text-blue-600 bg-blue-50 border border-blue-200 rounded px-2 py-1 cursor-pointer font-medium"
-                      onChange={(e) => {
-                        if (e.target.value) {
-                          handleSelectConcept(index, e.target.value);
-                        }
-                      }}
-                      value=""
-                    >
-                      <option value="" disabled>
-                        ⚡ Cargar del Catálogo...
-                      </option>
-                      {concepts.map((conc) => (
-                        <option key={conc.id} value={conc.name}>
-                          {conc.name} ({conc.defaultCurrency}) - {conc.isTaxable ? "Afecto IGV" : "Inafecto"}
-                        </option>
-                      ))}
-                    </select>
-                  )}
                 </div>
 
                 {/* Mobile-First Stacked Grid */}
@@ -463,15 +513,14 @@ export function QuotationForm({ clients, concepts }: QuotationFormProps) {
                   {/* Concept Description (sm:col-span-3) */}
                   <div className="sm:col-span-3 space-y-1.5">
                     <Label className="text-xs font-semibold text-slate-700">Concepto / Servicio *</Label>
-                    <Input
-                      placeholder="Ej: Flete Internacional, Handling, Visto Bueno..."
-                      {...register(`items.${index}.description` as const)}
+                    <ConceptSearchInput
+                      index={index}
+                      register={register}
+                      setValue={setValue}
+                      concepts={concepts}
+                      errors={errors}
+                      handleSelectConcept={handleSelectConcept}
                     />
-                    {errors.items?.[index]?.description && (
-                      <p className="text-xs text-red-500">
-                        {errors.items[index]?.description?.message}
-                      </p>
-                    )}
                   </div>
 
                   {/* Currency (sm:col-span-2) */}
