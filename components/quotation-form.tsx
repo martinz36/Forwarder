@@ -78,15 +78,21 @@ export function QuotationForm({ clients, concepts }: QuotationFormProps) {
       validUntil: "",
       modality: "IMPORTACIÓN MARÍTIMA",
       incoterm: "EXW",
-      origin: "SHANGHAI - CHINA",
+      origin: "SHANGHAI",
       destination: "CALLAO - PERU",
       shippingType: "Directo",
-      shippingLine: "COSCO / MAERSK",
+      shippingLine: "MAERSK SALTORO Vº.631E",
       frequency: "SEMANAL",
       transitTime: "35 DÍAS APROX.",
+      etd: "13/08/2026",
+      eta: "07/09/2026",
+      blNro: "SHCLL26258216Q",
+      shipper: "Jiaxing Whatz Games Co.,Ltd",
+      mercaderia: "CARGA GENERAL",
+      formaPago: "CONTADO",
       cargoType: "CARGA GENERAL",
-      packagesCount: "10 BULTOS",
-      grossWeight: "305.00 KG",
+      packagesCount: "3 PALETA",
+      grossWeight: "0.96 Ton",
       volume: "2.200 CBM",
       loadType: "LCL / LCL",
       containersCount: "0 X LCL",
@@ -237,7 +243,7 @@ export function QuotationForm({ clients, concepts }: QuotationFormProps) {
 
       const res = await parseQuotationPdfAction(formData);
 
-      // Auto fill metadata fields if present
+      // Auto fill metadata fields matching Pre-Alerta headers
       if (res.metadata.origin) setValue("origin", res.metadata.origin);
       if (res.metadata.destination) setValue("destination", res.metadata.destination);
       if (res.metadata.incoterm) setValue("incoterm", res.metadata.incoterm);
@@ -245,6 +251,12 @@ export function QuotationForm({ clients, concepts }: QuotationFormProps) {
       if (res.metadata.shippingLine) setValue("shippingLine", res.metadata.shippingLine);
       if (res.metadata.frequency) setValue("frequency", res.metadata.frequency);
       if (res.metadata.transitTime) setValue("transitTime", res.metadata.transitTime);
+      if (res.metadata.etd) setValue("etd", res.metadata.etd);
+      if (res.metadata.eta) setValue("eta", res.metadata.eta);
+      if (res.metadata.blNro) setValue("blNro", res.metadata.blNro);
+      if (res.metadata.shipper) setValue("shipper", res.metadata.shipper);
+      if (res.metadata.mercaderia) setValue("mercaderia", res.metadata.mercaderia);
+      if (res.metadata.formaPago) setValue("formaPago", res.metadata.formaPago);
       if (res.metadata.cargoType) setValue("cargoType", res.metadata.cargoType);
       if (res.metadata.packagesCount) setValue("packagesCount", res.metadata.packagesCount);
       if (res.metadata.grossWeight) setValue("grossWeight", res.metadata.grossWeight);
@@ -406,14 +418,69 @@ export function QuotationForm({ clients, concepts }: QuotationFormProps) {
         </div>
       </div>
 
-      {/* Section: Datos del Embarque (Shipment Header Metadata) */}
+      {/* Section: Datos del Embarque y Pre-Alerta (Exact Pre-Alerta document headers) */}
       <div className="rounded-xl border bg-white p-6 shadow-sm space-y-4">
-        <div className="flex items-center gap-2 border-b pb-3 text-slate-900">
-          <Ship className="h-5 w-5 text-blue-600" />
-          <h2 className="text-base font-bold">Datos del Embarque y Operación Logística</h2>
+        <div className="flex items-center justify-between border-b pb-3">
+          <div className="flex items-center gap-2 text-slate-900">
+            <Ship className="h-5 w-5 text-blue-600" />
+            <h2 className="text-base font-bold">Datos del Embarque (Cabecera Pre-Alerta)</h2>
+          </div>
+          <span className="text-xs font-semibold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-md border border-blue-200">
+            Formatos Pre-Alerta 1:1
+          </span>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
+          <div className="space-y-1.5">
+            <Label className="text-xs font-bold text-slate-900">NAVE</Label>
+            <Input placeholder="Ej: MAERSK SALTORO Vº.631E" {...register("shippingLine")} className="h-9 text-xs font-medium" />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs font-bold text-slate-900">LUG. EMBARQUE</Label>
+            <Input placeholder="Ej: SHANGHAI" {...register("origin")} className="h-9 text-xs font-medium" />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs font-bold text-slate-900">E.T.D</Label>
+            <Input placeholder="Ej: 13/08/2026" {...register("etd")} className="h-9 text-xs font-medium" />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs font-bold text-slate-900">E.T.A</Label>
+            <Input placeholder="Ej: 07/09/2026" {...register("eta")} className="h-9 text-xs font-medium" />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs font-bold text-slate-900">BL/Nro</Label>
+            <Input placeholder="Ej: SHCLL26258216Q" {...register("blNro")} className="h-9 text-xs font-medium" />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs font-bold text-slate-900">BULTOS / PALETA</Label>
+            <Input placeholder="Ej: 3 PALETA" {...register("packagesCount")} className="h-9 text-xs font-medium" />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs font-bold text-slate-900">PESO & VOL.</Label>
+            <Input placeholder="Ej: 0.96 Ton" {...register("grossWeight")} className="h-9 text-xs font-medium" />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs font-bold text-slate-900">SHIPPER</Label>
+            <Input placeholder="Ej: Jiaxing Whatz Games Co.,Ltd" {...register("shipper")} className="h-9 text-xs font-medium" />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs font-bold text-slate-900">MERCADERIA</Label>
+            <Input placeholder="Ej: JUEGOS DE MESA" {...register("mercaderia")} className="h-9 text-xs font-medium" />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs font-bold text-slate-900">FORMA DE PAGO</Label>
+            <Input placeholder="Ej: CONTADO" {...register("formaPago")} className="h-9 text-xs font-medium" />
+          </div>
+
           <div className="space-y-1.5">
             <Label className="text-xs font-semibold text-slate-700">Modalidad *</Label>
             <select
@@ -430,12 +497,7 @@ export function QuotationForm({ clients, concepts }: QuotationFormProps) {
 
           <div className="space-y-1.5">
             <Label className="text-xs font-semibold text-slate-700">Incoterm</Label>
-            <Input placeholder="Ej: EXW, FOB, CIF, CFR" {...register("incoterm")} className="h-9 text-xs" />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label className="text-xs font-semibold text-slate-700">Lug. Embarque (Origen)</Label>
-            <Input placeholder="Ej: SHANGHAI - CHINA" {...register("origin")} className="h-9 text-xs" />
+            <Input placeholder="Ej: EXW, FOB, CIF" {...register("incoterm")} className="h-9 text-xs" />
           </div>
 
           <div className="space-y-1.5">
@@ -443,53 +505,8 @@ export function QuotationForm({ clients, concepts }: QuotationFormProps) {
             <Input placeholder="Ej: CALLAO - PERU" {...register("destination")} className="h-9 text-xs" />
           </div>
 
-          <div className="space-y-1.5">
-            <Label className="text-xs font-semibold text-slate-700">Tipo de Envío</Label>
-            <Input placeholder="Ej: Directo / Transbordo" {...register("shippingType")} className="h-9 text-xs" />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label className="text-xs font-semibold text-slate-700">Nave / Vía</Label>
-            <Input placeholder="Ej: MAERSK SALTORO V°.631E" {...register("shippingLine")} className="h-9 text-xs" />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label className="text-xs font-semibold text-slate-700">Frecuencia</Label>
-            <Input placeholder="Ej: SEMANAL" {...register("frequency")} className="h-9 text-xs" />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label className="text-xs font-semibold text-slate-700">E.T.D / E.T.A (Tiempo Tránsito)</Label>
-            <Input placeholder="Ej: ETD: 13/08/2026 - ETA: 07/09/2026" {...register("transitTime")} className="h-9 text-xs" />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label className="text-xs font-semibold text-slate-700">Shipper / Carga</Label>
-            <Input placeholder="Ej: Jiaxing Whatz Games Co.,Ltd" {...register("cargoType")} className="h-9 text-xs" />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label className="text-xs font-semibold text-slate-700">Bultos / Paleta</Label>
-            <Input placeholder="Ej: 3 PALETA / 10 CARTONES" {...register("packagesCount")} className="h-9 text-xs" />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label className="text-xs font-semibold text-slate-700">Peso & Vol.</Label>
-            <Input placeholder="Ej: 0.96 Ton / 2.200 CBM" {...register("grossWeight")} className="h-9 text-xs" />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label className="text-xs font-semibold text-slate-700">Volumen (CBM)</Label>
-            <Input placeholder="Ej: 2.200 CBM" {...register("volume")} className="h-9 text-xs" />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label className="text-xs font-semibold text-slate-700">Tipo Flete / Contenedor</Label>
-            <Input placeholder="Ej: LCL / LCL, FCL / FCL" {...register("loadType")} className="h-9 text-xs" />
-          </div>
-
-          <div className="space-y-1.5 sm:col-span-2 md:col-span-3">
-            <Label className="text-xs font-semibold text-slate-700">Cantidad / Detalle de Contenedores</Label>
+          <div className="space-y-1.5 sm:col-span-3">
+            <Label className="text-xs font-semibold text-slate-700">Contenedor(es) / Tipo Flete</Label>
             <Input placeholder="Ej: 1 X 40'HQ o 0 X LCL" {...register("containersCount")} className="h-9 text-xs" />
           </div>
         </div>

@@ -127,6 +127,12 @@ export default async function QuotationDetailPage({ params }: QuotationDetailPag
     shippingLine: quotation.shippingLine,
     frequency: quotation.frequency,
     transitTime: quotation.transitTime,
+    etd: quotation.etd,
+    eta: quotation.eta,
+    blNro: quotation.blNro,
+    shipper: quotation.shipper,
+    mercaderia: quotation.mercaderia,
+    formaPago: quotation.formaPago,
     cargoType: quotation.cargoType,
     packagesCount: quotation.packagesCount,
     grossWeight: quotation.grossWeight,
@@ -235,64 +241,66 @@ export default async function QuotationDetailPage({ params }: QuotationDetailPag
           </p>
         </div>
 
-        {/* Shipment Metadata Grid (Datos del Embarque) */}
+        {/* Shipment Metadata Grid (Pre-Alerta Exact Headers) */}
         <div className="rounded-xl border bg-slate-50/70 p-5 space-y-3">
           <h3 className="font-bold text-blue-900 text-sm uppercase tracking-wider flex items-center gap-2 border-b border-slate-200 pb-2">
-            <Ship className="h-4 w-4 text-blue-600" /> Datos del Embarque y Operación
+            <Ship className="h-4 w-4 text-blue-600" /> Datos del Embarque (Pre-Alerta Logística)
           </h3>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 text-xs">
             <div>
-              <span className="text-slate-400 font-semibold block uppercase tracking-wider text-[10px]">Lug. Embarque</span>
-              <p className="font-bold text-slate-800">{quotation.origin || "NO ESPECIFICADO"}</p>
+              <span className="text-slate-400 font-bold block uppercase tracking-wider text-[10px]">NAVE</span>
+              <p className="font-bold text-slate-800">{quotation.shippingLine || "-"}</p>
             </div>
             <div>
-              <span className="text-slate-400 font-semibold block uppercase tracking-wider text-[10px]">Puerto / Destino</span>
-              <p className="font-bold text-slate-800">{quotation.destination || "CALLAO - PERU"}</p>
+              <span className="text-slate-400 font-bold block uppercase tracking-wider text-[10px]">LUG. EMBARQUE</span>
+              <p className="font-bold text-slate-800">{quotation.origin || "-"}</p>
             </div>
             <div>
-              <span className="text-slate-400 font-semibold block uppercase tracking-wider text-[10px]">Tipo de Envío</span>
-              <p className="font-semibold text-slate-800">{quotation.shippingType || "Directo"}</p>
+              <span className="text-slate-400 font-bold block uppercase tracking-wider text-[10px]">E.T.D</span>
+              <p className="font-semibold text-slate-800">{quotation.etd || "-"}</p>
             </div>
             <div>
-              <span className="text-slate-400 font-semibold block uppercase tracking-wider text-[10px]">Nave / Vía</span>
-              <p className="font-semibold text-slate-800">{quotation.shippingLine || "-"}</p>
+              <span className="text-slate-400 font-bold block uppercase tracking-wider text-[10px]">E.T.A</span>
+              <p className="font-semibold text-slate-800">{quotation.eta || "-"}</p>
+            </div>
+            <div>
+              <span className="text-slate-400 font-bold block uppercase tracking-wider text-[10px]">BL/NRO</span>
+              <p className="font-bold text-slate-800">{quotation.blNro || "-"}</p>
             </div>
 
             <div>
-              <span className="text-slate-400 font-semibold block uppercase tracking-wider text-[10px]">Shipper / Carga</span>
-              <p className="font-semibold text-slate-800">{quotation.cargoType || "CARGA GENERAL"}</p>
-            </div>
-            <div>
-              <span className="text-slate-400 font-semibold block uppercase tracking-wider text-[10px]">Bultos / Paleta</span>
+              <span className="text-slate-400 font-bold block uppercase tracking-wider text-[10px]">BULTOS / PALETA</span>
               <p className="font-semibold text-slate-800">{quotation.packagesCount || "-"}</p>
             </div>
             <div>
-              <span className="text-slate-400 font-semibold block uppercase tracking-wider text-[10px]">Peso & Vol.</span>
-              <p className="font-semibold text-slate-800">
-                {quotation.grossWeight || "-"} {quotation.volume ? `/ ${quotation.volume}` : ""}
-              </p>
+              <span className="text-slate-400 font-bold block uppercase tracking-wider text-[10px]">PESO & VOL.</span>
+              <p className="font-semibold text-slate-800">{quotation.grossWeight || "-"}</p>
             </div>
             <div>
-              <span className="text-slate-400 font-semibold block uppercase tracking-wider text-[10px]">Tipo Flete / Contenedor</span>
-              <p className="font-semibold text-slate-800">{quotation.loadType || "-"}</p>
+              <span className="text-slate-400 font-bold block uppercase tracking-wider text-[10px]">SHIPPER</span>
+              <p className="font-semibold text-slate-800">{quotation.shipper || "-"}</p>
+            </div>
+            <div>
+              <span className="text-slate-400 font-bold block uppercase tracking-wider text-[10px]">MERCADERIA</span>
+              <p className="font-semibold text-slate-800">{quotation.mercaderia || quotation.cargoType || "-"}</p>
+            </div>
+            <div>
+              <span className="text-slate-400 font-bold block uppercase tracking-wider text-[10px]">FORMA DE PAGO</span>
+              <p className="font-semibold text-slate-800">{quotation.formaPago || "-"}</p>
             </div>
 
             <div>
-              <span className="text-slate-400 font-semibold block uppercase tracking-wider text-[10px]">Incoterm</span>
+              <span className="text-slate-400 font-semibold block uppercase tracking-wider text-[10px]">INCOTERM</span>
               <p className="font-bold text-blue-700">{quotation.incoterm || "EXW"}</p>
             </div>
             <div>
-              <span className="text-slate-400 font-semibold block uppercase tracking-wider text-[10px]">Frecuencia</span>
-              <p className="font-semibold text-slate-800">{quotation.frequency || "-"}</p>
+              <span className="text-slate-400 font-semibold block uppercase tracking-wider text-[10px]">PUERTO / DESTINO</span>
+              <p className="font-semibold text-slate-800">{quotation.destination || "CALLAO - PERU"}</p>
             </div>
-            <div>
-              <span className="text-slate-400 font-semibold block uppercase tracking-wider text-[10px]">E.T.D / E.T.A</span>
-              <p className="font-semibold text-slate-800">{quotation.transitTime || "APROX."}</p>
-            </div>
-            <div>
-              <span className="text-slate-400 font-semibold block uppercase tracking-wider text-[10px]">BL / Nro</span>
-              <p className="font-semibold text-slate-800">{quotation.containersCount || "-"}</p>
+            <div className="col-span-2">
+              <span className="text-slate-400 font-semibold block uppercase tracking-wider text-[10px]">CONTENEDOR(ES) / FLETE</span>
+              <p className="font-semibold text-slate-800">{quotation.containersCount || quotation.loadType || "-"}</p>
             </div>
           </div>
         </div>

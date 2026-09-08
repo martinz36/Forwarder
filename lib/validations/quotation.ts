@@ -14,7 +14,7 @@ export const quotationSchema = z.object({
   clientId: z.string().min(1, "Debes seleccionar un cliente."),
   validUntil: z.string().optional(),
 
-  // Shipment metadata fields
+  // Shipment metadata fields & Pre-Alerta document headers
   modality: z.string().optional(),
   incoterm: z.string().optional(),
   origin: z.string().optional(),
@@ -23,6 +23,12 @@ export const quotationSchema = z.object({
   shippingLine: z.string().optional(),
   frequency: z.string().optional(),
   transitTime: z.string().optional(),
+  etd: z.string().optional(),
+  eta: z.string().optional(),
+  blNro: z.string().optional(),
+  shipper: z.string().optional(),
+  mercaderia: z.string().optional(),
+  formaPago: z.string().optional(),
   cargoType: z.string().optional(),
   packagesCount: z.string().optional(),
   grossWeight: z.string().optional(),

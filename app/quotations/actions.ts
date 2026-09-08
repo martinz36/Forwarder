@@ -71,6 +71,12 @@ export async function createQuotationAction(data: QuotationFormValues) {
         shippingLine: validated.shippingLine || null,
         frequency: validated.frequency || null,
         transitTime: validated.transitTime || null,
+        etd: validated.etd || null,
+        eta: validated.eta || null,
+        blNro: validated.blNro || null,
+        shipper: validated.shipper || null,
+        mercaderia: validated.mercaderia || null,
+        formaPago: validated.formaPago || null,
         cargoType: validated.cargoType || null,
         packagesCount: validated.packagesCount || null,
         grossWeight: validated.grossWeight || null,
@@ -104,7 +110,7 @@ export async function parseQuotationPdfAction(formData: FormData) {
   const { text: textPages } = await extractText(arrayBuffer);
   const text = Array.isArray(textPages) ? textPages.join("\n") : textPages || "";
 
-  // 1. Extract Metadata matching exact Pre-Alerta Header Labels
+  // 1. Extract Metadata matching exact Pre-Alerta Header Labels from PDF
   const originMatch = text.match(/(?:LUG\.\s*EMBARQUE|LUGAR EMBARQUE|ORIGEN)\s*:\s*([^\n\r]+)/i);
   const naveMatch = text.match(/(?:NAVE|VESSEL|L[Íi]NEA MAR[Íi]TIMA)\s*:\s*([^\n\r]+)/i);
   const etdMatch = text.match(/(?:E\.T\.D|ETD)\s*:\s*([^\n\r]+)/i);
@@ -113,6 +119,8 @@ export async function parseQuotationPdfAction(formData: FormData) {
   const bultosMatch = text.match(/(?:BULTOS|PALETA|PACKAGES)\s*:\s*([^\n\r]+)/i);
   const pesoVolMatch = text.match(/(?:PESO\s*&\s*VOL\.|PESO Y VOL\.|PESO|VOLUMEN)\s*:\s*([^\n\r]+)/i);
   const shipperMatch = text.match(/(?:SHIPPER|PROVEEDOR)\s*:\s*([^\n\r]+)/i);
+  const mercaderiaMatch = text.match(/(?:MERCADERIA|MERCADER[IÍ]A)\s*:\s*([^\n\r]+)/i);
+  const formaPagoMatch = text.match(/(?:FORMA DE PAGO|FORMA PAGO|PAGO)\s*:\s*([^\n\r]+)/i);
   const incotermMatch = text.match(/(?:Incoterm|MODALIDAD)\s*:\s*([^\n\r]+)/i) || text.match(/\b(EXW|FOB|CFR|CIF|DDP|FCA)\b/i);
 
   // Separate Peso & Vol if combined (e.g. "0.96 Ton")
@@ -128,6 +136,9 @@ export async function parseQuotationPdfAction(formData: FormData) {
       grossWeight = rawPV;
     }
   }
+
+  // Clean ETA (e.g. strip trailing "Hora:")
+  const rawEta = etaMatch ? etaMatch[1].replace(/\s*Hora:.*/i, "").trim() : "";
 
   // 2. Line Items Parsing with Section Context Tracking
   const items: Array<{
@@ -236,13 +247,19 @@ export async function parseQuotationPdfAction(formData: FormData) {
       shippingType: "Directo",
       shippingLine: naveMatch ? naveMatch[1].trim() : "",
       frequency: "SEMANAL",
-      transitTime: etdMatch && etaMatch ? `ETD: ${etdMatch[1].trim()} - ETA: ${etaMatch[1].trim()}` : "35 DÍAS APROX.",
-      cargoType: shipperMatch ? `SHIPPER: ${shipperMatch[1].trim()}` : "CARGA GENERAL",
+      transitTime: etdMatch && etaMatch ? `ETD: ${etdMatch[1].trim()} - ETA: ${rawEta}` : "",
+      etd: etdMatch ? etdMatch[1].trim() : "",
+      eta: rawEta,
+      blNro: blMatch ? blMatch[1].trim() : "",
+      shipper: shipperMatch ? shipperMatch[1].trim() : "",
+      mercaderia: mercaderiaMatch ? mercaderiaMatch[1].trim() : "",
+      formaPago: formaPagoMatch ? formaPagoMatch[1].trim() : "CONTADO",
+      cargoType: mercaderiaMatch ? mercaderiaMatch[1].trim() : "CARGA GENERAL",
       packagesCount: bultosMatch ? bultosMatch[1].trim() : "",
       grossWeight: grossWeight || "",
       volume: volume || "",
       loadType: "LCL / LCL",
-      containersCount: blMatch ? blMatch[1].trim() : "",
+      containersCount: "",
       notes: "- TARIFA HASTA 5 CBM, EN CASO DE SUPERAR SE VOLVERÁ A COTIZAR.\n- VERIFICAR LA TARIFA VIGENTE SEGÚN FECHA DE ZARPE.",
     },
     items,

@@ -24,6 +24,12 @@ export interface QuotationPdfData {
   shippingLine?: string | null;
   frequency?: string | null;
   transitTime?: string | null;
+  etd?: string | null;
+  eta?: string | null;
+  blNro?: string | null;
+  shipper?: string | null;
+  mercaderia?: string | null;
+  formaPago?: string | null;
   cargoType?: string | null;
   packagesCount?: string | null;
   grossWeight?: string | null;
@@ -335,49 +341,57 @@ export function QuotationPDF({ data }: { data: QuotationPdfData }) {
           </Text>
         </View>
 
-        {/* Shipment Info Grid */}
+        {/* Shipment Info Grid matching exact Pre-Alerta headers */}
         <View style={styles.shipmentGrid}>
-          <Text style={styles.shipmentTitle}>Datos del Embarque</Text>
+          <Text style={styles.shipmentTitle}>Datos del Embarque (Pre-Alerta Logística)</Text>
           <View style={styles.gridRow}>
             <View style={styles.gridCell}>
-              <Text style={styles.gridLabel}>Lug. Embarque:</Text>
-              <Text style={styles.gridVal}>{data.origin || "NO ESPECIFICADO"}</Text>
-            </View>
-            <View style={styles.gridCell}>
-              <Text style={styles.gridLabel}>Nave / Vía:</Text>
+              <Text style={styles.gridLabel}>NAVE:</Text>
               <Text style={styles.gridVal}>{data.shippingLine || "-"}</Text>
             </View>
-          </View>
-          <View style={styles.gridRow}>
             <View style={styles.gridCell}>
-              <Text style={styles.gridLabel}>Destino:</Text>
-              <Text style={styles.gridVal}>{data.destination || "CALLAO - PERU"}</Text>
-            </View>
-            <View style={styles.gridCell}>
-              <Text style={styles.gridLabel}>E.T.D / E.T.A:</Text>
-              <Text style={styles.gridVal}>{data.transitTime || "APROX."}</Text>
+              <Text style={styles.gridLabel}>LUG. EMBARQUE:</Text>
+              <Text style={styles.gridVal}>{data.origin || "-"}</Text>
             </View>
           </View>
           <View style={styles.gridRow}>
             <View style={styles.gridCell}>
-              <Text style={styles.gridLabel}>Shipper / Carga:</Text>
-              <Text style={styles.gridVal}>{data.cargoType || "CARGA GENERAL"}</Text>
+              <Text style={styles.gridLabel}>E.T.D:</Text>
+              <Text style={styles.gridVal}>{data.etd || "-"}</Text>
             </View>
             <View style={styles.gridCell}>
-              <Text style={styles.gridLabel}>BL / Nro:</Text>
-              <Text style={styles.gridVal}>{data.containersCount || "-"}</Text>
+              <Text style={styles.gridLabel}>E.T.A:</Text>
+              <Text style={styles.gridVal}>{data.eta || "-"}</Text>
             </View>
           </View>
           <View style={styles.gridRow}>
             <View style={styles.gridCell}>
-              <Text style={styles.gridLabel}>Peso & Vol.:</Text>
-              <Text style={styles.gridVal}>
-                {data.grossWeight || "-"} {data.volume ? `/ ${data.volume}` : ""}
-              </Text>
+              <Text style={styles.gridLabel}>BL/NRO:</Text>
+              <Text style={styles.gridVal}>{data.blNro || "-"}</Text>
             </View>
             <View style={styles.gridCell}>
-              <Text style={styles.gridLabel}>Tipo Flete/Cont:</Text>
-              <Text style={styles.gridVal}>{data.loadType || "-"}</Text>
+              <Text style={styles.gridLabel}>BULTOS / PALETA:</Text>
+              <Text style={styles.gridVal}>{data.packagesCount || "-"}</Text>
+            </View>
+          </View>
+          <View style={styles.gridRow}>
+            <View style={styles.gridCell}>
+              <Text style={styles.gridLabel}>PESO & VOL.:</Text>
+              <Text style={styles.gridVal}>{data.grossWeight || "-"}</Text>
+            </View>
+            <View style={styles.gridCell}>
+              <Text style={styles.gridLabel}>SHIPPER:</Text>
+              <Text style={styles.gridVal}>{data.shipper || "-"}</Text>
+            </View>
+          </View>
+          <View style={styles.gridRow}>
+            <View style={styles.gridCell}>
+              <Text style={styles.gridLabel}>MERCADERIA:</Text>
+              <Text style={styles.gridVal}>{data.mercaderia || data.cargoType || "-"}</Text>
+            </View>
+            <View style={styles.gridCell}>
+              <Text style={styles.gridLabel}>FORMA DE PAGO:</Text>
+              <Text style={styles.gridVal}>{data.formaPago || "-"}</Text>
             </View>
           </View>
           <View style={styles.gridRow}>

@@ -80,21 +80,27 @@ model Quotation {
   profitUsd       Float           @default(0)
   profitPen       Float           @default(0)
 
-  // Shipment metadata fields
-  modality        String?         @default("IMPORTACION_MARITIMA")
+  // Pre-Alerta exact headers & Shipment metadata fields
+  modality        String?         @default("IMPORTACIÓN MARÍTIMA")
   incoterm        String?
-  origin          String?
-  destination     String?
-  shippingType    String?
-  shippingLine    String?
+  origin          String?         // LUG. EMBARQUE
+  destination     String?         // PUERTO / DESTINO
+  shippingType    String?         // TIPO DE ENVÍO
+  shippingLine    String?         // NAVE
   frequency       String?
-  transitTime     String?
+  transitTime     String?         // TIEMPO TRÁNSITO
+  etd             String?         // E.T.D
+  eta             String?         // E.T.A
+  blNro           String?         // BL/Nro
+  shipper         String?         // SHIPPER
+  mercaderia      String?         // MERCADERIA
+  formaPago       String?         // FORMA DE PAGO
   cargoType       String?
-  packagesCount   String?
-  grossWeight     String?
+  packagesCount   String?         // BULTOS / PALETA
+  grossWeight     String?         // PESO & VOL.
   volume          String?
   loadType        String?
-  containersCount String?
+  containersCount String?         // CONTENEDOR(ES)
   notes           String?         @db.Text
 
   items           QuotationItem[]
