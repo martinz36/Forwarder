@@ -323,7 +323,7 @@ export function QuotationForm({ clients, concepts, initialData }: QuotationFormP
           <div>
             <h2 className="text-lg font-bold text-slate-900">Conceptos y Costos Operativos</h2>
             <p className="text-xs text-slate-500 font-medium">
-              Selecciona un concepto del catálogo o elige ➕ + Crear nuevo concepto para redactar uno nuevo
+              Selecciona un concepto del catálogo o crea uno nuevo. Todos los costos y precios son 100% editables para cada cotización.
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -416,7 +416,7 @@ export function QuotationForm({ clients, concepts, initialData }: QuotationFormP
                         type="number"
                         step="0.01"
                         min="0"
-                        className="h-8 text-xs text-right font-medium bg-slate-50/50"
+                        className="h-8 text-xs text-right font-semibold bg-white border-slate-300 focus:border-blue-500"
                         {...register(`items.${index}.unitCost` as const, { valueAsNumber: true })}
                       />
                     </td>
@@ -543,12 +543,12 @@ export function QuotationForm({ clients, concepts, initialData }: QuotationFormP
 
                   {/* Unit Cost (sm:col-span-2) */}
                   <div className="sm:col-span-2 space-y-1.5">
-                    <Label className="text-xs font-semibold text-slate-700">Costo Unit.</Label>
+                    <Label className="text-xs font-semibold text-slate-700">Costo Unit. *</Label>
                     <Input
                       type="number"
                       step="0.01"
                       min="0"
-                      className="text-right font-medium bg-slate-50/50"
+                      className="text-right font-semibold bg-white border-slate-300 focus:border-blue-500"
                       {...register(`items.${index}.unitCost` as const, { valueAsNumber: true })}
                     />
                   </div>
