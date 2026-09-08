@@ -24,23 +24,33 @@ interface ConceptData {
 }
 
 interface CreateConceptDialogProps {
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
   conceptToEdit?: (Partial<ConceptData> & { id?: string }) | null;
   onSuccess?: (created: ConceptData) => void;
   triggerText?: string;
   triggerVariant?: "default" | "outline" | "secondary" | "ghost";
   triggerSize?: "default" | "sm" | "lg" | "icon";
   triggerClassName?: string;
+  showTrigger?: boolean;
 }
 
 export function CreateConceptDialog({
+  open: controlledOpen,
+  onOpenChange: setControlledOpen,
   conceptToEdit,
   onSuccess,
   triggerText,
   triggerVariant = "default",
   triggerSize = "sm",
   triggerClassName,
+  showTrigger = true,
 }: CreateConceptDialogProps) {
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isControlled = controlledOpen !== undefined;
+  const open = isControlled ? controlledOpen : internalOpen;
+  const setOpen = isControlled ? setControlledOpen! : setInternalOpen;
+
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
@@ -104,21 +114,23 @@ export function CreateConceptDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {isEditing ? (
-          <Button variant="outline" size="sm" className="h-8 px-2 text-xs font-semibold text-blue-600 border-blue-200">
-            <Pencil className="h-3.5 w-3.5 mr-1" /> Editar
-          </Button>
-        ) : (
-          <Button
-            variant={triggerVariant}
-            size={triggerSize}
-            className={triggerClassName || "bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs flex items-center gap-1.5 shadow-sm"}
-          >
-            <Plus className="h-4 w-4" /> {triggerText || "Nuevo Concepto"}
-          </Button>
-        )}
-      </DialogTrigger>
+      {showTrigger && (
+        <DialogTrigger asChild>
+          {isEditing ? (
+            <Button variant="outline" size="sm" className="h-8 px-2 text-xs font-semibold text-blue-600 border-blue-200">
+              <Pencil className="h-3.5 w-3.5 mr-1" /> Editar
+            </Button>
+          ) : (
+            <Button
+              variant={triggerVariant}
+              size={triggerSize}
+              className={triggerClassName || "bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs flex items-center gap-1.5 shadow-sm"}
+            >
+              <Plus className="h-4 w-4" /> {triggerText || "Nuevo Concepto"}
+            </Button>
+          )}
+        </DialogTrigger>
+      )}
 
       <DialogContent className="sm:max-w-md bg-white">
         <DialogHeader>

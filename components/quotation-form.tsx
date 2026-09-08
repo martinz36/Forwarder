@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus, Trash2, Calculator, Loader2, ArrowLeft, TrendingUp, DollarSign, Wallet, CheckSquare, Square, Tags } from "lucide-react";
+import { Plus, Trash2, Calculator, Loader2, ArrowLeft, TrendingUp, DollarSign, Wallet, CheckSquare, Square } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,102 +33,52 @@ interface QuotationFormProps {
   initialData?: QuotationFormValues & { id?: string; code?: string };
 }
 
-function ConceptCell({
+function ConceptSelect({
   index,
-  register,
-  setValue,
-  concepts,
-  errors,
+  conceptsList,
   handleSelectConcept,
   currentItem,
+  onRequestCreateNew,
 }: {
   index: number;
-  register: any;
-  setValue: any;
-  concepts: ConceptOption[];
-  errors: any;
+  conceptsList: ConceptOption[];
   handleSelectConcept: (index: number, conceptName: string) => void;
   currentItem: any;
+  onRequestCreateNew: (index: number) => void;
 }) {
-  const [isCustom, setIsCustom] = useState<boolean>(
-    !concepts.some((c) => c.name === currentItem?.description)
-  );
+  const currentDesc = currentItem?.description || "";
+  const hasMatch = conceptsList.some((c) => c.name === currentDesc);
 
   return (
-    <div className="space-y-1.5 py-1">
-      <div className="flex items-center justify-between gap-1">
-        {!isCustom && concepts.length > 0 ? (
-          <select
-            className="text-xs h-8 text-blue-900 bg-blue-50/80 border border-blue-200 rounded px-2 font-semibold cursor-pointer w-full focus:ring-1 focus:ring-blue-500"
-            onChange={(e) => {
-              const val = e.target.value;
-              if (val === "__CUSTOM__") {
-                setIsCustom(true);
-                setValue(`items.${index}.description`, "", { shouldValidate: true, shouldDirty: true });
-              } else if (val) {
-                handleSelectConcept(index, val);
-              }
-            }}
-            value={
-              concepts.some((c) => c.name === currentItem?.description)
-                ? currentItem?.description
-                : ""
-            }
-          >
-            <option value="" disabled>⚡ Seleccionar del Catálogo...</option>
-            {concepts.map((c) => (
-              <option key={c.id} value={c.name}>
-                {c.name} ({c.defaultCurrency === "PEN" ? "S/" : "$"} {c.defaultPrice ?? 0}) - {c.isTaxable ? "Afecto 18%" : "Inafecto"}
-              </option>
-            ))}
-            <option value="__CUSTOM__">✏️ + Escribir concepto libre / personalizado...</option>
-          </select>
-        ) : (
-          <div className="flex items-center gap-1 w-full">
-            <Input
-              placeholder="Escribe el concepto libre o personalizado..."
-              className="h-8 text-xs font-medium w-full border-slate-300 focus:border-blue-500"
-              {...register(`items.${index}.description` as const)}
-            />
-            {concepts.length > 0 && (
-              <button
-                type="button"
-                onClick={() => setIsCustom(false)}
-                className="h-8 px-2 text-[11px] font-bold text-blue-700 bg-blue-50 border border-blue-200 rounded hover:bg-blue-100 shrink-0 cursor-pointer transition-colors"
-                title="Volver a seleccionar del catálogo"
-              >
-                ⚡ Catálogo
-              </button>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* If a catalog item is active, allow quick text customization */}
-      {!isCustom && currentItem?.description && (
-        <div className="flex items-center gap-1.5 pt-0.5">
-          <Input
-            placeholder="Ajustar descripción..."
-            className="h-7 text-[11px] text-slate-700 bg-slate-50/70 border-slate-200 w-full"
-            {...register(`items.${index}.description` as const)}
-          />
-          <button
-            type="button"
-            onClick={() => setIsCustom(true)}
-            className="text-[10px] font-semibold text-slate-500 hover:text-blue-600 underline shrink-0 px-1 cursor-pointer"
-            title="Cambiar a concepto libre"
-          >
-            Modo libre
-          </button>
-        </div>
+    <select
+      className="text-xs h-8 text-slate-800 bg-white border border-input rounded-md px-2.5 font-medium cursor-pointer w-full focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+      onChange={(e) => {
+        const val = e.target.value;
+        if (val === "__CREATE_NEW__") {
+          onRequestCreateNew(index);
+        } else if (val) {
+          handleSelectConcept(index, val);
+        }
+      }}
+      value={hasMatch ? currentDesc : currentDesc ? "__CUSTOM_VAL__" : ""}
+    >
+      <option value="" disabled>
+        ⚡ Seleccionar concepto del catálogo...
+      </option>
+      <option value="__CREATE_NEW__" className="font-bold text-blue-600 bg-blue-50">
+        ➕ + Crear nuevo concepto en catálogo...
+      </option>
+      {conceptsList.map((c) => (
+        <option key={c.id} value={c.name}>
+          {c.name} ({c.defaultCurrency === "PEN" ? "S/" : "$"} {c.defaultPrice ?? 0}) - {c.isTaxable ? "Afecto 18%" : "Inafecto"}
+        </option>
+      ))}
+      {!hasMatch && currentDesc && (
+        <option value="__CUSTOM_VAL__">
+          {currentDesc}
+        </option>
       )}
-
-      {errors.items?.[index]?.description && (
-        <p className="text-[11px] text-red-500 font-medium">
-          {errors.items[index]?.description?.message}
-        </p>
-      )}
-    </div>
+    </select>
   );
 }
 
@@ -136,6 +86,10 @@ export function QuotationForm({ clients, concepts, initialData }: QuotationFormP
   const [isPending, startTransition] = useTransition();
   const [serverError, setServerError] = useState<string | null>(null);
   const [conceptsList, setConceptsList] = useState<ConceptOption[]>(concepts);
+
+  // Dialog State for creating concepts on the fly
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [activeRowIndex, setActiveRowIndex] = useState<number | null>(null);
 
   const isEditing = !!initialData?.id;
 
@@ -153,12 +107,12 @@ export function QuotationForm({ clients, concepts, initialData }: QuotationFormP
       validUntil: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
       items: [
         {
-          description: "Despacho Aduanero (Comisión Agente)",
-          currency: "USD",
-          unitCost: 120,
-          unitPrice: 200,
+          description: concepts[0]?.name || "Despacho Aduanero (Comisión Agente)",
+          currency: (concepts[0]?.defaultCurrency as "USD" | "PEN") || "USD",
+          unitCost: Number(((concepts[0]?.defaultPrice || 200) * 0.65).toFixed(2)),
+          unitPrice: concepts[0]?.defaultPrice || 200,
           quantity: 1,
-          isTaxable: true,
+          isTaxable: concepts[0]?.isTaxable !== false,
         },
       ],
     },
@@ -171,7 +125,7 @@ export function QuotationForm({ clients, concepts, initialData }: QuotationFormP
 
   const watchedItems = watch("items") || [];
 
-  // Live calculations for Summary (Cost, Sale, Profit, Taxable & IGV 18% for USD & PEN)
+  // Live calculations for Summary
   let liveCostUsd = 0;
   let liveSaleUsd = 0;
   let liveTaxableUsd = 0;
@@ -233,7 +187,6 @@ export function QuotationForm({ clients, concepts, initialData }: QuotationFormP
       }
       if (matched.defaultPrice !== null && matched.defaultPrice !== undefined) {
         setValue(`items.${index}.unitPrice`, matched.defaultPrice, { shouldValidate: true, shouldDirty: true });
-        // Default unitCost estimate at 65% of price if unspecified
         setValue(`items.${index}.unitCost`, Number((matched.defaultPrice * 0.65).toFixed(2)), { shouldValidate: true, shouldDirty: true });
       }
       if (matched.isTaxable !== undefined) {
@@ -244,10 +197,17 @@ export function QuotationForm({ clients, concepts, initialData }: QuotationFormP
 
   function handleConceptCreated(created: ConceptOption) {
     setConceptsList((prev) => [...prev, created]);
-    const targetIndex = fields.length - 1;
+    const targetIndex = activeRowIndex !== null ? activeRowIndex : fields.length - 1;
     if (targetIndex >= 0) {
       handleSelectConcept(targetIndex, created.name);
     }
+    setIsCreateDialogOpen(false);
+    setActiveRowIndex(null);
+  }
+
+  function handleRequestCreateNew(index: number) {
+    setActiveRowIndex(index);
+    setIsCreateDialogOpen(true);
   }
 
   function onSubmit(values: QuotationFormValues) {
@@ -267,6 +227,14 @@ export function QuotationForm({ clients, concepts, initialData }: QuotationFormP
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-8 w-full">
+      {/* Controlled Dialog Modal for Concept Creation */}
+      <CreateConceptDialog
+        open={isCreateDialogOpen}
+        onOpenChange={setIsCreateDialogOpen}
+        onSuccess={handleConceptCreated}
+        showTrigger={false}
+      />
+
       {/* Top Action Header Bar */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b pb-4">
         <div>
@@ -355,17 +323,19 @@ export function QuotationForm({ clients, concepts, initialData }: QuotationFormP
           <div>
             <h2 className="text-lg font-bold text-slate-900">Conceptos y Costos Operativos</h2>
             <p className="text-xs text-slate-500 font-medium">
-              Selecciona una plantilla del catálogo o escribe un concepto libre para la operación
+              Selecciona un concepto del catálogo o elige ➕ + Crear nuevo concepto para redactar uno nuevo
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <CreateConceptDialog
-              onSuccess={handleConceptCreated}
-              triggerText="+ Crear en Catálogo"
-              triggerVariant="outline"
-              triggerSize="sm"
-              triggerClassName="border-blue-200 text-blue-700 hover:bg-blue-50 text-xs font-semibold"
-            />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => handleRequestCreateNew(fields.length - 1)}
+              className="border-blue-200 text-blue-700 hover:bg-blue-50 text-xs font-semibold"
+            >
+              <Plus className="h-4 w-4 mr-1" /> Crear en Catálogo
+            </Button>
           </div>
         </div>
 
@@ -373,7 +343,7 @@ export function QuotationForm({ clients, concepts, initialData }: QuotationFormP
           <p className="text-xs font-medium text-red-500">{errors.items.message}</p>
         )}
 
-        {/* Desktop View: Wide Dense DataGrid Table */}
+        {/* Desktop View: Wide Dense DataGrid Table (Single Line per Row) */}
         <div className="hidden md:block overflow-x-auto border rounded-xl bg-white shadow-sm w-full">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
@@ -408,16 +378,14 @@ export function QuotationForm({ clients, concepts, initialData }: QuotationFormP
                       {index + 1}
                     </td>
 
-                    {/* Dual Mode Concept Cell (Catalog Select vs Custom Text) */}
+                    {/* Single Line Clean Concept Select */}
                     <td className="py-2 px-3">
-                      <ConceptCell
+                      <ConceptSelect
                         index={index}
-                        register={register}
-                        setValue={setValue}
-                        concepts={conceptsList}
-                        errors={errors}
+                        conceptsList={conceptsList}
                         handleSelectConcept={handleSelectConcept}
                         currentItem={currentItem}
+                        onRequestCreateNew={handleRequestCreateNew}
                       />
                     </td>
 
@@ -552,14 +520,12 @@ export function QuotationForm({ clients, concepts, initialData }: QuotationFormP
                   {/* Concept Description (sm:col-span-3) */}
                   <div className="sm:col-span-3 space-y-1.5">
                     <Label className="text-xs font-semibold text-slate-700">Concepto / Servicio *</Label>
-                    <ConceptCell
+                    <ConceptSelect
                       index={index}
-                      register={register}
-                      setValue={setValue}
-                      concepts={conceptsList}
-                      errors={errors}
+                      conceptsList={conceptsList}
                       handleSelectConcept={handleSelectConcept}
                       currentItem={currentItem}
+                      onRequestCreateNew={handleRequestCreateNew}
                     />
                   </div>
 
@@ -673,7 +639,17 @@ export function QuotationForm({ clients, concepts, initialData }: QuotationFormP
             type="button"
             variant="outline"
             size="sm"
-            onClick={() => append({ description: "", currency: "USD", unitCost: 0, unitPrice: 0, quantity: 1, isTaxable: true })}
+            onClick={() => {
+              const defaultConcept = conceptsList[0];
+              append({
+                description: defaultConcept?.name || "",
+                currency: (defaultConcept?.defaultCurrency as "USD" | "PEN") || "USD",
+                unitCost: Number(((defaultConcept?.defaultPrice || 0) * 0.65).toFixed(2)),
+                unitPrice: defaultConcept?.defaultPrice || 0,
+                quantity: 1,
+                isTaxable: defaultConcept?.isTaxable !== false,
+              });
+            }}
             className="text-blue-600 border-blue-200 hover:bg-blue-50 h-9 font-semibold text-xs flex items-center gap-1.5 shadow-sm"
           >
             <Plus className="h-4 w-4" /> Agregar Ítem
