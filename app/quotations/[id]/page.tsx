@@ -243,11 +243,11 @@ export default async function QuotationDetailPage({ params }: QuotationDetailPag
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
             <div>
-              <span className="text-slate-400 font-semibold block uppercase tracking-wider text-[10px]">Origen</span>
+              <span className="text-slate-400 font-semibold block uppercase tracking-wider text-[10px]">Lug. Embarque</span>
               <p className="font-bold text-slate-800">{quotation.origin || "NO ESPECIFICADO"}</p>
             </div>
             <div>
-              <span className="text-slate-400 font-semibold block uppercase tracking-wider text-[10px]">Destino</span>
+              <span className="text-slate-400 font-semibold block uppercase tracking-wider text-[10px]">Puerto / Destino</span>
               <p className="font-bold text-slate-800">{quotation.destination || "CALLAO - PERU"}</p>
             </div>
             <div>
@@ -255,22 +255,22 @@ export default async function QuotationDetailPage({ params }: QuotationDetailPag
               <p className="font-semibold text-slate-800">{quotation.shippingType || "Directo"}</p>
             </div>
             <div>
-              <span className="text-slate-400 font-semibold block uppercase tracking-wider text-[10px]">Línea Marítima</span>
+              <span className="text-slate-400 font-semibold block uppercase tracking-wider text-[10px]">Nave / Vía</span>
               <p className="font-semibold text-slate-800">{quotation.shippingLine || "-"}</p>
             </div>
 
             <div>
-              <span className="text-slate-400 font-semibold block uppercase tracking-wider text-[10px]">Producto / Carga</span>
+              <span className="text-slate-400 font-semibold block uppercase tracking-wider text-[10px]">Shipper / Carga</span>
               <p className="font-semibold text-slate-800">{quotation.cargoType || "CARGA GENERAL"}</p>
             </div>
             <div>
-              <span className="text-slate-400 font-semibold block uppercase tracking-wider text-[10px]">Bultos</span>
+              <span className="text-slate-400 font-semibold block uppercase tracking-wider text-[10px]">Bultos / Paleta</span>
               <p className="font-semibold text-slate-800">{quotation.packagesCount || "-"}</p>
             </div>
             <div>
-              <span className="text-slate-400 font-semibold block uppercase tracking-wider text-[10px]">Peso / Volumen</span>
+              <span className="text-slate-400 font-semibold block uppercase tracking-wider text-[10px]">Peso & Vol.</span>
               <p className="font-semibold text-slate-800">
-                {quotation.grossWeight || "-"} / {quotation.volume || "-"}
+                {quotation.grossWeight || "-"} {quotation.volume ? `/ ${quotation.volume}` : ""}
               </p>
             </div>
             <div>
@@ -287,21 +287,21 @@ export default async function QuotationDetailPage({ params }: QuotationDetailPag
               <p className="font-semibold text-slate-800">{quotation.frequency || "-"}</p>
             </div>
             <div>
-              <span className="text-slate-400 font-semibold block uppercase tracking-wider text-[10px]">Tiempo de Tránsito</span>
+              <span className="text-slate-400 font-semibold block uppercase tracking-wider text-[10px]">E.T.D / E.T.A</span>
               <p className="font-semibold text-slate-800">{quotation.transitTime || "APROX."}</p>
             </div>
             <div>
-              <span className="text-slate-400 font-semibold block uppercase tracking-wider text-[10px]">Detalle Contenedores</span>
+              <span className="text-slate-400 font-semibold block uppercase tracking-wider text-[10px]">BL / Nro</span>
               <p className="font-semibold text-slate-800">{quotation.containersCount || "-"}</p>
             </div>
           </div>
         </div>
 
-        {/* Section 1: GASTOS DE ORIGEN Y FLETE (Inafectos) */}
+        {/* Section 1: GASTOS DE ORIGEN (Inafectos) */}
         {originItems.length > 0 && (
           <div className="space-y-3">
             <div className="bg-blue-900 text-white px-4 py-2 rounded-t-lg font-bold text-sm uppercase tracking-wider flex items-center justify-between">
-              <span>Gastos de Origen, Flete Internacional y Seguro</span>
+              <span>GASTOS DE ORIGEN</span>
               <span className="text-xs font-normal text-blue-200">Conceptos Inafectos a IGV</span>
             </div>
 
@@ -345,11 +345,11 @@ export default async function QuotationDetailPage({ params }: QuotationDetailPag
           </div>
         )}
 
-        {/* Section 2: GASTOS LOCALES Y DESTINO (Afectos IGV) */}
+        {/* Section 2: GASTOS DE DESTINO (Afectos IGV) */}
         {localItems.length > 0 && (
           <div className="space-y-3">
             <div className="bg-blue-900 text-white px-4 py-2 rounded-t-lg font-bold text-sm uppercase tracking-wider flex items-center justify-between">
-              <span>Gastos Locales y Aduaneros en Destino</span>
+              <span>GASTOS DE DESTINO</span>
               <span className="text-xs font-normal text-blue-200">Servicios Afectos a IGV (18%)</span>
             </div>
 

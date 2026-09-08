@@ -340,12 +340,12 @@ export function QuotationPDF({ data }: { data: QuotationPdfData }) {
           <Text style={styles.shipmentTitle}>Datos del Embarque</Text>
           <View style={styles.gridRow}>
             <View style={styles.gridCell}>
-              <Text style={styles.gridLabel}>Origen:</Text>
+              <Text style={styles.gridLabel}>Lug. Embarque:</Text>
               <Text style={styles.gridVal}>{data.origin || "NO ESPECIFICADO"}</Text>
             </View>
             <View style={styles.gridCell}>
-              <Text style={styles.gridLabel}>Tipo de Envío:</Text>
-              <Text style={styles.gridVal}>{data.shippingType || "Directo"}</Text>
+              <Text style={styles.gridLabel}>Nave / Vía:</Text>
+              <Text style={styles.gridVal}>{data.shippingLine || "-"}</Text>
             </View>
           </View>
           <View style={styles.gridRow}>
@@ -354,25 +354,25 @@ export function QuotationPDF({ data }: { data: QuotationPdfData }) {
               <Text style={styles.gridVal}>{data.destination || "CALLAO - PERU"}</Text>
             </View>
             <View style={styles.gridCell}>
-              <Text style={styles.gridLabel}>Línea Marítima:</Text>
-              <Text style={styles.gridVal}>{data.shippingLine || "-"}</Text>
-            </View>
-          </View>
-          <View style={styles.gridRow}>
-            <View style={styles.gridCell}>
-              <Text style={styles.gridLabel}>Producto / Carga:</Text>
-              <Text style={styles.gridVal}>{data.cargoType || "CARGA GENERAL"}</Text>
-            </View>
-            <View style={styles.gridCell}>
-              <Text style={styles.gridLabel}>Tiempo Tránsito:</Text>
+              <Text style={styles.gridLabel}>E.T.D / E.T.A:</Text>
               <Text style={styles.gridVal}>{data.transitTime || "APROX."}</Text>
             </View>
           </View>
           <View style={styles.gridRow}>
             <View style={styles.gridCell}>
-              <Text style={styles.gridLabel}>Peso / Volumen:</Text>
+              <Text style={styles.gridLabel}>Shipper / Carga:</Text>
+              <Text style={styles.gridVal}>{data.cargoType || "CARGA GENERAL"}</Text>
+            </View>
+            <View style={styles.gridCell}>
+              <Text style={styles.gridLabel}>BL / Nro:</Text>
+              <Text style={styles.gridVal}>{data.containersCount || "-"}</Text>
+            </View>
+          </View>
+          <View style={styles.gridRow}>
+            <View style={styles.gridCell}>
+              <Text style={styles.gridLabel}>Peso & Vol.:</Text>
               <Text style={styles.gridVal}>
-                {data.grossWeight || "-"} / {data.volume || "-"}
+                {data.grossWeight || "-"} {data.volume ? `/ ${data.volume}` : ""}
               </Text>
             </View>
             <View style={styles.gridCell}>
@@ -392,10 +392,10 @@ export function QuotationPDF({ data }: { data: QuotationPdfData }) {
           </View>
         </View>
 
-        {/* Table Block 1: GASTOS DE ORIGEN & FLETE */}
+        {/* Table Block 1: GASTOS DE ORIGEN */}
         {originItems.length > 0 && (
           <View>
-            <Text style={styles.tableBlockTitle}>GASTOS DE ORIGEN, FLETE Y SEGURO</Text>
+            <Text style={styles.tableBlockTitle}>GASTOS DE ORIGEN</Text>
             <View style={styles.tableHeader}>
               <Text style={styles.thDesc}>CONCEPTO</Text>
               <Text style={styles.thCurr}>MONEDA</Text>
@@ -417,17 +417,17 @@ export function QuotationPDF({ data }: { data: QuotationPdfData }) {
               </View>
             ))}
             <View style={styles.totalCategoryRow}>
-              <Text style={styles.totalCategoryLabel}>SUBTOTAL GASTOS ORIGEN / FLETE</Text>
+              <Text style={styles.totalCategoryLabel}>SUBTOTAL GASTOS ORIGEN</Text>
               <Text style={styles.totalCategoryUsd}>{formatCurrency(originTotalUsd, "USD")}</Text>
               <Text style={styles.totalCategoryPen}>{formatCurrency(originTotalPen, "PEN")}</Text>
             </View>
           </View>
         )}
 
-        {/* Table Block 2: GASTOS LOCALES */}
+        {/* Table Block 2: GASTOS DE DESTINO */}
         {localItems.length > 0 && (
           <View style={{ marginTop: 6 }}>
-            <Text style={styles.tableBlockTitle}>GASTOS LOCALES Y DESTINO</Text>
+            <Text style={styles.tableBlockTitle}>GASTOS DE DESTINO</Text>
             <View style={styles.tableHeader}>
               <Text style={styles.thDesc}>CONCEPTO</Text>
               <Text style={styles.thCurr}>MONEDA</Text>
@@ -451,7 +451,7 @@ export function QuotationPDF({ data }: { data: QuotationPdfData }) {
               </View>
             ))}
             <View style={styles.totalCategoryRow}>
-              <Text style={styles.totalCategoryLabel}>SUBTOTAL GASTOS LOCALES</Text>
+              <Text style={styles.totalCategoryLabel}>SUBTOTAL GASTOS DE DESTINO</Text>
               <Text style={styles.totalCategoryUsd}>{formatCurrency(localTotalUsd, "USD")}</Text>
               <Text style={styles.totalCategoryPen}>{formatCurrency(localTotalPen, "PEN")}</Text>
             </View>

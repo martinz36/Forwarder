@@ -104,23 +104,32 @@ export async function parseQuotationPdfAction(formData: FormData) {
   const { text: textPages } = await extractText(arrayBuffer);
   const text = Array.isArray(textPages) ? textPages.join("\n") : textPages || "";
 
-  // 1. Extract Metadata using Regex
-  const originMatch = text.match(/(?:Origen|ORIGEN)\s*:\s*([^\n\r]+)/i);
-  const destMatch = text.match(/(?:Destino|DESTINO)\s*:\s*([^\n\r]+)/i);
-  const incotermMatch = text.match(/(?:Incoterm|Tipo Flete\/cont|Tipo Flete)\s*:\s*([^\n\r]+)/i) || text.match(/\b(EXW|FOB|CFR|CIF|DDP|FCA)\b/i);
-  const shippingTypeMatch = text.match(/(?:Tipo de Env[íi]o|Tipo Env[íi]o)\s*:\s*([^\n\r]+)/i);
-  const shippingLineMatch = text.match(/(?:L[íi]nea Mar[íi]tima|L[íi]nea A[ée]rea|Carrier)\s*:\s*([^\n\r]+)/i);
-  const frequencyMatch = text.match(/(?:Frecuencia)\s*:\s*([^\n\r]+)/i);
-  const transitMatch = text.match(/(?:Tiempo de Transito|Tiempo Tr[áa]nsito|Transit Time)\s*:\s*([^\n\r]+)/i);
-  const cargoTypeMatch = text.match(/(?:Producto|Tipo de Carga|Carga)\s*:\s*([^\n\r]+)/i);
-  const packagesMatch = text.match(/(?:Bultos|Packages)\s*:\s*([^\n\r]+)/i);
-  const weightMatch = text.match(/(?:Peso Bruto|Peso|Gross Weight)\s*:\s*([^\n\r]+)/i);
-  const volumeMatch = text.match(/(?:Volumen|Volume|CBM)\s*:\s*([^\n\r]+)/i);
-  const loadTypeMatch = text.match(/(?:Tipo Flete\/cont|Tipo Flete|FCL\/LCL|LCL\/LCL)\s*:\s*([^\n\r]+)/i);
-  const containersMatch = text.match(/(?:Cant\. Contenedores|Contenedores)\s*:\s*([^\n\r]+)/i);
-  const obsMatch = text.match(/(?:Observaciones|Notas|Conditions)\s*:\s*([\s\S]+?)(?=\n\n|\n[A-Z\s]{4,}:|$)/i);
+  // 1. Extract Metadata matching exact Pre-Alerta Header Labels
+  const originMatch = text.match(/(?:LUG\.\s*EMBARQUE|LUGAR EMBARQUE|ORIGEN)\s*:\s*([^\n\r]+)/i);
+  const naveMatch = text.match(/(?:NAVE|VESSEL|L[Íi]NEA MAR[Íi]TIMA)\s*:\s*([^\n\r]+)/i);
+  const etdMatch = text.match(/(?:E\.T\.D|ETD)\s*:\s*([^\n\r]+)/i);
+  const etaMatch = text.match(/(?:E\.T\.A|ETA)\s*:\s*([^\n\r]+)/i);
+  const blMatch = text.match(/(?:BL\/Nro|BL\/NRO|BL NRO|HBL|BL)\s*:\s*([^\n\r]+)/i);
+  const bultosMatch = text.match(/(?:BULTOS|PALETA|PACKAGES)\s*:\s*([^\n\r]+)/i);
+  const pesoVolMatch = text.match(/(?:PESO\s*&\s*VOL\.|PESO Y VOL\.|PESO|VOLUMEN)\s*:\s*([^\n\r]+)/i);
+  const shipperMatch = text.match(/(?:SHIPPER|PROVEEDOR)\s*:\s*([^\n\r]+)/i);
+  const incotermMatch = text.match(/(?:Incoterm|MODALIDAD)\s*:\s*([^\n\r]+)/i) || text.match(/\b(EXW|FOB|CFR|CIF|DDP|FCA)\b/i);
 
-  // 2. Line Items Parsing
+  // Separate Peso & Vol if combined (e.g. "0.96 Ton")
+  let grossWeight = "";
+  let volume = "";
+  if (pesoVolMatch) {
+    const rawPV = pesoVolMatch[1].trim();
+    if (rawPV.includes("/")) {
+      const parts = rawPV.split("/");
+      grossWeight = parts[0].trim();
+      volume = parts[1].trim();
+    } else {
+      grossWeight = rawPV;
+    }
+  }
+
+  // 2. Line Items Parsing with Section Context Tracking
   const items: Array<{
     description: string;
     category: "GASTOS_ORIGEN" | "FLETE_INTERNACIONAL" | "SEGURO" | "GASTOS_LOCALES";
@@ -133,9 +142,22 @@ export async function parseQuotationPdfAction(formData: FormData) {
 
   const lines = text.split(/\r?\n/).map((l: string) => l.trim()).filter((l: string) => l.length > 0);
 
+  let currentCategoryContext: "GASTOS_ORIGEN" | "GASTOS_LOCALES" | null = null;
+
   for (const line of lines) {
+    const upperLine = line.toUpperCase();
+
+    // Check section header changes
+    if (upperLine.includes("GASTOS DE ORIGEN")) {
+      currentCategoryContext = "GASTOS_ORIGEN";
+      continue;
+    } else if (upperLine.includes("GASTOS DE DESTINO") || upperLine.includes("GASTOS LOCALES")) {
+      currentCategoryContext = "GASTOS_LOCALES";
+      continue;
+    }
+
     if (
-      /CONCEPTO|MONEDA|PRECIO UNIT|TOTAL GASTOS|TOTAL GENERAL|TOTAL A PAGAR|Señores|Estimados/i.test(line) &&
+      /CONCEPTO|MONEDA|PRECIO UNIT|TOTAL GASTOS|TOTAL GENERAL|TOTAL A PAGAR|TOTAL:|MONTOS A PAGAR|PRE-ALERTA/i.test(line) &&
       !line.includes(":")
     ) {
       continue;
@@ -162,18 +184,33 @@ export async function parseQuotationPdfAction(formData: FormData) {
 
         const descUpper = rawDesc.toUpperCase();
 
-        if (/EXW|ORIGEN|PICKUP|INLAND|PICK UP|ORIGIN|FOB CHARGES|DOC FEE/i.test(descUpper)) {
-          category = "GASTOS_ORIGEN";
+        if (currentCategoryContext === "GASTOS_ORIGEN") {
+          if (/FLETE|FREIGHT|OCEAN|AIR|MARITIMO|TON\/M3|BAF/i.test(descUpper)) {
+            category = "FLETE_INTERNACIONAL";
+          } else if (/SEGURO|INSURANCE/i.test(descUpper)) {
+            category = "SEGURO";
+          } else {
+            category = "GASTOS_ORIGEN";
+          }
           isTaxable = false;
-        } else if (/FLETE|FREIGHT|OCEAN|AIR|MARITIMO|TON\/M3|BAF|THC|ZARPE/i.test(descUpper)) {
-          category = "FLETE_INTERNACIONAL";
-          isTaxable = false;
-        } else if (/SEGURO|INSURANCE|POLICY/i.test(descUpper)) {
-          category = "SEGURO";
-          isTaxable = false;
-        } else {
+        } else if (currentCategoryContext === "GASTOS_LOCALES") {
           category = "GASTOS_LOCALES";
-          isTaxable = !/INAFECTO|REEMBOLSO/i.test(descUpper);
+          isTaxable = true;
+        } else {
+          // Heuristic fallback
+          if (/EXW|ORIGEN|PICKUP|INLAND|ORIGIN|DOC FEE/i.test(descUpper)) {
+            category = "GASTOS_ORIGEN";
+            isTaxable = false;
+          } else if (/FLETE|FREIGHT|OCEAN|AIR|TON\/M3/i.test(descUpper)) {
+            category = "FLETE_INTERNACIONAL";
+            isTaxable = false;
+          } else if (/SEGURO|INSURANCE/i.test(descUpper)) {
+            category = "SEGURO";
+            isTaxable = false;
+          } else {
+            category = "GASTOS_LOCALES";
+            isTaxable = true;
+          }
         }
 
         const unitPrice = Number((unitCost * 1.15).toFixed(2));
@@ -194,19 +231,19 @@ export async function parseQuotationPdfAction(formData: FormData) {
   return {
     metadata: {
       origin: originMatch ? originMatch[1].trim() : "",
-      destination: destMatch ? destMatch[1].trim() : "",
-      incoterm: incotermMatch ? incotermMatch[1].trim() : "",
-      shippingType: shippingTypeMatch ? shippingTypeMatch[1].trim() : "",
-      shippingLine: shippingLineMatch ? shippingLineMatch[1].trim() : "",
-      frequency: frequencyMatch ? frequencyMatch[1].trim() : "",
-      transitTime: transitMatch ? transitMatch[1].trim() : "",
-      cargoType: cargoTypeMatch ? cargoTypeMatch[1].trim() : "",
-      packagesCount: packagesMatch ? packagesMatch[1].trim() : "",
-      grossWeight: weightMatch ? weightMatch[1].trim() : "",
-      volume: volumeMatch ? volumeMatch[1].trim() : "",
-      loadType: loadTypeMatch ? loadTypeMatch[1].trim() : "",
-      containersCount: containersMatch ? containersMatch[1].trim() : "",
-      notes: obsMatch ? obsMatch[1].trim() : "",
+      destination: "CALLAO - PERU",
+      incoterm: incotermMatch ? incotermMatch[1].trim() : "EXW",
+      shippingType: "Directo",
+      shippingLine: naveMatch ? naveMatch[1].trim() : "",
+      frequency: "SEMANAL",
+      transitTime: etdMatch && etaMatch ? `ETD: ${etdMatch[1].trim()} - ETA: ${etaMatch[1].trim()}` : "35 DÍAS APROX.",
+      cargoType: shipperMatch ? `SHIPPER: ${shipperMatch[1].trim()}` : "CARGA GENERAL",
+      packagesCount: bultosMatch ? bultosMatch[1].trim() : "",
+      grossWeight: grossWeight || "",
+      volume: volume || "",
+      loadType: "LCL / LCL",
+      containersCount: blMatch ? blMatch[1].trim() : "",
+      notes: "- TARIFA HASTA 5 CBM, EN CASO DE SUPERAR SE VOLVERÁ A COTIZAR.\n- VERIFICAR LA TARIFA VIGENTE SEGÚN FECHA DE ZARPE.",
     },
     items,
     rawTextLength: text.length,

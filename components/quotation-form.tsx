@@ -434,7 +434,7 @@ export function QuotationForm({ clients, concepts }: QuotationFormProps) {
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-xs font-semibold text-slate-700">Puerto / Origen</Label>
+            <Label className="text-xs font-semibold text-slate-700">Lug. Embarque (Origen)</Label>
             <Input placeholder="Ej: SHANGHAI - CHINA" {...register("origin")} className="h-9 text-xs" />
           </div>
 
@@ -449,8 +449,8 @@ export function QuotationForm({ clients, concepts }: QuotationFormProps) {
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-xs font-semibold text-slate-700">Línea Marítima / Aérea</Label>
-            <Input placeholder="Ej: COSCO, MAERSK" {...register("shippingLine")} className="h-9 text-xs" />
+            <Label className="text-xs font-semibold text-slate-700">Nave / Vía</Label>
+            <Input placeholder="Ej: MAERSK SALTORO V°.631E" {...register("shippingLine")} className="h-9 text-xs" />
           </div>
 
           <div className="space-y-1.5">
@@ -459,23 +459,23 @@ export function QuotationForm({ clients, concepts }: QuotationFormProps) {
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-xs font-semibold text-slate-700">Tiempo de Tránsito</Label>
-            <Input placeholder="Ej: 35 DÍAS APROX." {...register("transitTime")} className="h-9 text-xs" />
+            <Label className="text-xs font-semibold text-slate-700">E.T.D / E.T.A (Tiempo Tránsito)</Label>
+            <Input placeholder="Ej: ETD: 13/08/2026 - ETA: 07/09/2026" {...register("transitTime")} className="h-9 text-xs" />
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-xs font-semibold text-slate-700">Tipo de Carga</Label>
-            <Input placeholder="Ej: CARGA GENERAL" {...register("cargoType")} className="h-9 text-xs" />
+            <Label className="text-xs font-semibold text-slate-700">Shipper / Carga</Label>
+            <Input placeholder="Ej: Jiaxing Whatz Games Co.,Ltd" {...register("cargoType")} className="h-9 text-xs" />
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-xs font-semibold text-slate-700">Bultos / Cantidad</Label>
-            <Input placeholder="Ej: 10 CARTONES / 0" {...register("packagesCount")} className="h-9 text-xs" />
+            <Label className="text-xs font-semibold text-slate-700">Bultos / Paleta</Label>
+            <Input placeholder="Ej: 3 PALETA / 10 CARTONES" {...register("packagesCount")} className="h-9 text-xs" />
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-xs font-semibold text-slate-700">Peso Bruto (KG)</Label>
-            <Input placeholder="Ej: 305.00 KG" {...register("grossWeight")} className="h-9 text-xs" />
+            <Label className="text-xs font-semibold text-slate-700">Peso & Vol.</Label>
+            <Input placeholder="Ej: 0.96 Ton / 2.200 CBM" {...register("grossWeight")} className="h-9 text-xs" />
           </div>
 
           <div className="space-y-1.5">
