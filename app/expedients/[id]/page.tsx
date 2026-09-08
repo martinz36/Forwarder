@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Folder, FilePlus, User, Calendar, FileText, Ship, MapPin } from "lucide-react";
+import { ArrowLeft, Folder, FilePlus, User, Calendar, FileText, Ship, MapPin, StickyNote } from "lucide-react";
 import prisma from "@/lib/prisma";
 import { formatDate, formatCurrency } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
@@ -52,7 +52,7 @@ export default async function ExpedientDetailPage({ params }: ExpedientDetailPag
             </Button>
           </Link>
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-2xl font-bold tracking-tight text-slate-900">
                 Expediente {expedient.code}
               </h1>
@@ -83,7 +83,7 @@ export default async function ExpedientDetailPage({ params }: ExpedientDetailPag
       {/* Main Info Cards */}
       <div className="grid gap-6 md:grid-cols-3">
         {/* Client & Expedient Summary Card */}
-        <div className="md:col-span-1 rounded-2xl border bg-white p-5 shadow-sm space-y-4">
+        <div className="md:col-span-1 rounded-2xl border bg-white p-5 shadow-sm space-y-4 h-fit">
           <div className="border-b pb-3">
             <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2">
               <User className="h-4 w-4 text-blue-600" />
@@ -91,7 +91,7 @@ export default async function ExpedientDetailPage({ params }: ExpedientDetailPag
             </h3>
           </div>
 
-          <div className="space-y-2 text-xs text-slate-700">
+          <div className="space-y-2.5 text-xs text-slate-700">
             <div>
               <span className="text-slate-400 block font-medium">Razón Social:</span>
               <span className="font-bold text-slate-900 text-sm block">{client.businessName}</span>
@@ -121,7 +121,21 @@ export default async function ExpedientDetailPage({ params }: ExpedientDetailPag
                 <span>{client.email}</span>
               </div>
             )}
-            <div className="pt-2 border-t text-slate-500">
+
+            {/* Expedient Notes Section */}
+            {expedient.notes && (
+              <div className="pt-3 border-t space-y-1.5">
+                <span className="text-[11px] font-bold text-amber-800 uppercase tracking-wider flex items-center gap-1">
+                  <StickyNote className="h-3.5 w-3.5 text-amber-600" />
+                  Observaciones / Referencia:
+                </span>
+                <div className="p-3 bg-amber-50/80 border border-amber-200 rounded-xl text-xs text-amber-950 font-medium whitespace-pre-wrap leading-relaxed shadow-sm">
+                  {expedient.notes}
+                </div>
+              </div>
+            )}
+
+            <div className="pt-3 border-t text-slate-500">
               <span className="text-slate-400 block font-medium">Fecha de Apertura:</span>
               <span>{formatDate(expedient.createdAt)}</span>
             </div>
@@ -130,6 +144,23 @@ export default async function ExpedientDetailPage({ params }: ExpedientDetailPag
 
         {/* Linked Quotations & Operations List */}
         <div className="md:col-span-2 space-y-6">
+          {/* Expedient Notes Banner (Featured if notes exist) */}
+          {expedient.notes && (
+            <div className="rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50 p-4 shadow-sm flex items-start gap-3">
+              <div className="rounded-xl bg-amber-500/20 p-2 text-amber-700 shrink-0 mt-0.5 border border-amber-400/30">
+                <StickyNote className="h-5 w-5" />
+              </div>
+              <div>
+                <h4 className="font-bold text-amber-950 text-sm">
+                  Observaciones / Referencia del Expediente
+                </h4>
+                <p className="text-xs text-amber-900 mt-1 whitespace-pre-wrap leading-relaxed">
+                  {expedient.notes}
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Quotations Section */}
           <div className="rounded-2xl border bg-white p-5 shadow-sm space-y-4">
             <div className="flex items-center justify-between border-b pb-3">

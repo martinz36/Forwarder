@@ -113,6 +113,11 @@ export default async function ExpedientsPage() {
                       <TableCell className="text-left font-medium text-slate-900">
                         <div>{exp.client.businessName}</div>
                         <div className="text-xs text-slate-400 font-mono">{exp.client.documentNumber}</div>
+                        {exp.notes && (
+                          <div className="text-[11px] text-amber-700 italic mt-0.5 truncate max-w-xs" title={exp.notes}>
+                            📝 {exp.notes}
+                          </div>
+                        )}
                       </TableCell>
 
                       <TableCell className="text-center">
