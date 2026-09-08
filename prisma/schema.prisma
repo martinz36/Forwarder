@@ -44,18 +44,28 @@ enum LiquidationStatus {
 }
 
 model Client {
-  id             String      @id @default(cuid())
-  documentType   String      @default("RUC")
-  documentNumber String      @unique
+  id             String       @id @default(cuid())
+  documentType   String       @default("RUC")
+  documentNumber String       @unique
   businessName   String
   contactName    String?
   email          String?
   phone          String?
   address        String?
-  status         String      @default("ACTIVE")
-  createdAt      DateTime    @default(now())
-  updatedAt      DateTime    @updatedAt
+  status         String       @default("ACTIVE")
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
   quotations     Quotation[]
+  notes          ClientNote[]
+}
+
+model ClientNote {
+  id        String   @id @default(cuid())
+  clientId  String
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  content   String   @db.Text
+  createdBy String?  @default("BROKER")
+  createdAt DateTime @default(now())
 }
 
 model Quotation {

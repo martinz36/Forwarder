@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Users, Mail, Phone, MapPin, Building2, CreditCard } from "lucide-react";
 import prisma from "@/lib/prisma";
 import {
@@ -63,15 +64,17 @@ export default async function ClientsPage() {
                 {clients.map((client) => (
                   <TableRow key={client.id} className="hover:bg-slate-50/80 transition-colors">
                     <TableCell className="font-mono font-bold text-xs text-slate-900">
-                      <Badge variant="outline" className="border-blue-200 text-blue-800 bg-blue-50 font-mono">
-                        {client.documentType}: {client.documentNumber}
-                      </Badge>
+                      <Link href={`/clients/${client.id}`} className="hover:opacity-80">
+                        <Badge variant="outline" className="border-blue-200 text-blue-800 bg-blue-50 font-mono hover:bg-blue-100 cursor-pointer">
+                          {client.documentType}: {client.documentNumber}
+                        </Badge>
+                      </Link>
                     </TableCell>
                     <TableCell className="font-bold text-slate-900 text-sm">
-                      <div className="flex items-center gap-2">
+                      <Link href={`/clients/${client.id}`} className="flex items-center gap-2 hover:text-blue-600">
                         <Building2 className="h-4 w-4 text-blue-600 shrink-0" />
                         <span>{client.businessName}</span>
-                      </div>
+                      </Link>
                     </TableCell>
                     <TableCell className="text-xs text-slate-700 font-medium">
                       {client.contactName || <span className="text-slate-400 font-normal">No asignado</span>}
