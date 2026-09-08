@@ -72,7 +72,7 @@ export default async function LiquidationDetailPage({ params }: LiquidationPageP
               </Badge>
             </div>
             <p className="text-sm text-slate-500">
-              Expediente: <span className="font-semibold text-slate-800">{quotation.code}</span> • Cliente: <span className="font-semibold text-slate-800">{client.name}</span>
+              Expediente: <span className="font-semibold text-slate-800">{quotation.code}</span> • Cliente: <span className="font-semibold text-slate-800">{client.businessName}</span>
             </p>
           </div>
         </div>
@@ -118,7 +118,12 @@ export default async function LiquidationDetailPage({ params }: LiquidationPageP
         <div className="grid gap-4 sm:grid-cols-2 bg-slate-50 p-4 rounded-xl border text-sm">
           <div className="space-y-1">
             <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Facturar A (Cliente)</span>
-            <p className="font-bold text-slate-900">{client.name}</p>
+            <div className="flex items-center gap-2">
+              <p className="font-bold text-slate-900">{client.businessName}</p>
+              <Badge variant="outline" className="text-xs font-mono">
+                {client.documentType}: {client.documentNumber}
+              </Badge>
+            </div>
             {client.address && (
               <p className="text-xs text-slate-600 flex items-center gap-1.5">
                 <MapPin className="h-3.5 w-3.5 text-slate-400 shrink-0" /> {client.address}

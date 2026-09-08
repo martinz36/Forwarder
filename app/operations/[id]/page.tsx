@@ -88,7 +88,7 @@ export default async function OperationDetailPage({ params }: OperationDetailPag
               )}
             </div>
             <p className="text-sm text-slate-500">
-              Cliente: <span className="font-semibold text-slate-800">{operation.quotation.client.name}</span>
+              Cliente: <span className="font-semibold text-slate-800">{operation.quotation.client.businessName}</span>
             </p>
           </div>
         </div>

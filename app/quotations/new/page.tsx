@@ -7,8 +7,8 @@ export default async function NewQuotationPage() {
   const [clients, concepts] = await Promise.all([
     prisma.client.findMany({
       where: { status: "ACTIVE" },
-      select: { id: true, name: true },
-      orderBy: { name: "asc" },
+      select: { id: true, businessName: true, documentNumber: true },
+      orderBy: { businessName: "asc" },
     }),
     prisma.conceptCatalog.findMany({
       select: { id: true, name: true, defaultCurrency: true, defaultPrice: true, isTaxable: true },

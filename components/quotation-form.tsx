@@ -14,7 +14,8 @@ import { createQuotationAction } from "@/app/quotations/actions";
 
 interface ClientOption {
   id: string;
-  name: string;
+  businessName: string;
+  documentNumber?: string;
 }
 
 interface ConceptOption {
@@ -207,7 +208,7 @@ export function QuotationForm({ clients, concepts }: QuotationFormProps) {
             >
               {clients.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.name}
+                  {c.businessName} {c.documentNumber ? `(${c.documentNumber})` : ""}
                 </option>
               ))}
             </select>

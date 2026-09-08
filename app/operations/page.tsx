@@ -101,7 +101,7 @@ export default async function OperationsPage() {
                 <div className="space-y-1.5 text-sm">
                   <div className="flex items-center gap-2 text-slate-700">
                     <User className="h-4 w-4 text-slate-400 shrink-0" />
-                    <span className="font-medium truncate">{op.quotation.client.name}</span>
+                    <span className="font-medium truncate">{op.quotation.client.businessName}</span>
                   </div>
                   <div className="flex items-center gap-2 text-slate-600 text-xs">
                     <span className="font-semibold text-slate-500">BL / HBL:</span>
@@ -146,7 +146,7 @@ export default async function OperationsPage() {
                         {op.quotation.code}
                       </TableCell>
                       <TableCell className="text-left font-medium text-slate-800">
-                        {op.quotation.client.name}
+                        {op.quotation.client.businessName}
                       </TableCell>
                       <TableCell className="text-left text-sm font-mono text-slate-700">
                         {op.blNumber || <span className="text-slate-400 italic">Por asignar</span>}

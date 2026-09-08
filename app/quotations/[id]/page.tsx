@@ -84,7 +84,9 @@ export default async function QuotationDetailPage({ params }: QuotationDetailPag
     createdAt: quotation.createdAt,
     validUntil: quotation.validUntil,
     client: {
-      name: client.name,
+      name: client.businessName,
+      documentType: client.documentType,
+      documentNumber: client.documentNumber,
       email: client.email,
       phone: client.phone,
       address: client.address,
@@ -129,7 +131,7 @@ export default async function QuotationDetailPage({ params }: QuotationDetailPag
               </Badge>
             </div>
             <p className="text-sm text-slate-500">
-              Cliente: <span className="font-semibold text-slate-800">{client.name}</span> • Válida hasta: <span className="font-semibold text-slate-800">{formatDate(quotation.validUntil)}</span>
+              Cliente: <span className="font-semibold text-slate-800">{client.businessName}</span> • Válida hasta: <span className="font-semibold text-slate-800">{formatDate(quotation.validUntil)}</span>
             </p>
           </div>
         </div>
@@ -175,7 +177,12 @@ export default async function QuotationDetailPage({ params }: QuotationDetailPag
         {/* Client Details Grid */}
         <div className="bg-slate-50 p-4 rounded-xl border text-sm space-y-1">
           <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Propuesta Preparada Para (Cliente)</span>
-          <p className="font-bold text-slate-900 text-base">{client.name}</p>
+          <div className="flex items-center gap-2">
+            <p className="font-bold text-slate-900 text-base">{client.businessName}</p>
+            <Badge variant="outline" className="text-xs font-mono">
+              {client.documentType}: {client.documentNumber}
+            </Badge>
+          </div>
           {client.address && (
             <p className="text-xs text-slate-600 flex items-center gap-1.5">
               <MapPin className="h-3.5 w-3.5 text-slate-400 shrink-0" /> {client.address}

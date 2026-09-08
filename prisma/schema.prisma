@@ -44,15 +44,18 @@ enum LiquidationStatus {
 }
 
 model Client {
-  id         String      @id @default(cuid())
-  name       String
-  email      String?
-  phone      String?
-  address    String?
-  status     String      @default("ACTIVE")
-  createdAt  DateTime    @default(now())
-  updatedAt  DateTime    @updatedAt
-  quotations Quotation[]
+  id             String      @id @default(cuid())
+  documentType   String      @default("RUC")
+  documentNumber String      @unique
+  businessName   String
+  contactName    String?
+  email          String?
+  phone          String?
+  address        String?
+  status         String      @default("ACTIVE")
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  quotations     Quotation[]
 }
 
 model Quotation {

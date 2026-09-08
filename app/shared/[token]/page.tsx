@@ -36,7 +36,7 @@ export default async function SharedPortalPage({ params }: SharedPortalPageProps
       operationId={operation.id}
       token={token}
       operationCode={operation.quotation.code}
-      clientName={operation.quotation.client.name}
+      clientName={operation.quotation.client.businessName}
       blNumber={operation.blNumber}
       etd={operation.etd}
       eta={operation.eta}

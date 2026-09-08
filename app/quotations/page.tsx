@@ -86,7 +86,7 @@ export default async function QuotationsPage() {
                 <div className="space-y-1 text-sm">
                   <div className="flex items-center gap-2 text-slate-700">
                     <User className="h-4 w-4 text-slate-400 shrink-0" />
-                    <span className="font-medium truncate">{item.client.name}</span>
+                    <span className="font-medium truncate">{item.client.businessName}</span>
                   </div>
                   <div className="flex items-center gap-2 text-slate-500 text-xs">
                     <Calendar className="h-3.5 w-3.5 text-slate-400 shrink-0" />
@@ -153,7 +153,7 @@ export default async function QuotationsPage() {
                         </Link>
                       </TableCell>
                       <TableCell className="text-left font-medium text-slate-800">
-                        {item.client.name}
+                        {item.client.businessName}
                       </TableCell>
                       <TableCell className="text-left">
                         <Badge variant={statusVariantMap[item.status] || "secondary"}>

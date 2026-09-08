@@ -1,4 +1,4 @@
-import { Users, Mail, Phone, MapPin } from "lucide-react";
+import { Users, Mail, Phone, MapPin, Building2, CreditCard } from "lucide-react";
 import prisma from "@/lib/prisma";
 import {
   Table,
@@ -47,70 +47,72 @@ export default async function ClientsPage() {
             </div>
           </div>
         ) : (
-          <Table>
-            <TableHeader className="bg-slate-50">
-              <TableRow>
-                <TableHead className="font-semibold text-slate-700">Razón Social / Nombre</TableHead>
-                <TableHead className="font-semibold text-slate-700">Contacto</TableHead>
-                <TableHead className="font-semibold text-slate-700">Dirección Fiscal</TableHead>
-                <TableHead className="font-semibold text-slate-700">Estado</TableHead>
-                <TableHead className="font-semibold text-slate-700">Registrado</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {clients.map((client) => (
-                <TableRow key={client.id} className="hover:bg-slate-50/80 transition-colors">
-                  <TableCell className="font-medium text-slate-900">
-                    <div className="flex items-center gap-2">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-blue-700 font-bold text-xs">
-                        {client.name.substring(0, 2).toUpperCase()}
-                      </div>
-                      <span>{client.name}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="space-y-1 text-xs text-slate-600">
-                      {client.email && (
-                        <div className="flex items-center gap-1.5">
-                          <Mail className="h-3.5 w-3.5 text-slate-400" />
-                          <span>{client.email}</span>
-                        </div>
-                      )}
-                      {client.phone && (
-                        <div className="flex items-center gap-1.5">
-                          <Phone className="h-3.5 w-3.5 text-slate-400" />
-                          <span>{client.phone}</span>
-                        </div>
-                      )}
-                      {!client.email && !client.phone && <span className="text-slate-400">Sin contacto</span>}
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-sm text-slate-600">
-                    {client.address ? (
-                      <div className="flex items-center gap-1.5">
-                        <MapPin className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-                        <span className="truncate max-w-[240px]">{client.address}</span>
-                      </div>
-                    ) : (
-                      <span className="text-slate-400 text-xs">No registrada</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={client.status === "ACTIVE" ? "success" : "secondary"}>
-                      {client.status === "ACTIVE" ? "Activo" : client.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-xs text-slate-500">
-                    {new Date(client.createdAt).toLocaleDateString("es-PE", {
-                      day: "2-digit",
-                      month: "short",
-                      year: "numeric",
-                    })}
-                  </TableCell>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader className="bg-slate-50">
+                <TableRow>
+                  <TableHead className="font-semibold text-slate-700">RUC / Documento</TableHead>
+                  <TableHead className="font-semibold text-slate-700">Razón Social / Empresa</TableHead>
+                  <TableHead className="font-semibold text-slate-700">Contacto</TableHead>
+                  <TableHead className="font-semibold text-slate-700">Teléfono / Email</TableHead>
+                  <TableHead className="font-semibold text-slate-700">Dirección Fiscal</TableHead>
+                  <TableHead className="font-semibold text-slate-700">Estado</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {clients.map((client) => (
+                  <TableRow key={client.id} className="hover:bg-slate-50/80 transition-colors">
+                    <TableCell className="font-mono font-bold text-xs text-slate-900">
+                      <Badge variant="outline" className="border-blue-200 text-blue-800 bg-blue-50 font-mono">
+                        {client.documentType}: {client.documentNumber}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="font-bold text-slate-900 text-sm">
+                      <div className="flex items-center gap-2">
+                        <Building2 className="h-4 w-4 text-blue-600 shrink-0" />
+                        <span>{client.businessName}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-xs text-slate-700 font-medium">
+                      {client.contactName || <span className="text-slate-400 font-normal">No asignado</span>}
+                    </TableCell>
+                    <TableCell>
+                      <div className="space-y-1 text-xs text-slate-600">
+                        {client.email && (
+                          <div className="flex items-center gap-1.5">
+                            <Mail className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                            <span>{client.email}</span>
+                          </div>
+                        )}
+                        {client.phone && (
+                          <div className="flex items-center gap-1.5">
+                            <Phone className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                            <span>{client.phone}</span>
+                          </div>
+                        )}
+                        {!client.email && !client.phone && <span className="text-slate-400">Sin datos</span>}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-xs text-slate-600">
+                      {client.address ? (
+                        <div className="flex items-center gap-1.5">
+                          <MapPin className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                          <span className="truncate max-w-[220px]">{client.address}</span>
+                        </div>
+                      ) : (
+                        <span className="text-slate-400">No registrada</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={client.status === "ACTIVE" ? "success" : "secondary"}>
+                        {client.status === "ACTIVE" ? "Activo" : client.status}
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         )}
       </div>
     </div>

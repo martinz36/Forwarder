@@ -42,8 +42,9 @@ export async function emitirComprobanteMock(liquidationId: string): Promise<Suna
     tipo_de_comprobante: 1, // 1 = Factura
     serie: "F001",
     numero: Math.floor(1000 + Math.random() * 9000),
-    cliente_tipo_de_documento: 6, // 6 = RUC
-    cliente_denominacion: client.name,
+    cliente_tipo_de_documento: client.documentType === "RUC" ? 6 : 1,
+    cliente_numero_de_documento: client.documentNumber,
+    cliente_denominacion: client.businessName,
     cliente_email: client.email || "cliente@ejemplo.com",
     fecha_de_emision: new Date().toISOString().split("T")[0],
     moneda: "USD",

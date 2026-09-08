@@ -17,6 +17,8 @@ export interface QuotationPdfData {
   validUntil?: string | Date | null;
   client: {
     name: string;
+    documentType?: string | null;
+    documentNumber?: string | null;
     email?: string | null;
     phone?: string | null;
     address?: string | null;
@@ -268,8 +270,12 @@ export function QuotationPDF({ data }: { data: QuotationPdfData }) {
         {/* Client & Date Info */}
         <View style={styles.metaGrid}>
           <View style={styles.metaCol}>
-            <Text style={styles.metaLabel}>INFORMACIÓN DEL CLIENTE</Text>
             <Text style={styles.clientName}>{data.client.name}</Text>
+            {data.client.documentNumber && (
+              <Text style={styles.metaText}>
+                {data.client.documentType || "RUC"}: {data.client.documentNumber}
+              </Text>
+            )}
             {data.client.address && <Text style={styles.metaText}>Dirección: {data.client.address}</Text>}
             {data.client.phone && <Text style={styles.metaText}>Teléfono: {data.client.phone}</Text>}
             {data.client.email && <Text style={styles.metaText}>Email: {data.client.email}</Text>}

@@ -2,26 +2,33 @@
 
 import { revalidatePath } from "next/cache";
 import prisma from "@/lib/prisma";
+import { clientSchema, ClientFormValues } from "@/lib/validations/client";
 
-export async function createClientAction(formData: FormData) {
-  const name = formData.get("name") as string;
-  const email = formData.get("email") as string;
-  const phone = formData.get("phone") as string;
-  const address = formData.get("address") as string;
+export async function createClientAction(data: ClientFormValues) {
+  const validated = clientSchema.parse(data);
 
-  if (!name || name.trim() === "") {
-    throw new Error("El nombre / Razón Social es requerido.");
+  // Check if documentNumber already exists
+  const existing = await prisma.client.findUnique({
+    where: { documentNumber: validated.documentNumber.trim() },
+  });
+
+  if (existing) {
+    throw new Error(`El número de documento ${validated.documentNumber} ya está registrado para ${existing.businessName}.`);
   }
 
   await prisma.client.create({
     data: {
-      name: name.trim(),
-      email: email ? email.trim() : null,
-      phone: phone ? phone.trim() : null,
-      address: address ? address.trim() : null,
+      documentType: validated.documentType,
+      documentNumber: validated.documentNumber.trim(),
+      businessName: validated.businessName.trim(),
+      contactName: validated.contactName ? validated.contactName.trim() : null,
+      email: validated.email ? validated.email.trim() : null,
+      phone: validated.phone ? validated.phone.trim() : null,
+      address: validated.address ? validated.address.trim() : null,
       status: "ACTIVE",
     },
   });
 
   revalidatePath("/clients");
+  revalidatePath("/quotations/new");
 }
