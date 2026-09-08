@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Receipt, Printer, FileText, CheckCircle2, ShieldAlert, Sparkles, Building2, User, Calendar, MapPin } from "lucide-react";
+import { ArrowLeft, Receipt, FileText, Building2, MapPin } from "lucide-react";
 import prisma from "@/lib/prisma";
 import { formatCurrency, formatDate } from "@/lib/format";
 import {
@@ -13,9 +13,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-
-import { EmitInvoiceButton } from "@/components/emit-invoice-button";
-import { EmitReceiptButton } from "@/components/emit-receipt-button";
+import { LiquidationHeaderActions } from "@/components/liquidation-header-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -79,8 +77,8 @@ export default async function LiquidationDetailPage({ params }: LiquidationPageP
     : null;
 
   return (
-    <div className="space-y-8 max-w-5xl mx-auto pb-12">
-      {/* Action Header Navbar */}
+    <div className="space-y-6 max-w-5xl mx-auto pb-12">
+      {/* Clean Corporate Action Header Navbar */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b pb-4">
         <div className="flex items-center gap-3">
           <Link href={`/operations/${operation.id}`}>
@@ -93,41 +91,30 @@ export default async function LiquidationDetailPage({ params }: LiquidationPageP
               <h1 className="text-2xl font-bold tracking-tight text-slate-900">
                 Liquidación de Gastos Operativos
               </h1>
-              <Badge className="bg-emerald-600 text-white text-xs font-semibold">
+              <Badge className="bg-slate-900 text-white text-xs font-semibold">
                 LIQUIDACIÓN #{liquidation.id.slice(-6).toUpperCase()}
               </Badge>
             </div>
-            <p className="text-sm text-slate-500">
+            <p className="text-xs sm:text-sm text-slate-500">
               Expediente: <span className="font-semibold text-slate-800">{quotation.code}</span> • Cliente: <span className="font-semibold text-slate-800">{client.businessName}</span>
             </p>
           </div>
         </div>
-      </div>
 
-      {/* Interactive Electronic Documents Action Cards (1. SUNAT Invoice, 2. Internal Receipt) */}
-      <div className="grid gap-6 md:grid-cols-2">
-        <EmitInvoiceButton
+        {/* Compact Right Header Actions */}
+        <LiquidationHeaderActions
           liquidationId={liquidation.id}
           status={liquidation.status}
           invoiceNumber={liquidation.invoiceNumber}
           sunatPdfUrl={liquidation.sunatPdfUrl}
           sunatCdrStatus={liquidation.sunatCdrStatus}
-          sunatNotes={liquidation.sunatNotes}
-          totalTaxableUsd={liquidation.totalTaxableUsd}
-          totalTaxablePen={liquidation.totalTaxablePen}
-        />
-
-        <EmitReceiptButton
-          liquidationId={liquidation.id}
           receiptNumber={liquidation.receiptNumber}
-          totalNonTaxableUsd={liquidation.totalNonTaxableUsd}
-          totalNonTaxablePen={liquidation.totalNonTaxablePen}
           receiptPdfData={receiptPdfData}
         />
       </div>
 
       {/* Official Liquidation Document Card */}
-      <div className="rounded-2xl border bg-white p-8 shadow-sm space-y-8">
+      <div className="rounded-2xl border bg-white p-6 sm:p-8 shadow-sm space-y-8">
         {/* Document Header Section */}
         <div className="flex flex-col sm:flex-row justify-between gap-6 border-b pb-6">
           <div className="space-y-2">
