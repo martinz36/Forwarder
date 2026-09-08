@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -75,7 +75,7 @@ export function QuotationForm({ clients, concepts }: QuotationFormProps) {
     resolver: zodResolver(quotationSchema),
     defaultValues: {
       clientId: clients[0]?.id || "",
-      validUntil: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+      validUntil: "",
       modality: "IMPORTACIÓN MARÍTIMA",
       incoterm: "EXW",
       origin: "SHANGHAI - CHINA",
@@ -129,6 +129,13 @@ export function QuotationForm({ clients, concepts }: QuotationFormProps) {
   });
 
   const watchedItems = watch("items") || [];
+
+  useEffect(() => {
+    if (!watch("validUntil")) {
+      const defaultDate = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+      setValue("validUntil", defaultDate);
+    }
+  }, [setValue, watch]);
 
   // Live calculations for Summary
   let liveCostUsd = 0;

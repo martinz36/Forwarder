@@ -2,11 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { PDFParse } from "pdf-parse";
 import prisma from "@/lib/prisma";
 import { quotationSchema, QuotationFormValues } from "@/lib/validations/quotation";
-
-// Require pdf-parse to avoid ESM default import issues
-const pdfParse = require("pdf-parse");
 
 export async function createQuotationAction(data: QuotationFormValues) {
   const validated = quotationSchema.parse(data);
@@ -101,11 +99,13 @@ export async function parseQuotationPdfAction(formData: FormData) {
   }
 
   const arrayBuffer = await file.arrayBuffer();
-  const buffer = Buffer.from(arrayBuffer);
+  const uint8Array = new Uint8Array(arrayBuffer);
 
-  // pdf-parse extracts plain text
-  const pdfData = await pdfParse(buffer);
-  const text = pdfData.text || "";
+  // Modern pdf-parse v2.4+ PDFParse instance
+  const parser = new PDFParse({ data: uint8Array });
+  const textResult = await parser.getText();
+  const text = textResult?.text || "";
+  await parser.destroy();
 
   // 1. Extract Metadata using Regex
   const originMatch = text.match(/(?:Origen|ORIGEN)\s*:\s*([^\n\r]+)/i);
