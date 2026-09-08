@@ -204,6 +204,9 @@ model Liquidation {
   sunatCdrStatus     String?           @default("PENDING")
   sunatNotes          String?
 
+  receiptNumber      String?
+  receiptGeneratedAt DateTime?
+
   createdAt          DateTime          @default(now())
   updatedAt          DateTime          @updatedAt
 }

@@ -51,8 +51,8 @@ export async function emitirComprobanteMock(liquidationId: string): Promise<Suna
     porcentaje_igv: 18.0,
     total_gravada: liquidation.subtotalTaxableUsd,
     total_igv: liquidation.igvUsd,
-    total_inafecta: liquidation.totalNonTaxableUsd,
-    total: liquidation.grandTotalUsd,
+    total_inafecta: 0.0,
+    total: liquidation.totalTaxableUsd,
     items: taxableCharges.map((item) => ({
       unidad_de_medida: "ZZ",
       descripcion: item.description,

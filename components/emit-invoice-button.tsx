@@ -13,6 +13,8 @@ interface EmitInvoiceButtonProps {
   sunatPdfUrl?: string | null;
   sunatCdrStatus?: string | null;
   sunatNotes?: string | null;
+  totalTaxableUsd: number;
+  totalTaxablePen: number;
 }
 
 export function EmitInvoiceButton({
@@ -22,6 +24,8 @@ export function EmitInvoiceButton({
   sunatPdfUrl,
   sunatCdrStatus,
   sunatNotes,
+  totalTaxableUsd,
+  totalTaxablePen,
 }: EmitInvoiceButtonProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -47,14 +51,14 @@ export function EmitInvoiceButton({
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-emerald-200 pb-3">
           <h3 className="text-base sm:text-lg font-bold flex items-center gap-2 text-emerald-900 dark:text-emerald-300">
             <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-            Comprobante Electrónico SUNAT: {invoiceNumber}
+            Factura Electrónica SUNAT / OSE: {invoiceNumber}
           </h3>
           <Badge className="w-fit bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs px-3 py-1">
             ESTADO SUNAT: {sunatCdrStatus || "ACEPTADO"} 🟢
           </Badge>
         </div>
         <p className="text-xs sm:text-sm text-emerald-800 dark:text-emerald-400">
-          {sunatNotes || "El comprobante electrónico ha sido procesado y aceptado oficialmente por SUNAT."}
+          {sunatNotes || "La factura electrónica ha sido procesada y aceptada por el operador OSE / SUNAT afectando únicamente los servicios del broker con IGV (18%)."}
         </p>
         {sunatPdfUrl && (
           <div className="pt-2">
@@ -65,7 +69,7 @@ export function EmitInvoiceButton({
               className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs sm:text-sm font-semibold shadow transition-colors"
             >
               <Download className="w-4 h-4" />
-              Descargar Factura PDF
+              Descargar Factura SUNAT (PDF)
             </a>
           </div>
         )}
@@ -74,14 +78,21 @@ export function EmitInvoiceButton({
   }
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+    <div className="rounded-2xl border border-blue-200 bg-blue-50/30 p-6 shadow-sm dark:border-blue-900/40 dark:bg-blue-950/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
       <div>
-        <h3 className="font-bold text-base sm:text-lg text-slate-900 dark:text-white flex items-center gap-2">
-          <FileText className="w-5 h-5 text-blue-600 shrink-0" />
-          Emisión de Factura Electrónica (SUNAT)
-        </h3>
-        <p className="text-xs sm:text-sm text-slate-500 mt-1">
-          Genera la factura oficial afectando únicamente los conceptos imponibles (Servicios de agenciamiento/flete).
+        <div className="flex items-center gap-2">
+          <h3 className="font-bold text-base sm:text-lg text-slate-900 dark:text-white flex items-center gap-2">
+            <FileText className="w-5 h-5 text-blue-600 shrink-0" />
+            Emisión de Factura Electrónica (SUNAT / OSE)
+          </h3>
+          <Badge className="bg-blue-600 text-white text-[10px]">
+            CONECTADO A OSE
+          </Badge>
+        </div>
+        <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1">
+          Emite la factura oficial afectando <strong className="text-slate-900">únicamente</strong> los servicios facturables del broker (con IGV 18%). Total Factura SUNAT:{" "}
+          <span className="font-bold text-blue-700">${totalTaxableUsd.toFixed(2)} USD</span> /{" "}
+          <span className="font-bold text-blue-700">S/{totalTaxablePen.toFixed(2)} PEN</span>.
         </p>
         {error && (
           <p className="text-xs text-red-600 mt-2 flex items-center gap-1 font-medium">
@@ -98,12 +109,12 @@ export function EmitInvoiceButton({
         {loading ? (
           <>
             <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            Emitiendo en SUNAT...
+            Transmitiendo a OSE/SUNAT...
           </>
         ) : (
           <>
             <FileText className="w-4 h-4 mr-2" />
-            Emitir Comprobante (SUNAT)
+            Emitir Factura (SUNAT)
           </>
         )}
       </Button>

@@ -166,3 +166,39 @@ export async function emitInvoiceAction(liquidationId: string) {
   };
 }
 
+export async function generateReceiptAction(liquidationId: string) {
+  const liquidation = await prisma.liquidation.findUnique({
+    where: { id: liquidationId },
+    select: { operationId: true, receiptNumber: true },
+  });
+
+  if (!liquidation) {
+    throw new Error("Liquidación no encontrada.");
+  }
+
+  if (liquidation.receiptNumber) {
+    return { success: true, receiptNumber: liquidation.receiptNumber };
+  }
+
+  // Generate internal receipt correlative code: e.g. REC-2026-000123
+  const count = await prisma.liquidation.count({
+    where: { receiptNumber: { not: null } },
+  });
+  const year = new Date().getFullYear();
+  const sequence = String(count + 1).padStart(6, "0");
+  const receiptNumber = `REC-${year}-${sequence}`;
+
+  await prisma.liquidation.update({
+    where: { id: liquidationId },
+    data: {
+      receiptNumber,
+      receiptGeneratedAt: new Date(),
+    },
+  });
+
+  revalidatePath(`/liquidations/${liquidationId}`);
+  revalidatePath(`/operations/${liquidation.operationId}`);
+
+  return { success: true, receiptNumber };
+}
+

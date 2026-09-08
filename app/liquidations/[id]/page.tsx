@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
 import { EmitInvoiceButton } from "@/components/emit-invoice-button";
+import { EmitReceiptButton } from "@/components/emit-receipt-button";
 
 export const dynamic = "force-dynamic";
 
@@ -52,6 +53,31 @@ export default async function LiquidationDetailPage({ params }: LiquidationPageP
   const taxableCharges = operation.charges.filter((c) => c.isTaxable);
   const nonTaxableCharges = operation.charges.filter((c) => !c.isTaxable);
 
+  // Data for internal receipt PDF
+  const receiptPdfData = liquidation.receiptNumber
+    ? {
+        receiptNumber: liquidation.receiptNumber,
+        createdAt: liquidation.receiptGeneratedAt || liquidation.createdAt,
+        operationCode: quotation.code,
+        blNumber: operation.blNumber,
+        client: {
+          name: client.businessName,
+          documentType: client.documentType,
+          documentNumber: client.documentNumber,
+          address: client.address,
+        },
+        items: nonTaxableCharges.map((c) => ({
+          description: c.description,
+          currency: c.currency,
+          unitPrice: c.unitPrice,
+          quantity: c.quantity,
+          totalPrice: c.totalPrice,
+        })),
+        totalNonTaxableUsd: liquidation.totalNonTaxableUsd,
+        totalNonTaxablePen: liquidation.totalNonTaxablePen,
+      }
+    : null;
+
   return (
     <div className="space-y-8 max-w-5xl mx-auto pb-12">
       {/* Action Header Navbar */}
@@ -78,15 +104,27 @@ export default async function LiquidationDetailPage({ params }: LiquidationPageP
         </div>
       </div>
 
-      {/* Interactive SUNAT Invoicing Card */}
-      <EmitInvoiceButton
-        liquidationId={liquidation.id}
-        status={liquidation.status}
-        invoiceNumber={liquidation.invoiceNumber}
-        sunatPdfUrl={liquidation.sunatPdfUrl}
-        sunatCdrStatus={liquidation.sunatCdrStatus}
-        sunatNotes={liquidation.sunatNotes}
-      />
+      {/* Interactive Electronic Documents Action Cards (1. SUNAT Invoice, 2. Internal Receipt) */}
+      <div className="grid gap-6 md:grid-cols-2">
+        <EmitInvoiceButton
+          liquidationId={liquidation.id}
+          status={liquidation.status}
+          invoiceNumber={liquidation.invoiceNumber}
+          sunatPdfUrl={liquidation.sunatPdfUrl}
+          sunatCdrStatus={liquidation.sunatCdrStatus}
+          sunatNotes={liquidation.sunatNotes}
+          totalTaxableUsd={liquidation.totalTaxableUsd}
+          totalTaxablePen={liquidation.totalTaxablePen}
+        />
+
+        <EmitReceiptButton
+          liquidationId={liquidation.id}
+          receiptNumber={liquidation.receiptNumber}
+          totalNonTaxableUsd={liquidation.totalNonTaxableUsd}
+          totalNonTaxablePen={liquidation.totalNonTaxablePen}
+          receiptPdfData={receiptPdfData}
+        />
+      </div>
 
       {/* Official Liquidation Document Card */}
       <div className="rounded-2xl border bg-white p-8 shadow-sm space-y-8">
