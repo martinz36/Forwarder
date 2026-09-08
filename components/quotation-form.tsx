@@ -150,7 +150,7 @@ export function QuotationForm({ clients, concepts }: QuotationFormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-8 w-full">
       {/* Top Action Header Bar */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b pb-4">
         <div>
@@ -172,7 +172,7 @@ export function QuotationForm({ clients, concepts }: QuotationFormProps) {
               Cancelar
             </Button>
           </Link>
-          <Button type="submit" className="bg-blue-600 hover:bg-blue-500 text-white" disabled={isPending}>
+          <Button type="submit" className="bg-blue-600 hover:bg-blue-500 text-white font-semibold" disabled={isPending}>
             {isPending ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Guardando...
@@ -204,7 +204,7 @@ export function QuotationForm({ clients, concepts }: QuotationFormProps) {
             <select
               id="clientId"
               {...register("clientId")}
-              className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring font-medium"
             >
               {clients.map((c) => (
                 <option key={c.id} value={c.id}>
@@ -234,7 +234,7 @@ export function QuotationForm({ clients, concepts }: QuotationFormProps) {
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-bold text-slate-900">Conceptos y Costos Operativos</h2>
           <span className="text-xs text-slate-500 font-medium hidden sm:inline">
-            Formulario denso estilo Excel • Navegación rápida con Tab
+            Escribe directamente cualquier concepto libre o selecciona una plantilla del catálogo
           </span>
         </div>
 
@@ -242,13 +242,13 @@ export function QuotationForm({ clients, concepts }: QuotationFormProps) {
           <p className="text-xs font-medium text-red-500">{errors.items.message}</p>
         )}
 
-        {/* Desktop View: Dense DataGrid Table */}
-        <div className="hidden md:block overflow-x-auto border rounded-xl bg-white shadow-sm">
+        {/* Desktop View: Wide Dense DataGrid Table */}
+        <div className="hidden md:block overflow-x-auto border rounded-xl bg-white shadow-sm w-full">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
               <tr className="bg-slate-50 border-b text-slate-700 font-semibold">
                 <th className="py-2.5 px-3 w-10 text-center">#</th>
-                <th className="py-2.5 px-3 min-w-[220px]">Concepto / Servicio</th>
+                <th className="py-2.5 px-3 w-[40%] min-w-[280px]">Concepto / Servicio</th>
                 <th className="py-2.5 px-3 w-28">Moneda</th>
                 <th className="py-2.5 px-3 w-20 text-center">Cant.</th>
                 <th className="py-2.5 px-3 w-32 text-right">Costo Unit.</th>
@@ -277,23 +277,23 @@ export function QuotationForm({ clients, concepts }: QuotationFormProps) {
                       {index + 1}
                     </td>
 
-                    {/* Concept Description + Catalog Selector */}
-                    <td className="py-2 px-3 space-y-1">
+                    {/* Free-text Concept Input + Smart Catalog Dropdown */}
+                    <td className="py-2 px-3">
                       <div className="flex items-center gap-1.5">
                         <Input
-                          placeholder="Ej: Flete Internacional, Handling..."
-                          className="h-8 text-xs font-medium"
+                          placeholder="Escribe cualquier concepto o servicio..."
+                          className="h-8 text-xs font-medium w-full"
                           {...register(`items.${index}.description` as const)}
                         />
                         {concepts.length > 0 && (
                           <select
-                            className="text-[11px] h-8 text-blue-700 bg-blue-50 border border-blue-200 rounded px-1.5 font-semibold cursor-pointer max-w-[130px] shrink-0"
+                            className="text-[11px] h-8 text-blue-700 bg-blue-50 border border-blue-200 rounded px-1.5 font-semibold cursor-pointer shrink-0 max-w-[130px]"
                             onChange={(e) => {
                               if (e.target.value) {
                                 handleSelectConcept(index, e.target.value);
                               }
                             }}
-                            defaultValue=""
+                            value=""
                           >
                             <option value="" disabled>⚡ Catálogo...</option>
                             {concepts.map((c) => (
@@ -305,7 +305,7 @@ export function QuotationForm({ clients, concepts }: QuotationFormProps) {
                         )}
                       </div>
                       {errors.items?.[index]?.description && (
-                        <p className="text-[11px] text-red-500 font-medium">
+                        <p className="text-[11px] text-red-500 font-medium mt-1">
                           {errors.items[index]?.description?.message}
                         </p>
                       )}
@@ -432,7 +432,7 @@ export function QuotationForm({ clients, concepts }: QuotationFormProps) {
                       {index + 1}
                     </span>
                     <span className="font-semibold text-slate-800 text-sm">
-                      Línea de Servicio #{index + 1}
+                      Línea #{index + 1}
                     </span>
                   </div>
 
@@ -444,7 +444,7 @@ export function QuotationForm({ clients, concepts }: QuotationFormProps) {
                           handleSelectConcept(index, e.target.value);
                         }
                       }}
-                      defaultValue=""
+                      value=""
                     >
                       <option value="" disabled>
                         ⚡ Cargar del Catálogo...

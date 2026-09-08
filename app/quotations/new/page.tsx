@@ -17,7 +17,7 @@ export default async function NewQuotationPage() {
   ]);
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="w-full px-4 sm:px-6 space-y-6">
       <QuotationForm clients={clients} concepts={concepts} />
     </div>
   );
