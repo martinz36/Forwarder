@@ -35,12 +35,13 @@ export async function createQuotationAction(data: QuotationFormValues) {
 
     return {
       description: item.description.trim(),
+      category: item.category || "GASTOS_LOCALES",
       currency: item.currency,
       unitCost: item.unitCost,
       unitPrice: item.unitPrice,
       quantity: item.quantity,
       total: saleTotal,
-      isTaxable: item.isTaxable ?? true,
+      isTaxable: item.isTaxable ?? (item.category === "GASTOS_LOCALES"),
     };
   });
 
@@ -61,6 +62,21 @@ export async function createQuotationAction(data: QuotationFormValues) {
         totalPen,
         profitUsd,
         profitPen,
+        modality: validated.modality || "IMPORTACIÓN MARÍTIMA",
+        incoterm: validated.incoterm || null,
+        origin: validated.origin || null,
+        destination: validated.destination || null,
+        shippingType: validated.shippingType || null,
+        shippingLine: validated.shippingLine || null,
+        frequency: validated.frequency || null,
+        transitTime: validated.transitTime || null,
+        cargoType: validated.cargoType || null,
+        packagesCount: validated.packagesCount || null,
+        grossWeight: validated.grossWeight || null,
+        volume: validated.volume || null,
+        loadType: validated.loadType || null,
+        containersCount: validated.containersCount || null,
+        notes: validated.notes || null,
         items: {
           createMany: {
             data: itemsWithTotal,

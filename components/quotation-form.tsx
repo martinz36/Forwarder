@@ -3,7 +3,23 @@
 import { useState, useTransition } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus, Trash2, Calculator, Loader2, ArrowLeft, TrendingUp, DollarSign, Wallet, CheckSquare, Square } from "lucide-react";
+import {
+  Plus,
+  Trash2,
+  Calculator,
+  Loader2,
+  ArrowLeft,
+  TrendingUp,
+  DollarSign,
+  Wallet,
+  CheckSquare,
+  Square,
+  Ship,
+  FileText,
+  Anchor,
+  Globe,
+  Package,
+} from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +27,13 @@ import { Label } from "@/components/ui/label";
 import { formatCurrency } from "@/lib/format";
 import { quotationSchema, QuotationFormValues } from "@/lib/validations/quotation";
 import { createQuotationAction } from "@/app/quotations/actions";
+
+export const CATEGORY_OPTIONS = [
+  { value: "GASTOS_ORIGEN", label: "Gastos de Origen", defaultTaxable: false },
+  { value: "FLETE_INTERNACIONAL", label: "Flete Internacional", defaultTaxable: false },
+  { value: "SEGURO", label: "Seguro (Opcional)", defaultTaxable: false },
+  { value: "GASTOS_LOCALES", label: "Gastos Locales", defaultTaxable: true },
+];
 
 interface ClientOption {
   id: string;
@@ -21,6 +44,7 @@ interface ClientOption {
 interface ConceptOption {
   id: string;
   name: string;
+  category?: string;
   defaultCurrency: string;
   defaultPrice: number | null;
   isTaxable?: boolean;
@@ -47,9 +71,43 @@ export function QuotationForm({ clients, concepts }: QuotationFormProps) {
     defaultValues: {
       clientId: clients[0]?.id || "",
       validUntil: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+      modality: "IMPORTACIÓN MARÍTIMA",
+      incoterm: "EXW",
+      origin: "SHANGHAI - CHINA",
+      destination: "CALLAO - PERU",
+      shippingType: "Directo",
+      shippingLine: "COSCO / MAERSK",
+      frequency: "SEMANAL",
+      transitTime: "35 DÍAS APROX.",
+      cargoType: "CARGA GENERAL",
+      packagesCount: "10 BULTOS",
+      grossWeight: "305.00 KG",
+      volume: "2.200 CBM",
+      loadType: "LCL / LCL",
+      containersCount: "0 X LCL",
+      notes: "- TARIFA HASTA 5 CBM, EN CASO DE SUPERAR SE VOLVERÁ A COTIZAR.\n- VERIFICAR LA TARIFA VIGENTE SEGÚN FECHA DE ZARPE.",
       items: [
         {
+          description: "EXW CHARGES (Gastos de Origen)",
+          category: "GASTOS_ORIGEN",
+          currency: "USD",
+          unitCost: 120,
+          unitPrice: 200,
+          quantity: 1,
+          isTaxable: false,
+        },
+        {
+          description: "OCEAN FREIGHT TON/M3 (Flete Marítimo)",
+          category: "FLETE_INTERNACIONAL",
+          currency: "USD",
+          unitCost: 180,
+          unitPrice: 264,
+          quantity: 1,
+          isTaxable: false,
+        },
+        {
           description: "Despacho Aduanero (Comisión Agente)",
+          category: "GASTOS_LOCALES",
           currency: "USD",
           unitCost: 120,
           unitPrice: 200,
@@ -67,7 +125,7 @@ export function QuotationForm({ clients, concepts }: QuotationFormProps) {
 
   const watchedItems = watch("items") || [];
 
-  // Live calculations for Summary (Cost, Sale, Profit, Taxable & IGV 18% for USD & PEN)
+  // Live calculations for Summary
   let liveCostUsd = 0;
   let liveSaleUsd = 0;
   let liveTaxableUsd = 0;
@@ -120,20 +178,35 @@ export function QuotationForm({ clients, concepts }: QuotationFormProps) {
   const marginUsdPct = liveSaleUsd > 0 ? ((liveProfitUsd / liveSaleUsd) * 100).toFixed(1) : "0.0";
   const marginPenPct = liveSalePen > 0 ? ((liveProfitPen / liveSalePen) * 100).toFixed(1) : "0.0";
 
+  function handleCategoryChange(index: number, newCat: string) {
+    setValue(`items.${index}.category`, newCat as any);
+    const catConfig = CATEGORY_OPTIONS.find((c) => c.value === newCat);
+    if (catConfig) {
+      setValue(`items.${index}.isTaxable`, catConfig.defaultTaxable);
+    }
+  }
+
   function handleSelectConcept(index: number, conceptName: string) {
     setValue(`items.${index}.description`, conceptName);
     const matched = concepts.find((c) => c.name === conceptName);
     if (matched) {
+      if (matched.category) {
+        setValue(`items.${index}.category`, matched.category as any);
+      }
       if (matched.defaultCurrency === "PEN" || matched.defaultCurrency === "USD") {
         setValue(`items.${index}.currency`, matched.defaultCurrency as "USD" | "PEN");
       }
       if (matched.defaultPrice !== null && matched.defaultPrice !== undefined) {
         setValue(`items.${index}.unitPrice`, matched.defaultPrice);
-        // Default unitCost estimate at 65% of price if unspecified
         setValue(`items.${index}.unitCost`, Number((matched.defaultPrice * 0.65).toFixed(2)));
       }
       if (matched.isTaxable !== undefined) {
         setValue(`items.${index}.isTaxable`, matched.isTaxable);
+      } else if (matched.category) {
+        const catConfig = CATEGORY_OPTIONS.find((c) => c.value === matched.category);
+        if (catConfig) {
+          setValue(`items.${index}.isTaxable`, catConfig.defaultTaxable);
+        }
       }
     }
   }
@@ -150,7 +223,7 @@ export function QuotationForm({ clients, concepts }: QuotationFormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-8 w-full">
       {/* Top Action Header Bar */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b pb-4">
         <div>
@@ -160,10 +233,10 @@ export function QuotationForm({ clients, concepts }: QuotationFormProps) {
                 <ArrowLeft className="h-4 w-4" />
               </Button>
             </Link>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">Nueva Cotización Broker</h1>
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900">Nueva Cotización Comercial</h1>
           </div>
           <p className="mt-1 text-sm text-slate-500">
-            Simulador de cotización en tiempo real con cálculo automático de Costos, Venta y Profit.
+            Formato oficial de cotización de carga internacional con desglose de impuestos y rentabilidad.
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -172,7 +245,7 @@ export function QuotationForm({ clients, concepts }: QuotationFormProps) {
               Cancelar
             </Button>
           </Link>
-          <Button type="submit" className="bg-blue-600 hover:bg-blue-500 text-white" disabled={isPending}>
+          <Button type="submit" className="bg-blue-600 hover:bg-blue-500 text-white font-semibold shadow" disabled={isPending}>
             {isPending ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Guardando...
@@ -190,7 +263,7 @@ export function QuotationForm({ clients, concepts }: QuotationFormProps) {
         </div>
       )}
 
-      {/* Client & Date Info */}
+      {/* Client & Basic Information */}
       <div className="grid gap-6 md:grid-cols-2 rounded-xl border bg-white p-6 shadow-sm">
         <div className="space-y-2">
           <Label htmlFor="clientId" className="font-semibold text-slate-800">
@@ -204,7 +277,7 @@ export function QuotationForm({ clients, concepts }: QuotationFormProps) {
             <select
               id="clientId"
               {...register("clientId")}
-              className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring font-medium"
             >
               {clients.map((c) => (
                 <option key={c.id} value={c.id}>
@@ -222,23 +295,125 @@ export function QuotationForm({ clients, concepts }: QuotationFormProps) {
           <Label htmlFor="validUntil" className="font-semibold text-slate-800">
             Fecha de Validez
           </Label>
-          <Input id="validUntil" type="date" {...register("validUntil")} />
+          <Input id="validUntil" type="date" {...register("validUntil")} className="h-10" />
           {errors.validUntil && (
             <p className="text-xs font-medium text-red-500">{errors.validUntil.message}</p>
           )}
         </div>
       </div>
 
-      {/* Dynamic Item Form */}
+      {/* Section: Datos del Embarque (Shipment Header Metadata) */}
+      <div className="rounded-xl border bg-white p-6 shadow-sm space-y-4">
+        <div className="flex items-center gap-2 border-b pb-3 text-slate-900">
+          <Ship className="h-5 w-5 text-blue-600" />
+          <h2 className="text-base font-bold">Datos del Embarque y Operación Logística</h2>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold text-slate-700">Modalidad *</Label>
+            <select
+              {...register("modality")}
+              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-xs shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring font-medium"
+            >
+              <option value="IMPORTACIÓN MARÍTIMA">IMPORTACIÓN MARÍTIMA</option>
+              <option value="EXPORTACIÓN MARÍTIMA">EXPORTACIÓN MARÍTIMA</option>
+              <option value="IMPORTACIÓN AÉREA">IMPORTACIÓN AÉREA</option>
+              <option value="EXPORTACIÓN AÉREA">EXPORTACIÓN AÉREA</option>
+              <option value="TRANSPORTE TERRESTRE">TRANSPORTE TERRESTRE</option>
+            </select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold text-slate-700">Incoterm</Label>
+            <Input placeholder="Ej: EXW, FOB, CIF, CFR" {...register("incoterm")} className="h-9 text-xs" />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold text-slate-700">Puerto / Origen</Label>
+            <Input placeholder="Ej: SHANGHAI - CHINA" {...register("origin")} className="h-9 text-xs" />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold text-slate-700">Puerto / Destino</Label>
+            <Input placeholder="Ej: CALLAO - PERU" {...register("destination")} className="h-9 text-xs" />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold text-slate-700">Tipo de Envío</Label>
+            <Input placeholder="Ej: Directo / Transbordo" {...register("shippingType")} className="h-9 text-xs" />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold text-slate-700">Línea Marítima / Aérea</Label>
+            <Input placeholder="Ej: COSCO, MAERSK" {...register("shippingLine")} className="h-9 text-xs" />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold text-slate-700">Frecuencia</Label>
+            <Input placeholder="Ej: SEMANAL" {...register("frequency")} className="h-9 text-xs" />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold text-slate-700">Tiempo de Tránsito</Label>
+            <Input placeholder="Ej: 35 DÍAS APROX." {...register("transitTime")} className="h-9 text-xs" />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold text-slate-700">Tipo de Carga</Label>
+            <Input placeholder="Ej: CARGA GENERAL" {...register("cargoType")} className="h-9 text-xs" />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold text-slate-700">Bultos / Cantidad</Label>
+            <Input placeholder="Ej: 10 CARTONES / 0" {...register("packagesCount")} className="h-9 text-xs" />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold text-slate-700">Peso Bruto (KG)</Label>
+            <Input placeholder="Ej: 305.00 KG" {...register("grossWeight")} className="h-9 text-xs" />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold text-slate-700">Volumen (CBM)</Label>
+            <Input placeholder="Ej: 2.200 CBM" {...register("volume")} className="h-9 text-xs" />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold text-slate-700">Tipo Flete / Contenedor</Label>
+            <Input placeholder="Ej: LCL / LCL, FCL / FCL" {...register("loadType")} className="h-9 text-xs" />
+          </div>
+
+          <div className="space-y-1.5 sm:col-span-2 md:col-span-3">
+            <Label className="text-xs font-semibold text-slate-700">Cantidad / Detalle de Contenedores</Label>
+            <Input placeholder="Ej: 1 X 40'HQ o 0 X LCL" {...register("containersCount")} className="h-9 text-xs" />
+          </div>
+        </div>
+      </div>
+
+      {/* Dynamic Items Form */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold text-slate-900">Conceptos y Costos Operativos</h2>
+          <div>
+            <h2 className="text-lg font-bold text-slate-900">Conceptos y Costos Operativos</h2>
+            <p className="text-xs text-slate-500">Clasifica los conceptos por categoría (Gastos de Origen, Flete, Gastos Locales).</p>
+          </div>
           <Button
             type="button"
             variant="outline"
             size="sm"
-            onClick={() => append({ description: "", currency: "USD", unitCost: 0, unitPrice: 0, quantity: 1, isTaxable: true })}
-            className="text-blue-600 border-blue-200 hover:bg-blue-50"
+            onClick={() =>
+              append({
+                description: "",
+                category: "GASTOS_LOCALES",
+                currency: "USD",
+                unitCost: 0,
+                unitPrice: 0,
+                quantity: 1,
+                isTaxable: true,
+              })
+            }
+            className="text-blue-600 border-blue-200 hover:bg-blue-50 font-semibold"
           >
             <Plus className="mr-1.5 h-4 w-4" /> Agregar Ítem
           </Button>
@@ -265,8 +440,8 @@ export function QuotationForm({ clients, concepts }: QuotationFormProps) {
                 key={field.id}
                 className="rounded-xl border bg-white p-4 shadow-sm space-y-4 transition-all hover:border-slate-300"
               >
-                {/* Header line for Mobile */}
-                <div className="flex items-center justify-between border-b pb-2">
+                {/* Line Header */}
+                <div className="flex items-center justify-between border-b pb-2 flex-wrap gap-2">
                   <div className="flex items-center gap-2">
                     <span className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-900 text-white font-bold text-xs">
                       {index + 1}
@@ -278,7 +453,7 @@ export function QuotationForm({ clients, concepts }: QuotationFormProps) {
 
                   {concepts.length > 0 && (
                     <select
-                      className="text-xs text-blue-600 bg-blue-50 border border-blue-200 rounded px-2 py-1 cursor-pointer font-medium"
+                      className="text-xs text-blue-600 bg-blue-50 border border-blue-200 rounded px-2.5 py-1 cursor-pointer font-medium"
                       onChange={(e) => {
                         if (e.target.value) {
                           handleSelectConcept(index, e.target.value);
@@ -291,21 +466,38 @@ export function QuotationForm({ clients, concepts }: QuotationFormProps) {
                       </option>
                       {concepts.map((conc) => (
                         <option key={conc.id} value={conc.name}>
-                          {conc.name} ({conc.defaultCurrency}) - {conc.isTaxable ? "Afecto IGV" : "Inafecto"}
+                          {conc.name} ({conc.defaultCurrency})
                         </option>
                       ))}
                     </select>
                   )}
                 </div>
 
-                {/* Mobile-First Stacked Grid */}
+                {/* Mobile-First Grid */}
                 <div className="grid gap-4 sm:grid-cols-12 sm:items-end">
+                  {/* Category (sm:col-span-3) */}
+                  <div className="sm:col-span-3 space-y-1.5">
+                    <Label className="text-xs font-semibold text-slate-700">Categoría *</Label>
+                    <select
+                      value={currentItem.category || "GASTOS_LOCALES"}
+                      onChange={(e) => handleCategoryChange(index, e.target.value)}
+                      className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-xs shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring font-bold text-slate-800"
+                    >
+                      {CATEGORY_OPTIONS.map((cat) => (
+                        <option key={cat.value} value={cat.value}>
+                          {cat.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
                   {/* Concept Description (sm:col-span-3) */}
                   <div className="sm:col-span-3 space-y-1.5">
                     <Label className="text-xs font-semibold text-slate-700">Concepto / Servicio *</Label>
                     <Input
                       placeholder="Ej: Flete Internacional, Handling, Visto Bueno..."
                       {...register(`items.${index}.description` as const)}
+                      className="h-9 text-xs"
                     />
                     {errors.items?.[index]?.description && (
                       <p className="text-xs text-red-500">
@@ -319,33 +511,33 @@ export function QuotationForm({ clients, concepts }: QuotationFormProps) {
                     <Label className="text-xs font-semibold text-slate-700">Moneda</Label>
                     <select
                       {...register(`items.${index}.currency` as const)}
-                      className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring font-semibold"
+                      className="flex h-9 w-full rounded-md border border-input bg-transparent px-2 py-1 text-xs shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring font-semibold"
                     >
                       <option value="USD">USD ($)</option>
                       <option value="PEN">PEN (S/)</option>
                     </select>
                   </div>
 
-                  {/* Unit Cost (sm:col-span-2) */}
-                  <div className="sm:col-span-2 space-y-1.5">
-                    <Label className="text-xs font-semibold text-slate-700">Costo Unit.</Label>
+                  {/* Unit Cost (sm:col-span-1) */}
+                  <div className="sm:col-span-1 space-y-1.5">
+                    <Label className="text-xs font-semibold text-slate-700">Costo U.</Label>
                     <Input
                       type="number"
                       step="0.01"
                       min="0"
-                      className="text-right font-medium bg-slate-50/50"
+                      className="text-right font-medium bg-slate-50/50 h-9 text-xs px-1"
                       {...register(`items.${index}.unitCost` as const, { valueAsNumber: true })}
                     />
                   </div>
 
-                  {/* Unit Price (sm:col-span-2) */}
-                  <div className="sm:col-span-2 space-y-1.5">
-                    <Label className="text-xs font-semibold text-blue-700">Precio Venta *</Label>
+                  {/* Unit Price (sm:col-span-1) */}
+                  <div className="sm:col-span-1 space-y-1.5">
+                    <Label className="text-xs font-semibold text-blue-700">Precio V.*</Label>
                     <Input
                       type="number"
                       step="0.01"
                       min="0"
-                      className="text-right font-bold text-blue-900 border-blue-200"
+                      className="text-right font-bold text-blue-900 border-blue-200 h-9 text-xs px-1"
                       {...register(`items.${index}.unitPrice` as const, { valueAsNumber: true })}
                     />
                   </div>
@@ -356,30 +548,34 @@ export function QuotationForm({ clients, concepts }: QuotationFormProps) {
                     <Input
                       type="number"
                       min="1"
-                      className="text-center font-medium px-1"
+                      className="text-center font-medium px-1 h-9 text-xs"
                       {...register(`items.${index}.quantity` as const, { valueAsNumber: true })}
                     />
                   </div>
 
-                  {/* Taxable Toggle (sm:col-span-2) */}
-                  <div className="sm:col-span-2 space-y-1.5">
-                    <Label className="text-xs font-semibold text-slate-700">Afecto IGV</Label>
+                  {/* Taxable Toggle (sm:col-span-1) */}
+                  <div className="sm:col-span-1 space-y-1.5">
+                    <Label className="text-xs font-semibold text-slate-700">IGV</Label>
                     <button
                       type="button"
                       onClick={() => setValue(`items.${index}.isTaxable`, !(currentItem.isTaxable !== false))}
-                      className={`flex h-9 w-full items-center justify-center gap-1.5 px-2 rounded-md text-xs font-bold border transition-colors ${
+                      className={`flex h-9 w-full items-center justify-center gap-1 px-1 rounded-md text-[11px] font-bold border transition-colors ${
                         currentItem.isTaxable !== false
                           ? "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100"
                           : "bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100"
                       }`}
                     >
-                      {currentItem.isTaxable !== false ? <CheckSquare className="h-3.5 w-3.5 text-blue-600 shrink-0" /> : <Square className="h-3.5 w-3.5 text-amber-600 shrink-0" />}
-                      <span className="truncate">{currentItem.isTaxable !== false ? "Afecto 18%" : "Inafecto"}</span>
+                      {currentItem.isTaxable !== false ? (
+                        <CheckSquare className="h-3 w-3 text-blue-600 shrink-0" />
+                      ) : (
+                        <Square className="h-3 w-3 text-amber-600 shrink-0" />
+                      )}
+                      <span className="truncate">{currentItem.isTaxable !== false ? "18%" : "Inafecto"}</span>
                     </button>
                   </div>
                 </div>
 
-                {/* Line Calculation Summary Footer (Cost, Sale, Profit) */}
+                {/* Line Calculation Summary Footer */}
                 <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t bg-slate-50/70 -mx-4 -mb-4 p-3 rounded-b-xl">
                   <div className="flex items-center gap-4 text-xs">
                     <div>
@@ -393,7 +589,6 @@ export function QuotationForm({ clients, concepts }: QuotationFormProps) {
                   </div>
 
                   <div className="flex items-center gap-4">
-                    {/* Item Profit Badge */}
                     <div className="text-right">
                       <span className="text-[10px] uppercase font-bold text-slate-400 mr-1">Profit Línea:</span>
                       <span className={`font-black text-sm ${lineProfit >= 0 ? "text-emerald-600" : "text-red-600"}`}>
@@ -420,7 +615,21 @@ export function QuotationForm({ clients, concepts }: QuotationFormProps) {
         </div>
       </div>
 
-      {/* Client Financial Summary Card (Desglose de Impuestos IGV 18% para el Cliente) */}
+      {/* Observations / Terms & Conditions */}
+      <div className="rounded-xl border bg-white p-6 shadow-sm space-y-2">
+        <Label htmlFor="notes" className="font-semibold text-slate-800 text-sm">
+          Observaciones / Términos y Condiciones
+        </Label>
+        <textarea
+          id="notes"
+          rows={3}
+          {...register("notes")}
+          className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-xs shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring font-mono"
+          placeholder="Términos comerciales, validez de fletes, condiciones de pago..."
+        />
+      </div>
+
+      {/* Client Financial Summary Card (Vista Cliente) */}
       <div className="rounded-2xl border bg-white p-6 shadow-sm space-y-6">
         <div className="flex items-center justify-between border-b pb-4">
           <div className="flex items-center gap-3">
@@ -450,7 +659,7 @@ export function QuotationForm({ clients, concepts }: QuotationFormProps) {
                 <span className="text-right">{formatCurrency(liveIgvUsd, "USD")}</span>
               </div>
               <div className="flex justify-between items-center text-slate-600">
-                <span>Subtotal Reembolsos (Inafectos):</span>
+                <span>Subtotal Reembolsos / Origen (Inafectos):</span>
                 <span className="font-semibold text-slate-800 text-right">{formatCurrency(liveNonTaxableUsd, "USD")}</span>
               </div>
               <div className="flex justify-between items-center pt-2 border-t border-blue-200">
@@ -475,7 +684,7 @@ export function QuotationForm({ clients, concepts }: QuotationFormProps) {
                 <span className="text-right">{formatCurrency(liveIgvPen, "PEN")}</span>
               </div>
               <div className="flex justify-between items-center text-slate-600">
-                <span>Subtotal Reembolsos (Inafectos):</span>
+                <span>Subtotal Reembolsos / Origen (Inafectos):</span>
                 <span className="font-semibold text-slate-800 text-right">{formatCurrency(liveNonTaxablePen, "PEN")}</span>
               </div>
               <div className="flex justify-between items-center pt-2 border-t border-purple-200">
@@ -487,7 +696,7 @@ export function QuotationForm({ clients, concepts }: QuotationFormProps) {
         </div>
       </div>
 
-      {/* Real-time Profit Summary Card (Broker Financial Panel) */}
+      {/* Real-time Profit Summary Card (Broker Internal Panel) */}
       <div className="rounded-2xl border bg-slate-950 text-white p-6 shadow-xl space-y-6">
         <div className="flex items-center justify-between border-b border-slate-800 pb-4">
           <div className="flex items-center gap-3">
@@ -501,7 +710,6 @@ export function QuotationForm({ clients, concepts }: QuotationFormProps) {
           </div>
         </div>
 
-        {/* Financial Breakdown Grid (USD and PEN) */}
         <div className="grid gap-6 md:grid-cols-2">
           {/* USD Breakdown Card */}
           <div className="rounded-xl bg-slate-900 p-5 border border-slate-800 space-y-3">

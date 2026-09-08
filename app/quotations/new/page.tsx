@@ -11,13 +11,13 @@ export default async function NewQuotationPage() {
       orderBy: { businessName: "asc" },
     }),
     prisma.conceptCatalog.findMany({
-      select: { id: true, name: true, defaultCurrency: true, defaultPrice: true, isTaxable: true },
+      select: { id: true, name: true, category: true, defaultCurrency: true, defaultPrice: true, isTaxable: true },
       orderBy: { name: "asc" },
     }),
   ]);
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-7xl mx-auto w-full space-y-6">
       <QuotationForm clients={clients} concepts={concepts} />
     </div>
   );

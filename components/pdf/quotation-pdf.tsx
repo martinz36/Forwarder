@@ -4,6 +4,7 @@ import { formatCurrency, formatDate } from "@/lib/format";
 
 export interface QuotationPdfItem {
   description: string;
+  category?: string;
   currency: string;
   unitPrice: number;
   quantity: number;
@@ -15,6 +16,21 @@ export interface QuotationPdfData {
   code: string;
   createdAt: string | Date;
   validUntil?: string | Date | null;
+  modality?: string | null;
+  incoterm?: string | null;
+  origin?: string | null;
+  destination?: string | null;
+  shippingType?: string | null;
+  shippingLine?: string | null;
+  frequency?: string | null;
+  transitTime?: string | null;
+  cargoType?: string | null;
+  packagesCount?: string | null;
+  grossWeight?: string | null;
+  volume?: string | null;
+  loadType?: string | null;
+  containersCount?: string | null;
+  notes?: string | null;
   client: {
     name: string;
     documentType?: string | null;
@@ -39,10 +55,10 @@ export interface QuotationPdfData {
 
 const styles = StyleSheet.create({
   page: {
-    padding: 35,
-    fontSize: 9,
+    padding: 30,
+    fontSize: 8.5,
     fontFamily: "Helvetica",
-    color: "#1e293b",
+    color: "#0f172a",
     backgroundColor: "#ffffff",
   },
   header: {
@@ -50,206 +66,238 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "flex-start",
     borderBottomWidth: 1.5,
-    borderBottomColor: "#2563eb",
-    borderBottomStyle: "solid",
-    paddingBottom: 12,
-    marginBottom: 16,
+    borderBottomColor: "#1e3a8a",
+    paddingBottom: 10,
+    marginBottom: 12,
   },
   companyName: {
     fontSize: 14,
     fontFamily: "Helvetica-Bold",
-    color: "#1e40af",
-    marginBottom: 3,
-  },
-  companyDetails: {
-    fontSize: 8,
-    color: "#64748b",
+    color: "#1e3a8a",
     marginBottom: 2,
   },
-  documentTitleBox: {
-    alignItems: "flex-end",
-  },
-  docCode: {
-    fontSize: 13,
-    fontFamily: "Helvetica-Bold",
-    color: "#0f172a",
-    marginBottom: 3,
-  },
-  docBadge: {
-    backgroundColor: "#eff6ff",
-    color: "#1d4ed8",
-    fontSize: 8,
-    fontFamily: "Helvetica-Bold",
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 3,
-  },
-  metaGrid: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    backgroundColor: "#f8fafc",
-    borderRadius: 4,
-    padding: 10,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
-  },
-  metaCol: {
-    width: "48%",
-  },
-  metaLabel: {
-    fontSize: 7,
-    fontFamily: "Helvetica-Bold",
-    color: "#94a3b8",
-    textTransform: "uppercase",
-    marginBottom: 3,
-  },
-  clientName: {
-    fontSize: 10,
-    fontFamily: "Helvetica-Bold",
-    color: "#0f172a",
-    marginBottom: 2,
-  },
-  metaText: {
+  companySub: {
     fontSize: 8,
     color: "#475569",
-    marginBottom: 2,
   },
-  table: {
-    width: "100%",
-    marginBottom: 16,
+  docBox: {
+    alignItems: "flex-end",
   },
+  docTitle: {
+    fontSize: 11,
+    fontFamily: "Helvetica-Bold",
+    color: "#0f172a",
+    textTransform: "uppercase",
+  },
+  docCode: {
+    fontSize: 10,
+    fontFamily: "Helvetica-Bold",
+    color: "#2563eb",
+    marginTop: 2,
+  },
+
+  salutationBox: {
+    marginBottom: 10,
+  },
+  salutationText: {
+    fontSize: 8.5,
+    color: "#334155",
+    lineHeight: 1.3,
+  },
+  clientNameBold: {
+    fontFamily: "Helvetica-Bold",
+    color: "#0f172a",
+  },
+
+  shipmentGrid: {
+    borderWidth: 1,
+    borderColor: "#cbd5e1",
+    borderRadius: 3,
+    padding: 8,
+    marginBottom: 12,
+    backgroundColor: "#f8fafc",
+  },
+  shipmentTitle: {
+    fontSize: 8,
+    fontFamily: "Helvetica-Bold",
+    color: "#1e3a8a",
+    borderBottomWidth: 1,
+    borderBottomColor: "#cbd5e1",
+    paddingBottom: 3,
+    marginBottom: 6,
+    textTransform: "uppercase",
+  },
+  gridRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 3,
+  },
+  gridCell: {
+    width: "48%",
+    flexDirection: "row",
+  },
+  gridLabel: {
+    width: "45%",
+    fontSize: 7.5,
+    fontFamily: "Helvetica-Bold",
+    color: "#475569",
+  },
+  gridVal: {
+    width: "55%",
+    fontSize: 7.5,
+    color: "#0f172a",
+  },
+
+  tableBlockTitle: {
+    backgroundColor: "#1e3a8a",
+    color: "#ffffff",
+    fontSize: 8,
+    fontFamily: "Helvetica-Bold",
+    paddingVertical: 4,
+    paddingHorizontal: 6,
+    textTransform: "uppercase",
+    marginTop: 6,
+  },
+
   tableHeader: {
     flexDirection: "row",
-    backgroundColor: "#1e293b",
-    borderRadius: 3,
-    paddingVertical: 6,
-    paddingHorizontal: 8,
+    backgroundColor: "#e2e8f0",
+    paddingVertical: 4,
+    paddingHorizontal: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: "#cbd5e1",
   },
-  thDesc: { width: "45%", color: "#ffffff", fontFamily: "Helvetica-Bold", fontSize: 8 },
-  thCurr: { width: "12%", color: "#ffffff", fontFamily: "Helvetica-Bold", fontSize: 8, textAlign: "center" },
-  thQty: { width: "10%", color: "#ffffff", fontFamily: "Helvetica-Bold", fontSize: 8, textAlign: "center" },
-  thUnitPrice: { width: "16.5%", color: "#ffffff", fontFamily: "Helvetica-Bold", fontSize: 8, textAlign: "right" },
-  thTotal: { width: "16.5%", color: "#ffffff", fontFamily: "Helvetica-Bold", fontSize: 8, textAlign: "right" },
+  thDesc: { width: "42%", fontSize: 7.5, fontFamily: "Helvetica-Bold", color: "#1e293b" },
+  thCurr: { width: "12%", fontSize: 7.5, fontFamily: "Helvetica-Bold", color: "#1e293b", textAlign: "center" },
+  thPrice: { width: "16%", fontSize: 7.5, fontFamily: "Helvetica-Bold", color: "#1e293b", textAlign: "right" },
+  thUsd: { width: "15%", fontSize: 7.5, fontFamily: "Helvetica-Bold", color: "#1e293b", textAlign: "right" },
+  thPen: { width: "15%", fontSize: 7.5, fontFamily: "Helvetica-Bold", color: "#1e293b", textAlign: "right" },
 
   tableRow: {
     flexDirection: "row",
     borderBottomWidth: 1,
     borderBottomColor: "#f1f5f9",
-    paddingVertical: 6,
-    paddingHorizontal: 8,
+    paddingVertical: 4,
+    paddingHorizontal: 6,
   },
-  tdDesc: { width: "45%", fontSize: 8.5, color: "#0f172a" },
-  tdCurr: { width: "12%", fontSize: 8.5, textAlign: "center", fontFamily: "Helvetica-Bold", color: "#475569" },
-  tdQty: { width: "10%", fontSize: 8.5, textAlign: "center", color: "#475569" },
-  tdUnitPrice: { width: "16.5%", fontSize: 8.5, textAlign: "right", color: "#475569" },
-  tdTotal: { width: "16.5%", fontSize: 8.5, textAlign: "right", fontFamily: "Helvetica-Bold", color: "#0f172a" },
+  tdDesc: { width: "42%", fontSize: 7.5, color: "#0f172a" },
+  tdCurr: { width: "12%", fontSize: 7.5, textAlign: "center", color: "#475569" },
+  tdPrice: { width: "16%", fontSize: 7.5, textAlign: "right", color: "#475569" },
+  tdUsd: { width: "15%", fontSize: 7.5, textAlign: "right", fontFamily: "Helvetica-Bold", color: "#0f172a" },
+  tdPen: { width: "15%", fontSize: 7.5, textAlign: "right", fontFamily: "Helvetica-Bold", color: "#0f172a" },
 
-  taxBadge: {
-    fontSize: 7,
-    color: "#2563eb",
-    fontFamily: "Helvetica-Bold",
+  totalCategoryRow: {
+    flexDirection: "row",
+    backgroundColor: "#f1f5f9",
+    paddingVertical: 4,
+    paddingHorizontal: 6,
+    borderBottomWidth: 1.5,
+    borderBottomColor: "#cbd5e1",
   },
-  nonTaxBadge: {
-    fontSize: 7,
-    color: "#d97706",
-    fontFamily: "Helvetica-Bold",
-  },
+  totalCategoryLabel: { width: "70%", fontSize: 7.5, fontFamily: "Helvetica-Bold", color: "#1e3a8a", textTransform: "uppercase" },
+  totalCategoryUsd: { width: "15%", fontSize: 7.5, fontFamily: "Helvetica-Bold", textAlign: "right", color: "#1e3a8a" },
+  totalCategoryPen: { width: "15%", fontSize: 7.5, fontFamily: "Helvetica-Bold", textAlign: "right", color: "#1e3a8a" },
 
-  summarySection: {
+  summaryContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginTop: 8,
+    marginTop: 12,
   },
-  notesBox: {
-    width: "48%",
-    backgroundColor: "#f8fafc",
-    padding: 10,
-    borderRadius: 4,
+  obsBox: {
+    width: "55%",
     borderWidth: 1,
     borderColor: "#e2e8f0",
+    borderRadius: 3,
+    padding: 8,
+    backgroundColor: "#fafafa",
   },
-  notesTitle: {
-    fontSize: 8,
-    fontFamily: "Helvetica-Bold",
-    color: "#334155",
-    marginBottom: 4,
-  },
-  notesText: {
+  obsTitle: {
     fontSize: 7.5,
-    color: "#64748b",
+    fontFamily: "Helvetica-Bold",
+    color: "#1e293b",
+    marginBottom: 4,
+    textTransform: "uppercase",
+  },
+  obsText: {
+    fontSize: 7,
+    color: "#475569",
     lineHeight: 1.3,
   },
 
   totalsBox: {
-    width: "48%",
-    backgroundColor: "#0f172a",
-    padding: 10,
-    borderRadius: 4,
+    width: "42%",
+    borderWidth: 1,
+    borderColor: "#1e3a8a",
+    borderRadius: 3,
+    padding: 8,
+    backgroundColor: "#1e293b",
     color: "#ffffff",
   },
   totalsTitle: {
-    fontSize: 9,
+    fontSize: 8,
     fontFamily: "Helvetica-Bold",
     color: "#38bdf8",
-    marginBottom: 6,
+    marginBottom: 4,
     borderBottomWidth: 1,
-    borderBottomColor: "#1e293b",
-    paddingBottom: 4,
+    borderBottomColor: "#334155",
+    paddingBottom: 2,
+    textAlign: "center",
   },
-  totalRow: {
+  rowSummary: {
     flexDirection: "row",
     justifyContent: "space-between",
-    paddingVertical: 2,
+    paddingVertical: 1.5,
   },
-  totalLabel: {
-    fontSize: 7.5,
-    color: "#94a3b8",
-  },
-  totalVal: {
-    fontSize: 7.5,
-    color: "#f8fafc",
-    fontFamily: "Helvetica-Bold",
-  },
+  lblSummary: { fontSize: 7, color: "#cbd5e1" },
+  valSummary: { fontSize: 7, fontFamily: "Helvetica-Bold", color: "#ffffff" },
   grandTotalRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     borderTopWidth: 1,
-    borderTopColor: "#334155",
-    paddingTop: 4,
-    marginTop: 4,
+    borderTopColor: "#475569",
+    paddingTop: 3,
+    marginTop: 3,
   },
-  grandTotalLabel: {
-    fontSize: 8.5,
-    fontFamily: "Helvetica-Bold",
-    color: "#ffffff",
-  },
-  grandTotalVal: {
-    fontSize: 10,
-    fontFamily: "Helvetica-Bold",
-    color: "#34d399",
-  },
+  grandTotalLbl: { fontSize: 8, fontFamily: "Helvetica-Bold", color: "#ffffff" },
+  grandTotalVal: { fontSize: 9, fontFamily: "Helvetica-Bold", color: "#34d399" },
 
   footer: {
     position: "absolute",
-    bottom: 25,
-    left: 35,
-    right: 35,
+    bottom: 20,
+    left: 30,
+    right: 30,
     borderTopWidth: 1,
     borderTopColor: "#e2e8f0",
-    paddingTop: 8,
+    paddingTop: 6,
     flexDirection: "row",
     justifyContent: "space-between",
   },
   footerText: {
-    fontSize: 7,
+    fontSize: 6.5,
     color: "#94a3b8",
   },
 });
 
 export function QuotationPDF({ data }: { data: QuotationPdfData }) {
-  const hasUsd = data.grandTotalUsd > 0;
-  const hasPen = data.grandTotalPen > 0;
+  const originItems = data.items.filter(
+    (i) => i.category === "GASTOS_ORIGEN" || i.category === "FLETE_INTERNACIONAL" || i.category === "SEGURO"
+  );
+  const localItems = data.items.filter((i) => i.category === "GASTOS_LOCALES" || !i.category);
+
+  // Calculate section totals
+  const originTotalUsd = originItems
+    .filter((i) => i.currency === "USD")
+    .reduce((sum, i) => sum + i.total, 0);
+  const originTotalPen = originItems
+    .filter((i) => i.currency === "PEN")
+    .reduce((sum, i) => sum + i.total, 0);
+
+  const localTotalUsd = localItems
+    .filter((i) => i.currency === "USD")
+    .reduce((sum, i) => sum + i.total, 0);
+  const localTotalPen = localItems
+    .filter((i) => i.currency === "PEN")
+    .reduce((sum, i) => sum + i.total, 0);
 
   return (
     <Document>
@@ -257,123 +305,208 @@ export function QuotationPDF({ data }: { data: QuotationPdfData }) {
         {/* Header */}
         <View style={styles.header}>
           <View>
-            <Text style={styles.companyName}>AGENCIA DE ADUANAS & LOGÍSTICA S.A.C.</Text>
-            <Text style={styles.companyDetails}>RUC: 20601234567 • Callao, Perú</Text>
-            <Text style={styles.companyDetails}>Tel: +51 1 555-0199 • cotizaciones@agencia.com.pe</Text>
+            <Text style={styles.companyName}>FORWARDER ERP - AGENCIA DE ADUANAS</Text>
+            <Text style={styles.companySub}>Agenciamiento Aduanero y Logística Internacional</Text>
+            <Text style={styles.companySub}>Callao, Perú • RUC: 20601335209</Text>
           </View>
-          <View style={styles.documentTitleBox}>
-            <Text style={styles.docCode}>COTIZACIÓN DE SERVICIOS</Text>
-            <Text style={styles.docBadge}>{data.code}</Text>
-          </View>
-        </View>
-
-        {/* Client & Date Info */}
-        <View style={styles.metaGrid}>
-          <View style={styles.metaCol}>
-            <Text style={styles.clientName}>{data.client.name}</Text>
-            {data.client.documentNumber && (
-              <Text style={styles.metaText}>
-                {data.client.documentType || "RUC"}: {data.client.documentNumber}
-              </Text>
-            )}
-            {data.client.address && <Text style={styles.metaText}>Dirección: {data.client.address}</Text>}
-            {data.client.phone && <Text style={styles.metaText}>Teléfono: {data.client.phone}</Text>}
-            {data.client.email && <Text style={styles.metaText}>Email: {data.client.email}</Text>}
-          </View>
-          <View style={styles.metaCol}>
-            <Text style={styles.metaLabel}>DETALLES DE LA COTIZACIÓN</Text>
-            <Text style={styles.metaText}>Fecha Emisión: {formatDate(data.createdAt)}</Text>
-            <Text style={styles.metaText}>Validez Hasta: {formatDate(data.validUntil)}</Text>
-            <Text style={styles.metaText}>Monedas: {hasUsd ? "USD ($) " : ""}{hasPen ? "PEN (S/)" : ""}</Text>
+          <View style={styles.docBox}>
+            <Text style={styles.docTitle}>
+              {data.modality ? `COTIZACIÓN DE ${data.modality}` : "COTIZACIÓN COMERCIAL"}
+            </Text>
+            <Text style={styles.docCode}>N° {data.code}</Text>
+            <Text style={{ fontSize: 7, color: "#64748b", marginTop: 2 }}>
+              Fecha: {formatDate(data.createdAt)}
+            </Text>
           </View>
         </View>
 
-        {/* Table of Concepts */}
-        <View style={styles.table}>
-          <View style={styles.tableHeader}>
-            <Text style={styles.thDesc}>CONCEPTO / SERVICIO</Text>
-            <Text style={styles.thCurr}>MONEDA</Text>
-            <Text style={styles.thQty}>CANT.</Text>
-            <Text style={styles.thUnitPrice}>PRECIO UNIT.</Text>
-            <Text style={styles.thTotal}>TOTAL</Text>
-          </View>
+        {/* Salutation & Client */}
+        <View style={styles.salutationBox}>
+          <Text style={styles.salutationText}>
+            Señores: <Text style={styles.clientNameBold}>{data.client.name}</Text>
+          </Text>
+          {data.client.documentNumber && (
+            <Text style={styles.salutationText}>
+              {data.client.documentType || "RUC"}: {data.client.documentNumber}
+            </Text>
+          )}
+          <Text style={[styles.salutationText, { marginTop: 4 }]}>
+            Por medio de la presente tenemos el agrado de saludarlos y a la vez presentarles nuestra propuesta comercial para vuestro embarque según la información proporcionada:
+          </Text>
+        </View>
 
-          {data.items.map((item, idx) => (
-            <View key={idx} style={styles.tableRow}>
-              <View style={styles.tdDesc}>
-                <Text style={{ fontFamily: "Helvetica-Bold" }}>{item.description}</Text>
-                <Text style={item.isTaxable ? styles.taxBadge : styles.nonTaxBadge}>
-                  {item.isTaxable ? "* Afecto a IGV (18%)" : "• Inafecto / Reembolso"}
-                </Text>
-              </View>
-              <Text style={styles.tdCurr}>{item.currency}</Text>
-              <Text style={styles.tdQty}>{item.quantity}</Text>
-              <Text style={styles.tdUnitPrice}>
-                {formatCurrency(item.unitPrice, item.currency as "USD" | "PEN")}
-              </Text>
-              <Text style={styles.tdTotal}>
-                {formatCurrency(item.total, item.currency as "USD" | "PEN")}
+        {/* Shipment Info Grid */}
+        <View style={styles.shipmentGrid}>
+          <Text style={styles.shipmentTitle}>Datos del Embarque</Text>
+          <View style={styles.gridRow}>
+            <View style={styles.gridCell}>
+              <Text style={styles.gridLabel}>Origen:</Text>
+              <Text style={styles.gridVal}>{data.origin || "NO ESPECIFICADO"}</Text>
+            </View>
+            <View style={styles.gridCell}>
+              <Text style={styles.gridLabel}>Tipo de Envío:</Text>
+              <Text style={styles.gridVal}>{data.shippingType || "Directo"}</Text>
+            </View>
+          </View>
+          <View style={styles.gridRow}>
+            <View style={styles.gridCell}>
+              <Text style={styles.gridLabel}>Destino:</Text>
+              <Text style={styles.gridVal}>{data.destination || "CALLAO - PERU"}</Text>
+            </View>
+            <View style={styles.gridCell}>
+              <Text style={styles.gridLabel}>Línea Marítima:</Text>
+              <Text style={styles.gridVal}>{data.shippingLine || "-"}</Text>
+            </View>
+          </View>
+          <View style={styles.gridRow}>
+            <View style={styles.gridCell}>
+              <Text style={styles.gridLabel}>Producto / Carga:</Text>
+              <Text style={styles.gridVal}>{data.cargoType || "CARGA GENERAL"}</Text>
+            </View>
+            <View style={styles.gridCell}>
+              <Text style={styles.gridLabel}>Tiempo Tránsito:</Text>
+              <Text style={styles.gridVal}>{data.transitTime || "APROX."}</Text>
+            </View>
+          </View>
+          <View style={styles.gridRow}>
+            <View style={styles.gridCell}>
+              <Text style={styles.gridLabel}>Peso / Volumen:</Text>
+              <Text style={styles.gridVal}>
+                {data.grossWeight || "-"} / {data.volume || "-"}
               </Text>
             </View>
-          ))}
+            <View style={styles.gridCell}>
+              <Text style={styles.gridLabel}>Tipo Flete/Cont:</Text>
+              <Text style={styles.gridVal}>{data.loadType || "-"}</Text>
+            </View>
+          </View>
+          <View style={styles.gridRow}>
+            <View style={styles.gridCell}>
+              <Text style={styles.gridLabel}>Incoterm:</Text>
+              <Text style={styles.gridVal}>{data.incoterm || "EXW"}</Text>
+            </View>
+            <View style={styles.gridCell}>
+              <Text style={styles.gridLabel}>Vigencia:</Text>
+              <Text style={styles.gridVal}>{formatDate(data.validUntil)}</Text>
+            </View>
+          </View>
         </View>
 
-        {/* Summary & Notes Section */}
-        <View style={styles.summarySection}>
-          <View style={styles.notesBox}>
-            <Text style={styles.notesTitle}>CONDICIONES COMERCIALES:</Text>
-            <Text style={styles.notesText}>1. Precios sujetos a variación de fletes marítimos/aéreos.</Text>
-            <Text style={styles.notesText}>2. Los conceptos inafectos corresponden a reembolsos por cuenta de terceros (Almacén, Tasas).</Text>
-            <Text style={styles.notesText}>3. Forma de Pago: Transferencia bancaria a la emisión de la liquidación.</Text>
-            <Text style={styles.notesText}>4. Validez de oferta: 15 días calendario desde la fecha de emisión.</Text>
+        {/* Table Block 1: GASTOS DE ORIGEN & FLETE */}
+        {originItems.length > 0 && (
+          <View>
+            <Text style={styles.tableBlockTitle}>GASTOS DE ORIGEN, FLETE Y SEGURO</Text>
+            <View style={styles.tableHeader}>
+              <Text style={styles.thDesc}>CONCEPTO</Text>
+              <Text style={styles.thCurr}>MONEDA</Text>
+              <Text style={styles.thPrice}>PRECIO UNIT.</Text>
+              <Text style={styles.thUsd}>USD ($)</Text>
+              <Text style={styles.thPen}>SOLES (S/)</Text>
+            </View>
+            {originItems.map((item, idx) => (
+              <View key={idx} style={styles.tableRow}>
+                <Text style={styles.tdDesc}>{item.description}</Text>
+                <Text style={styles.tdCurr}>{item.currency}</Text>
+                <Text style={styles.tdPrice}>{formatCurrency(item.unitPrice, item.currency as any)}</Text>
+                <Text style={styles.tdUsd}>
+                  {item.currency === "USD" ? formatCurrency(item.total, "USD") : "-"}
+                </Text>
+                <Text style={styles.tdPen}>
+                  {item.currency === "PEN" ? formatCurrency(item.total, "PEN") : "-"}
+                </Text>
+              </View>
+            ))}
+            <View style={styles.totalCategoryRow}>
+              <Text style={styles.totalCategoryLabel}>SUBTOTAL GASTOS ORIGEN / FLETE</Text>
+              <Text style={styles.totalCategoryUsd}>{formatCurrency(originTotalUsd, "USD")}</Text>
+              <Text style={styles.totalCategoryPen}>{formatCurrency(originTotalPen, "PEN")}</Text>
+            </View>
+          </View>
+        )}
+
+        {/* Table Block 2: GASTOS LOCALES */}
+        {localItems.length > 0 && (
+          <View style={{ marginTop: 6 }}>
+            <Text style={styles.tableBlockTitle}>GASTOS LOCALES Y DESTINO</Text>
+            <View style={styles.tableHeader}>
+              <Text style={styles.thDesc}>CONCEPTO</Text>
+              <Text style={styles.thCurr}>MONEDA</Text>
+              <Text style={styles.thPrice}>PRECIO UNIT.</Text>
+              <Text style={styles.thUsd}>USD ($)</Text>
+              <Text style={styles.thPen}>SOLES (S/)</Text>
+            </View>
+            {localItems.map((item, idx) => (
+              <View key={idx} style={styles.tableRow}>
+                <Text style={styles.tdDesc}>
+                  {item.description} {item.isTaxable ? "(+ IGV 18%)" : ""}
+                </Text>
+                <Text style={styles.tdCurr}>{item.currency}</Text>
+                <Text style={styles.tdPrice}>{formatCurrency(item.unitPrice, item.currency as any)}</Text>
+                <Text style={styles.tdUsd}>
+                  {item.currency === "USD" ? formatCurrency(item.total, "USD") : "-"}
+                </Text>
+                <Text style={styles.tdPen}>
+                  {item.currency === "PEN" ? formatCurrency(item.total, "PEN") : "-"}
+                </Text>
+              </View>
+            ))}
+            <View style={styles.totalCategoryRow}>
+              <Text style={styles.totalCategoryLabel}>SUBTOTAL GASTOS LOCALES</Text>
+              <Text style={styles.totalCategoryUsd}>{formatCurrency(localTotalUsd, "USD")}</Text>
+              <Text style={styles.totalCategoryPen}>{formatCurrency(localTotalPen, "PEN")}</Text>
+            </View>
+          </View>
+        )}
+
+        {/* Observations & Totals */}
+        <View style={styles.summaryContainer}>
+          <View style={styles.obsBox}>
+            <Text style={styles.obsTitle}>Observaciones y Condiciones:</Text>
+            <Text style={styles.obsText}>
+              {data.notes ||
+                "- Tarifa sujeta a variación según volumen/peso final verificado en origen.\n- Pago de flete a la confirmación de la reserva o emisión de BL."}
+            </Text>
           </View>
 
           <View style={styles.totalsBox}>
-            <Text style={styles.totalsTitle}>RESUMEN DE COTIZACIÓN (CLIENTE)</Text>
-
-            {hasUsd && (
-              <View style={{ marginBottom: 6 }}>
-                <Text style={{ fontSize: 8, color: "#38bdf8", fontFamily: "Helvetica-Bold", marginBottom: 2 }}>DÓLARES (USD $)</Text>
-                <View style={styles.totalRow}>
-                  <Text style={styles.totalLabel}>Subtotal Servicios Afectos:</Text>
-                  <Text style={styles.totalVal}>{formatCurrency(data.subtotalTaxableUsd, "USD")}</Text>
+            <Text style={styles.totalsTitle}>RESUMEN GENERAL</Text>
+            {data.grandTotalUsd > 0 && (
+              <View style={{ marginBottom: 4 }}>
+                <View style={styles.rowSummary}>
+                  <Text style={styles.lblSummary}>Servicios Afectos IGV:</Text>
+                  <Text style={styles.valSummary}>{formatCurrency(data.subtotalTaxableUsd, "USD")}</Text>
                 </View>
-                <View style={styles.totalRow}>
-                  <Text style={styles.totalLabel}>IGV (18% Ley Peruana):</Text>
-                  <Text style={styles.totalVal}>{formatCurrency(data.igvUsd, "USD")}</Text>
+                <View style={styles.rowSummary}>
+                  <Text style={styles.lblSummary}>IGV (18%):</Text>
+                  <Text style={styles.valSummary}>{formatCurrency(data.igvUsd, "USD")}</Text>
                 </View>
-                {data.totalNonTaxableUsd > 0 && (
-                  <View style={styles.totalRow}>
-                    <Text style={styles.totalLabel}>Subtotal Reembolsos (Inafectos):</Text>
-                    <Text style={styles.totalVal}>{formatCurrency(data.totalNonTaxableUsd, "USD")}</Text>
-                  </View>
-                )}
+                <View style={styles.rowSummary}>
+                  <Text style={styles.lblSummary}>Inafectos / Origen:</Text>
+                  <Text style={styles.valSummary}>{formatCurrency(data.totalNonTaxableUsd, "USD")}</Text>
+                </View>
                 <View style={styles.grandTotalRow}>
-                  <Text style={styles.grandTotalLabel}>TOTAL GENERAL USD:</Text>
+                  <Text style={styles.grandTotalLbl}>TOTAL USD:</Text>
                   <Text style={styles.grandTotalVal}>{formatCurrency(data.grandTotalUsd, "USD")}</Text>
                 </View>
               </View>
             )}
 
-            {hasPen && (
+            {data.grandTotalPen > 0 && (
               <View>
-                <Text style={{ fontSize: 8, color: "#a855f7", fontFamily: "Helvetica-Bold", marginBottom: 2 }}>SOLES (PEN S/)</Text>
-                <View style={styles.totalRow}>
-                  <Text style={styles.totalLabel}>Subtotal Servicios Afectos:</Text>
-                  <Text style={styles.totalVal}>{formatCurrency(data.subtotalTaxablePen, "PEN")}</Text>
+                <View style={styles.rowSummary}>
+                  <Text style={styles.lblSummary}>Servicios Afectos IGV:</Text>
+                  <Text style={styles.valSummary}>{formatCurrency(data.subtotalTaxablePen, "PEN")}</Text>
                 </View>
-                <View style={styles.totalRow}>
-                  <Text style={styles.totalLabel}>IGV (18% Ley Peruana):</Text>
-                  <Text style={styles.totalVal}>{formatCurrency(data.igvPen, "PEN")}</Text>
+                <View style={styles.rowSummary}>
+                  <Text style={styles.lblSummary}>IGV (18%):</Text>
+                  <Text style={styles.valSummary}>{formatCurrency(data.igvPen, "PEN")}</Text>
                 </View>
-                {data.totalNonTaxablePen > 0 && (
-                  <View style={styles.totalRow}>
-                    <Text style={styles.totalLabel}>Subtotal Reembolsos (Inafectos):</Text>
-                    <Text style={styles.totalVal}>{formatCurrency(data.totalNonTaxablePen, "PEN")}</Text>
-                  </View>
-                )}
+                <View style={styles.rowSummary}>
+                  <Text style={styles.lblSummary}>Inafectos / Origen:</Text>
+                  <Text style={styles.valSummary}>{formatCurrency(data.totalNonTaxablePen, "PEN")}</Text>
+                </View>
                 <View style={styles.grandTotalRow}>
-                  <Text style={styles.grandTotalLabel}>TOTAL GENERAL PEN:</Text>
+                  <Text style={styles.grandTotalLbl}>TOTAL PEN:</Text>
                   <Text style={styles.grandTotalVal}>{formatCurrency(data.grandTotalPen, "PEN")}</Text>
                 </View>
               </View>
@@ -383,7 +516,9 @@ export function QuotationPDF({ data }: { data: QuotationPdfData }) {
 
         {/* Footer */}
         <View style={styles.footer}>
-          <Text style={styles.footerText}>AGENCIA DE ADUANAS & LOGÍSTICA S.A.C. — Documento generado para propuesta comercial</Text>
+          <Text style={styles.footerText}>
+            FORWARDER ERP — Documento generado para propuesta comercial de carga internacional
+          </Text>
           <Text style={styles.footerText}>Página 1 de 1</Text>
         </View>
       </Page>

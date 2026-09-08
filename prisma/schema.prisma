@@ -69,20 +69,38 @@ model ClientNote {
 }
 
 model Quotation {
-  id          String          @id @default(cuid())
-  code        String          @unique
-  clientId    String
-  client      Client          @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  status      QuotationStatus @default(DRAFT)
-  validUntil  DateTime?
-  totalUsd    Float           @default(0)
-  totalPen    Float           @default(0)
-  profitUsd   Float           @default(0)
-  profitPen   Float           @default(0)
-  items       QuotationItem[]
-  operation   Operation?
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
+  id              String          @id @default(cuid())
+  code            String          @unique
+  clientId        String
+  client          Client          @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  status          QuotationStatus @default(DRAFT)
+  validUntil      DateTime?
+  totalUsd        Float           @default(0)
+  totalPen        Float           @default(0)
+  profitUsd       Float           @default(0)
+  profitPen       Float           @default(0)
+
+  // Shipment metadata fields
+  modality        String?         @default("IMPORTACION_MARITIMA")
+  incoterm        String?
+  origin          String?
+  destination     String?
+  shippingType    String?
+  shippingLine    String?
+  frequency       String?
+  transitTime     String?
+  cargoType       String?
+  packagesCount   String?
+  grossWeight     String?
+  volume          String?
+  loadType        String?
+  containersCount String?
+  notes           String?         @db.Text
+
+  items           QuotationItem[]
+  operation       Operation?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
 }
 
 model QuotationItem {
@@ -90,6 +108,7 @@ model QuotationItem {
   quotationId String
   quotation   Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
   description String
+  category    String    @default("GASTOS_LOCALES")
   currency    String    @default("USD")
   unitCost    Float     @default(0)
   unitPrice   Float
@@ -103,6 +122,7 @@ model QuotationItem {
 model ConceptCatalog {
   id              String   @id @default(cuid())
   name            String   @unique
+  category        String   @default("GASTOS_LOCALES")
   defaultCurrency String   @default("USD")
   defaultPrice    Float?
   isTaxable       Boolean  @default(true)
@@ -132,6 +152,7 @@ model OperationCharge {
   operationId   String
   operation     Operation @relation(fields: [operationId], references: [id], onDelete: Cascade)
   description   String
+  category      String    @default("GASTOS_LOCALES")
   currency      String    @default("USD")
   unitCost      Float
   unitPrice     Float

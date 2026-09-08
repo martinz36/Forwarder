@@ -2,6 +2,7 @@ import { z } from "zod";
 
 export const quotationItemSchema = z.object({
   description: z.string().min(1, "La descripción del concepto es requerida."),
+  category: z.enum(["GASTOS_ORIGEN", "FLETE_INTERNACIONAL", "SEGURO", "GASTOS_LOCALES"]),
   currency: z.enum(["USD", "PEN"]),
   unitCost: z.coerce.number().min(0, "El costo unitario debe ser mayor o igual a 0."),
   unitPrice: z.coerce.number().min(0, "El precio de venta debe ser mayor o igual a 0."),
@@ -12,6 +13,24 @@ export const quotationItemSchema = z.object({
 export const quotationSchema = z.object({
   clientId: z.string().min(1, "Debes seleccionar un cliente."),
   validUntil: z.string().optional(),
+
+  // Shipment metadata fields
+  modality: z.string().optional(),
+  incoterm: z.string().optional(),
+  origin: z.string().optional(),
+  destination: z.string().optional(),
+  shippingType: z.string().optional(),
+  shippingLine: z.string().optional(),
+  frequency: z.string().optional(),
+  transitTime: z.string().optional(),
+  cargoType: z.string().optional(),
+  packagesCount: z.string().optional(),
+  grossWeight: z.string().optional(),
+  volume: z.string().optional(),
+  loadType: z.string().optional(),
+  containersCount: z.string().optional(),
+  notes: z.string().optional(),
+
   items: z.array(quotationItemSchema).min(1, "Debe agregar al menos un ítem a la cotización."),
 });
 
