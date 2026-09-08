@@ -7,8 +7,7 @@ import {
   Users, 
   FileText, 
   Ship, 
-  Anchor,
-  Tags
+  Anchor
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -17,7 +16,6 @@ const navigationItems = [
   { name: "Clientes", href: "/clients", icon: Users },
   { name: "Cotizaciones", href: "/quotations", icon: FileText },
   { name: "Operaciones", href: "/operations", icon: Ship },
-  { name: "Catálogo", href: "/catalog", icon: Tags },
 ];
 
 export function Sidebar() {

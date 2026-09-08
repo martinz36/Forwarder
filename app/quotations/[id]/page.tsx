@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Building2, Calendar, FileText, MapPin, Receipt, TrendingUp, User, Pencil } from "lucide-react";
+import { ArrowLeft, Building2, Calendar, FileText, MapPin, Receipt, TrendingUp, User } from "lucide-react";
 import prisma from "@/lib/prisma";
 import { formatCurrency, formatDate } from "@/lib/format";
 import {
@@ -137,13 +137,6 @@ export default async function QuotationDetailPage({ params }: QuotationDetailPag
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          {/* Edit Quotation Button */}
-          <Link href={`/quotations/${quotation.id}/edit`}>
-            <Button variant="outline" size="sm" className="h-9 font-semibold text-xs border-blue-200 text-blue-700 hover:bg-blue-50 flex items-center gap-1.5">
-              <Pencil className="h-4 w-4" /> Editar
-            </Button>
-          </Link>
-
           {/* Download PDF Button */}
           <DownloadPdfButton data={pdfData} />
 
@@ -155,171 +148,150 @@ export default async function QuotationDetailPage({ params }: QuotationDetailPag
         </div>
       </div>
 
-      {/* Financial Summary Card for Client */}
-      <div className="rounded-2xl border bg-white p-6 shadow-sm space-y-6">
-        <h3 className="font-bold text-lg text-slate-900 flex items-center gap-2 border-b pb-3">
-          <Receipt className="h-5 w-5 text-blue-600" /> Resumen Propuesta Comercial (Vista Cliente)
-        </h3>
-
-        <div className="grid gap-6 md:grid-cols-2">
-          {/* USD Summary */}
-          <div className="rounded-xl bg-blue-50/50 p-5 border border-blue-100 space-y-3">
-            <span className="font-bold text-sm text-blue-900 flex items-center gap-1.5 border-b border-blue-200 pb-2">
-              Cobro en Dólares (USD $)
-            </span>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between items-center text-slate-600">
-                <span>Subtotal Servicios (Afectos IGV):</span>
-                <span className="font-semibold text-slate-800 text-right">{formatCurrency(subtotalTaxableUsd, "USD")}</span>
-              </div>
-              <div className="flex justify-between items-center text-blue-700 font-bold">
-                <span>IGV (18% Ley Peruana):</span>
-                <span className="text-right">{formatCurrency(igvUsd, "USD")}</span>
-              </div>
-              <div className="flex justify-between items-center text-slate-600">
-                <span>Subtotal Reembolsos (Inafectos):</span>
-                <span className="font-semibold text-slate-800 text-right">{formatCurrency(totalNonTaxableUsd, "USD")}</span>
-              </div>
-              <div className="flex justify-between items-center pt-2 border-t border-blue-200">
-                <span className="font-black text-slate-900 text-base">TOTAL A PAGAR USD:</span>
-                <span className="font-black text-blue-700 text-xl text-right">{formatCurrency(grandTotalUsd, "USD")}</span>
-              </div>
+      {/* Official Web Quotation Document Card */}
+      <div className="rounded-2xl border bg-white p-8 shadow-sm space-y-8">
+        {/* Document Header Section */}
+        <div className="flex flex-col sm:flex-row justify-between gap-6 border-b pb-6">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-blue-600 font-black text-xl">
+              <Building2 className="h-6 w-6" />
+              <span>AGENCIA DE ADUANAS & LOGÍSTICA S.A.C.</span>
             </div>
+            <p className="text-xs text-slate-500">RUC: 20601234567 • Callao, Perú</p>
+            <p className="text-xs text-slate-500">Propuesta de Servicios de Comercio Exterior</p>
           </div>
 
-          {/* PEN Summary */}
-          <div className="rounded-xl bg-purple-50/50 p-5 border border-purple-100 space-y-3">
-            <span className="font-bold text-sm text-purple-900 flex items-center gap-1.5 border-b border-purple-200 pb-2">
-              Cobro en Soles (PEN S/)
-            </span>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between items-center text-slate-600">
-                <span>Subtotal Servicios (Afectos IGV):</span>
-                <span className="font-semibold text-slate-800 text-right">{formatCurrency(subtotalTaxablePen, "PEN")}</span>
-              </div>
-              <div className="flex justify-between items-center text-purple-700 font-bold">
-                <span>IGV (18% Ley Peruana):</span>
-                <span className="text-right">{formatCurrency(igvPen, "PEN")}</span>
-              </div>
-              <div className="flex justify-between items-center text-slate-600">
-                <span>Subtotal Reembolsos (Inafectos):</span>
-                <span className="font-semibold text-slate-800 text-right">{formatCurrency(totalNonTaxablePen, "PEN")}</span>
-              </div>
-              <div className="flex justify-between items-center pt-2 border-t border-purple-200">
-                <span className="font-black text-slate-900 text-base">TOTAL A PAGAR PEN:</span>
-                <span className="font-black text-purple-700 text-xl text-right">{formatCurrency(grandTotalPen, "PEN")}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Internal Broker Profit Panel */}
-      <div className="rounded-2xl border bg-slate-950 text-white p-6 shadow-xl space-y-6">
-        <div className="flex items-center gap-3 border-b border-slate-800 pb-4">
-          <div className="rounded-xl bg-emerald-500/20 p-3 text-emerald-400 border border-emerald-500/30">
-            <TrendingUp className="h-6 w-6" />
-          </div>
-          <div>
-            <h3 className="font-bold text-xl leading-tight">Panel de Rentabilidad Interna (Broker Profit)</h3>
-            <p className="text-xs text-slate-400">Margen real proyectado de la operación</p>
+          <div className="sm:text-right space-y-1.5">
+            <Badge variant="outline" className="text-xs font-bold border-blue-200 text-blue-700 bg-blue-50">
+              {quotation.code}
+            </Badge>
+            <p className="text-xs text-slate-500">
+              Fecha Emisión: {formatDate(quotation.createdAt)}
+            </p>
+            <p className="text-xs text-slate-500">
+              Válida Hasta: {formatDate(quotation.validUntil)}
+            </p>
           </div>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2">
-          {/* USD Profit */}
-          <div className="rounded-xl bg-slate-900 p-5 border border-slate-800 space-y-3">
-            <div className="flex justify-between items-center border-b border-slate-800 pb-2">
-              <span className="font-bold text-sm text-slate-300">Margen Dólares (USD)</span>
-              <span className="text-xs font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
-                {quotation.totalUsd > 0 ? ((quotation.profitUsd / quotation.totalUsd) * 100).toFixed(1) : "0.0"}% Margen
-              </span>
-            </div>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between items-center text-slate-400">
-                <span>Venta Total:</span>
-                <span className="font-bold text-white text-right">{formatCurrency(quotation.totalUsd, "USD")}</span>
-              </div>
-              <div className="flex justify-between items-center pt-2 border-t border-slate-800">
-                <span className="font-bold text-emerald-400 text-base">Profit USD:</span>
-                <span className="font-black text-emerald-400 text-xl text-right">{formatCurrency(quotation.profitUsd, "USD")}</span>
-              </div>
-            </div>
+        {/* Client Details Grid */}
+        <div className="bg-slate-50 p-4 rounded-xl border text-sm space-y-1">
+          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Propuesta Preparada Para (Cliente)</span>
+          <div className="flex items-center gap-2">
+            <p className="font-bold text-slate-900 text-base">{client.businessName}</p>
+            <Badge variant="outline" className="text-xs font-mono">
+              {client.documentType}: {client.documentNumber}
+            </Badge>
           </div>
-
-          {/* PEN Profit */}
-          <div className="rounded-xl bg-slate-900 p-5 border border-slate-800 space-y-3">
-            <div className="flex justify-between items-center border-b border-slate-800 pb-2">
-              <span className="font-bold text-sm text-slate-300">Margen Soles (PEN)</span>
-              <span className="text-xs font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
-                {quotation.totalPen > 0 ? ((quotation.profitPen / quotation.totalPen) * 100).toFixed(1) : "0.0"}% Margen
-              </span>
-            </div>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between items-center text-slate-400">
-                <span>Venta Total:</span>
-                <span className="font-bold text-white text-right">{formatCurrency(quotation.totalPen, "PEN")}</span>
-              </div>
-              <div className="flex justify-between items-center pt-2 border-t border-slate-800">
-                <span className="font-bold text-emerald-400 text-base">Profit PEN:</span>
-                <span className="font-black text-emerald-400 text-xl text-right">{formatCurrency(quotation.profitPen, "PEN")}</span>
-              </div>
-            </div>
-          </div>
+          {client.address && (
+            <p className="text-xs text-slate-600 flex items-center gap-1.5">
+              <MapPin className="h-3.5 w-3.5 text-slate-400 shrink-0" /> {client.address}
+            </p>
+          )}
+          {client.phone && <p className="text-xs text-slate-500">Teléfono: {client.phone}</p>}
+          {client.email && <p className="text-xs text-slate-500">Email: {client.email}</p>}
         </div>
-      </div>
 
-      {/* Item Detail Table */}
-      <div className="rounded-xl border bg-white p-6 shadow-sm space-y-4">
-        <h3 className="font-bold text-lg text-slate-900 flex items-center gap-2">
-          <FileText className="h-5 w-5 text-blue-600" /> Desglose de Servicios e Impuestos
-        </h3>
+        {/* Quotation Concept Items Table */}
+        <div className="space-y-3">
+          <h3 className="font-bold text-slate-900 text-base flex items-center gap-2">
+            <FileText className="h-5 w-5 text-blue-600" /> Conceptos y Tarifas Cotizadas
+          </h3>
 
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader className="bg-slate-50">
-              <TableRow>
-                <TableHead className="font-semibold text-slate-700 text-left">Concepto / Servicio</TableHead>
-                <TableHead className="font-semibold text-slate-700 text-center">Moneda</TableHead>
-                <TableHead className="font-semibold text-slate-700 text-center">Cant.</TableHead>
-                <TableHead className="font-semibold text-slate-700 text-right">Precio Unit. ($/S/)</TableHead>
-                <TableHead className="font-semibold text-slate-700 text-right">Subtotal ($/S/)</TableHead>
-                <TableHead className="font-semibold text-slate-700 text-center">Afecto IGV</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {items.map((item) => (
-                <TableRow key={item.id}>
-                  <TableCell className="font-semibold text-slate-800 text-left">
-                    {item.description}
-                  </TableCell>
-                  <TableCell className="text-center font-mono font-bold text-xs">
-                    {item.currency}
-                  </TableCell>
-                  <TableCell className="text-center font-medium">
-                    {item.quantity}
-                  </TableCell>
-                  <TableCell className="text-right font-medium text-slate-700">
-                    {formatCurrency(item.unitPrice, item.currency as "USD" | "PEN")}
-                  </TableCell>
-                  <TableCell className="text-right font-bold text-slate-900">
-                    {formatCurrency(item.total, item.currency as "USD" | "PEN")}
-                  </TableCell>
-                  <TableCell className="text-center">
-                    {item.isTaxable ? (
-                      <Badge className="bg-blue-100 text-blue-800 font-medium text-xs">
-                        Afecto 18%
-                      </Badge>
-                    ) : (
-                      <Badge className="bg-amber-100 text-amber-800 font-medium text-xs">
-                        Inafecto
-                      </Badge>
-                    )}
-                  </TableCell>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader className="bg-slate-50">
+                <TableRow>
+                  <TableHead className="font-semibold text-slate-700 text-left">Concepto / Servicio</TableHead>
+                  <TableHead className="font-semibold text-slate-700 text-center">Moneda</TableHead>
+                  <TableHead className="font-semibold text-slate-700 text-center">Cant.</TableHead>
+                  <TableHead className="font-semibold text-slate-700 text-right">Precio Unit.</TableHead>
+                  <TableHead className="font-semibold text-slate-700 text-right">Total</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {items.map((item) => (
+                  <TableRow key={item.id}>
+                    <TableCell className="font-medium text-slate-900 text-left">
+                      <div>{item.description}</div>
+                      <span className={`text-[10px] font-bold ${item.isTaxable ? "text-blue-600" : "text-amber-600"}`}>
+                        {item.isTaxable ? "* Afecto a IGV (18%)" : "• Inafecto / Reembolso"}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-center font-bold text-xs">{item.currency}</TableCell>
+                    <TableCell className="text-center">{item.quantity}</TableCell>
+                    <TableCell className="text-right text-slate-600 font-medium">
+                      {formatCurrency(item.unitPrice, item.currency as any)}
+                    </TableCell>
+                    <TableCell className="text-right font-bold text-slate-900">
+                      {formatCurrency(item.total, item.currency as any)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+
+        {/* Client Tax & Financial Summary Box */}
+        <div className="grid gap-6 md:grid-cols-2 pt-4 border-t">
+          {/* USD Summary Box */}
+          {grandTotalUsd > 0 && (
+            <div className="rounded-xl bg-blue-50/50 p-5 border border-blue-100 space-y-3">
+              <span className="font-bold text-sm text-blue-900 flex items-center gap-1.5 border-b border-blue-200 pb-2">
+                Resumen de Cobro en Dólares (USD $)
+              </span>
+              <div className="space-y-2 text-xs sm:text-sm">
+                <div className="flex justify-between items-center text-slate-600">
+                  <span>Subtotal Servicios Afectos:</span>
+                  <span className="font-semibold text-slate-800 text-right">{formatCurrency(subtotalTaxableUsd, "USD")}</span>
+                </div>
+                <div className="flex justify-between items-center text-blue-700 font-bold">
+                  <span>IGV (18% Ley Peruana):</span>
+                  <span className="text-right">{formatCurrency(igvUsd, "USD")}</span>
+                </div>
+                {totalNonTaxableUsd > 0 && (
+                  <div className="flex justify-between items-center text-slate-600">
+                    <span>Subtotal Reembolsos (Inafectos):</span>
+                    <span className="font-semibold text-slate-800 text-right">{formatCurrency(totalNonTaxableUsd, "USD")}</span>
+                  </div>
+                )}
+                <div className="flex justify-between items-center pt-2 border-t border-blue-200">
+                  <span className="font-black text-slate-900 text-sm sm:text-base">TOTAL GENERAL USD:</span>
+                  <span className="font-black text-blue-700 text-lg sm:text-xl text-right">{formatCurrency(grandTotalUsd, "USD")}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* PEN Summary Box */}
+          {grandTotalPen > 0 && (
+            <div className="rounded-xl bg-purple-50/50 p-5 border border-purple-100 space-y-3">
+              <span className="font-bold text-sm text-purple-900 flex items-center gap-1.5 border-b border-purple-200 pb-2">
+                Resumen de Cobro en Soles (PEN S/)
+              </span>
+              <div className="space-y-2 text-xs sm:text-sm">
+                <div className="flex justify-between items-center text-slate-600">
+                  <span>Subtotal Servicios Afectos:</span>
+                  <span className="font-semibold text-slate-800 text-right">{formatCurrency(subtotalTaxablePen, "PEN")}</span>
+                </div>
+                <div className="flex justify-between items-center text-purple-700 font-bold">
+                  <span>IGV (18% Ley Peruana):</span>
+                  <span className="text-right">{formatCurrency(igvPen, "PEN")}</span>
+                </div>
+                {totalNonTaxablePen > 0 && (
+                  <div className="flex justify-between items-center text-slate-600">
+                    <span>Subtotal Reembolsos (Inafectos):</span>
+                    <span className="font-semibold text-slate-800 text-right">{formatCurrency(totalNonTaxablePen, "PEN")}</span>
+                  </div>
+                )}
+                <div className="flex justify-between items-center pt-2 border-t border-purple-200">
+                  <span className="font-black text-slate-900 text-sm sm:text-base">TOTAL GENERAL PEN:</span>
+                  <span className="font-black text-purple-700 text-lg sm:text-xl text-right">{formatCurrency(grandTotalPen, "PEN")}</span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

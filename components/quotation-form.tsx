@@ -10,8 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatCurrency } from "@/lib/format";
 import { quotationSchema, QuotationFormValues } from "@/lib/validations/quotation";
-import { createQuotationAction, updateQuotationAction } from "@/app/quotations/actions";
-import { CreateConceptDialog } from "@/components/create-concept-dialog";
+import { createQuotationAction } from "@/app/quotations/actions";
 
 interface ClientOption {
   id: string;
@@ -30,58 +29,11 @@ interface ConceptOption {
 interface QuotationFormProps {
   clients: ClientOption[];
   concepts: ConceptOption[];
-  initialData?: QuotationFormValues & { id?: string; code?: string };
 }
 
-function ConceptSelect({
-  index,
-  conceptsList,
-  handleSelectConcept,
-  onRequestCreateNew,
-}: {
-  index: number;
-  conceptsList: ConceptOption[];
-  handleSelectConcept: (index: number, conceptName: string) => void;
-  onRequestCreateNew: (index: number) => void;
-}) {
-  return (
-    <select
-      className="text-[11px] h-7 text-slate-600 bg-slate-50 border border-slate-200 rounded px-2 font-medium cursor-pointer w-full focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-      onChange={(e) => {
-        const val = e.target.value;
-        if (val === "__CREATE_NEW__") {
-          onRequestCreateNew(index);
-        } else if (val) {
-          handleSelectConcept(index, val);
-        }
-      }}
-      value=""
-    >
-      <option value="" disabled>
-        ⚡ Cargar tarifa del catálogo...
-      </option>
-      <option value="__CREATE_NEW__" className="font-bold text-blue-600 bg-blue-50">
-        ➕ + Crear nuevo concepto en catálogo...
-      </option>
-      {conceptsList.map((c) => (
-        <option key={c.id} value={c.name}>
-          {c.name} ({c.defaultCurrency === "PEN" ? "S/" : "$"} {c.defaultPrice ?? 0}) - {c.isTaxable ? "Afecto 18%" : "Inafecto"}
-        </option>
-      ))}
-    </select>
-  );
-}
-
-export function QuotationForm({ clients, concepts, initialData }: QuotationFormProps) {
+export function QuotationForm({ clients, concepts }: QuotationFormProps) {
   const [isPending, startTransition] = useTransition();
   const [serverError, setServerError] = useState<string | null>(null);
-  const [conceptsList, setConceptsList] = useState<ConceptOption[]>(concepts);
-
-  // Dialog State for creating concepts on the fly
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [activeRowIndex, setActiveRowIndex] = useState<number | null>(null);
-
-  const isEditing = !!initialData?.id;
 
   const {
     register,
@@ -92,17 +44,17 @@ export function QuotationForm({ clients, concepts, initialData }: QuotationFormP
     formState: { errors },
   } = useForm<QuotationFormValues>({
     resolver: zodResolver(quotationSchema),
-    defaultValues: initialData || {
+    defaultValues: {
       clientId: clients[0]?.id || "",
       validUntil: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
       items: [
         {
-          description: concepts[0]?.name || "Despacho Aduanero (Comisión Agente)",
-          currency: (concepts[0]?.defaultCurrency as "USD" | "PEN") || "USD",
-          unitCost: Number(((concepts[0]?.defaultPrice || 200) * 0.65).toFixed(2)),
-          unitPrice: concepts[0]?.defaultPrice || 200,
+          description: "Despacho Aduanero (Comisión Agente)",
+          currency: "USD",
+          unitCost: 120,
+          unitPrice: 200,
           quantity: 1,
-          isTaxable: concepts[0]?.isTaxable !== false,
+          isTaxable: true,
         },
       ],
     },
@@ -115,7 +67,7 @@ export function QuotationForm({ clients, concepts, initialData }: QuotationFormP
 
   const watchedItems = watch("items") || [];
 
-  // Live calculations for Summary
+  // Live calculations for Summary (Cost, Sale, Profit, Taxable & IGV 18% for USD & PEN)
   let liveCostUsd = 0;
   let liveSaleUsd = 0;
   let liveTaxableUsd = 0;
@@ -163,52 +115,34 @@ export function QuotationForm({ clients, concepts, initialData }: QuotationFormP
 
   const liveIgvPen = Number((liveTaxablePen * 0.18).toFixed(2));
   const liveTotalTaxablePen = Number((liveTaxablePen + liveIgvPen).toFixed(2));
-  const liveGrandTotalPen = Number((liveTotalTaxablePen + liveIgvPen).toFixed(2));
+  const liveGrandTotalPen = Number((liveTotalTaxablePen + liveNonTaxablePen).toFixed(2));
 
   const marginUsdPct = liveSaleUsd > 0 ? ((liveProfitUsd / liveSaleUsd) * 100).toFixed(1) : "0.0";
   const marginPenPct = liveSalePen > 0 ? ((liveProfitPen / liveSalePen) * 100).toFixed(1) : "0.0";
 
   function handleSelectConcept(index: number, conceptName: string) {
-    setValue(`items.${index}.description`, conceptName, { shouldValidate: true, shouldDirty: true });
-    const matched = conceptsList.find((c) => c.name === conceptName);
+    setValue(`items.${index}.description`, conceptName);
+    const matched = concepts.find((c) => c.name === conceptName);
     if (matched) {
       if (matched.defaultCurrency === "PEN" || matched.defaultCurrency === "USD") {
-        setValue(`items.${index}.currency`, matched.defaultCurrency as "USD" | "PEN", { shouldValidate: true, shouldDirty: true });
+        setValue(`items.${index}.currency`, matched.defaultCurrency as "USD" | "PEN");
       }
       if (matched.defaultPrice !== null && matched.defaultPrice !== undefined) {
-        setValue(`items.${index}.unitPrice`, matched.defaultPrice, { shouldValidate: true, shouldDirty: true });
-        setValue(`items.${index}.unitCost`, Number((matched.defaultPrice * 0.65).toFixed(2)), { shouldValidate: true, shouldDirty: true });
+        setValue(`items.${index}.unitPrice`, matched.defaultPrice);
+        // Default unitCost estimate at 65% of price if unspecified
+        setValue(`items.${index}.unitCost`, Number((matched.defaultPrice * 0.65).toFixed(2)));
       }
       if (matched.isTaxable !== undefined) {
-        setValue(`items.${index}.isTaxable`, matched.isTaxable, { shouldValidate: true, shouldDirty: true });
+        setValue(`items.${index}.isTaxable`, matched.isTaxable);
       }
     }
-  }
-
-  function handleConceptCreated(created: ConceptOption) {
-    setConceptsList((prev) => [...prev, created]);
-    const targetIndex = activeRowIndex !== null ? activeRowIndex : fields.length - 1;
-    if (targetIndex >= 0) {
-      handleSelectConcept(targetIndex, created.name);
-    }
-    setIsCreateDialogOpen(false);
-    setActiveRowIndex(null);
-  }
-
-  function handleRequestCreateNew(index: number) {
-    setActiveRowIndex(index);
-    setIsCreateDialogOpen(true);
   }
 
   function onSubmit(values: QuotationFormValues) {
     setServerError(null);
     startTransition(async () => {
       try {
-        if (isEditing && initialData?.id) {
-          await updateQuotationAction(initialData.id, values);
-        } else {
-          await createQuotationAction(values);
-        }
+        await createQuotationAction(values);
       } catch (err: any) {
         setServerError(err.message || "Ocurrió un error al guardar la cotización.");
       }
@@ -216,45 +150,33 @@ export function QuotationForm({ clients, concepts, initialData }: QuotationFormP
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-8 w-full">
-      {/* Controlled Dialog Modal for Concept Creation */}
-      <CreateConceptDialog
-        open={isCreateDialogOpen}
-        onOpenChange={setIsCreateDialogOpen}
-        onSuccess={handleConceptCreated}
-        showTrigger={false}
-      />
-
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
       {/* Top Action Header Bar */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b pb-4">
         <div>
           <div className="flex items-center gap-2">
-            <Link href={isEditing ? `/quotations/${initialData.id}` : "/quotations"}>
+            <Link href="/quotations">
               <Button type="button" variant="outline" size="sm" className="h-8 w-8 p-0">
                 <ArrowLeft className="h-4 w-4" />
               </Button>
             </Link>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-              {isEditing ? `Editar Cotización ${initialData?.code || ""}` : "Nueva Cotización Broker"}
-            </h1>
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900">Nueva Cotización Broker</h1>
           </div>
           <p className="mt-1 text-sm text-slate-500">
             Simulador de cotización en tiempo real con cálculo automático de Costos, Venta y Profit.
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <Link href={isEditing ? `/quotations/${initialData.id}` : "/quotations"}>
+          <Link href="/quotations">
             <Button type="button" variant="outline" disabled={isPending}>
               Cancelar
             </Button>
           </Link>
-          <Button type="submit" className="bg-blue-600 hover:bg-blue-500 text-white font-semibold" disabled={isPending}>
+          <Button type="submit" className="bg-blue-600 hover:bg-blue-500 text-white" disabled={isPending}>
             {isPending ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Guardando...
               </>
-            ) : isEditing ? (
-              "Guardar Cambios"
             ) : (
               "Guardar Cotización"
             )}
@@ -282,7 +204,7 @@ export function QuotationForm({ clients, concepts, initialData }: QuotationFormP
             <select
               id="clientId"
               {...register("clientId")}
-              className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring font-medium"
+              className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             >
               {clients.map((c) => (
                 <option key={c.id} value={c.id}>
@@ -307,187 +229,26 @@ export function QuotationForm({ clients, concepts, initialData }: QuotationFormP
         </div>
       </div>
 
-      {/* Dynamic Item Form (DataGrid / Cards) */}
+      {/* Dynamic Item Form */}
       <div className="space-y-4">
-        <div className="flex items-center justify-between flex-wrap gap-2">
-          <div>
-            <h2 className="text-lg font-bold text-slate-900">Conceptos y Costos Operativos</h2>
-            <p className="text-xs text-slate-500 font-medium">
-              Selecciona un concepto del catálogo o crea uno nuevo. Todos los costos y precios son 100% editables para cada cotización.
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => handleRequestCreateNew(fields.length - 1)}
-              className="border-blue-200 text-blue-700 hover:bg-blue-50 text-xs font-semibold"
-            >
-              <Plus className="h-4 w-4 mr-1" /> Crear en Catálogo
-            </Button>
-          </div>
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-bold text-slate-900">Conceptos y Costos Operativos</h2>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => append({ description: "", currency: "USD", unitCost: 0, unitPrice: 0, quantity: 1, isTaxable: true })}
+            className="text-blue-600 border-blue-200 hover:bg-blue-50"
+          >
+            <Plus className="mr-1.5 h-4 w-4" /> Agregar Ítem
+          </Button>
         </div>
 
         {errors.items && typeof errors.items.message === "string" && (
           <p className="text-xs font-medium text-red-500">{errors.items.message}</p>
         )}
 
-        {/* Desktop View: Wide Dense DataGrid Table (Single Line per Row) */}
-        <div className="hidden md:block overflow-x-auto border rounded-xl bg-white shadow-sm w-full">
-          <table className="w-full text-left text-xs border-collapse">
-            <thead>
-              <tr className="bg-slate-50 border-b text-slate-700 font-semibold">
-                <th className="py-2.5 px-3 w-10 text-center">#</th>
-                <th className="py-2.5 px-3 w-[40%] min-w-[280px]">Concepto / Servicio</th>
-                <th className="py-2.5 px-3 w-28">Moneda</th>
-                <th className="py-2.5 px-3 w-20 text-center">Cant.</th>
-                <th className="py-2.5 px-3 w-32 text-right">Costo Unit.</th>
-                <th className="py-2.5 px-3 w-32 text-right">Venta Unit.</th>
-                <th className="py-2.5 px-3 w-32 text-right">Profit Línea</th>
-                <th className="py-2.5 px-3 w-28 text-center">IGV (18%)</th>
-                <th className="py-2.5 px-3 w-12 text-center"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {fields.map((field, index) => {
-                const currentItem = watchedItems[index] || {};
-                const itemCost = Number(currentItem.unitCost) || 0;
-                const itemPrice = Number(currentItem.unitPrice) || 0;
-                const itemQty = Number(currentItem.quantity) || 0;
-
-                const lineCost = itemCost * itemQty;
-                const lineSale = itemPrice * itemQty;
-                const lineProfit = lineSale - lineCost;
-                const curr = currentItem.currency || "USD";
-
-                return (
-                  <tr key={field.id} className="hover:bg-slate-50/80 transition-colors">
-                    {/* Line Index */}
-                    <td className="py-2 px-3 text-center font-bold text-slate-400">
-                      {index + 1}
-                    </td>
-
-                    {/* Catalog Loader + Fully Editable Description Text Input */}
-                    <td className="py-2 px-3 space-y-1">
-                      <ConceptSelect
-                        index={index}
-                        conceptsList={conceptsList}
-                        handleSelectConcept={handleSelectConcept}
-                        onRequestCreateNew={handleRequestCreateNew}
-                      />
-                      <Input
-                        type="text"
-                        placeholder="Escribe o edita la descripción del concepto..."
-                        className="h-8 text-xs font-medium bg-white border-slate-300 focus:border-blue-500"
-                        {...register(`items.${index}.description` as const)}
-                      />
-                    </td>
-
-                    {/* Currency */}
-                    <td className="py-2 px-3">
-                      <select
-                        {...register(`items.${index}.currency` as const)}
-                        className="flex h-8 w-full rounded-md border border-input bg-white px-2 text-xs font-bold shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                      >
-                        <option value="USD">USD ($)</option>
-                        <option value="PEN">PEN (S/)</option>
-                      </select>
-                    </td>
-
-                    {/* Quantity */}
-                    <td className="py-2 px-3">
-                      <Input
-                        type="number"
-                        min="1"
-                        className="h-8 text-xs text-center font-medium px-1 bg-white border-slate-300 focus:border-blue-500"
-                        {...register(`items.${index}.quantity` as const, {
-                          setValueAs: (v) => (v === "" || v === null || v === undefined ? "" : isNaN(Number(v)) ? v : Number(v)),
-                        })}
-                      />
-                    </td>
-
-                    {/* Unit Cost */}
-                    <td className="py-2 px-3">
-                      <Input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        className="h-8 text-xs text-right font-semibold bg-white border-slate-300 focus:border-blue-500"
-                        {...register(`items.${index}.unitCost` as const, {
-                          setValueAs: (v) => (v === "" || v === null || v === undefined ? "" : isNaN(Number(v)) ? v : Number(v)),
-                        })}
-                      />
-                    </td>
-
-                    {/* Unit Price */}
-                    <td className="py-2 px-3">
-                      <Input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        className="h-8 text-xs text-right font-bold text-blue-900 border-blue-300 focus:border-blue-500 bg-white"
-                        {...register(`items.${index}.unitPrice` as const, {
-                          setValueAs: (v) => (v === "" || v === null || v === undefined ? "" : isNaN(Number(v)) ? v : Number(v)),
-                        })}
-                      />
-                    </td>
-
-                    {/* Line Profit (Read Only) */}
-                    <td className="py-2 px-3 text-right font-black text-xs">
-                      <span className={lineProfit >= 0 ? "text-emerald-600" : "text-red-600"}>
-                        {formatCurrency(lineProfit, curr as "USD" | "PEN")}
-                      </span>
-                    </td>
-
-                    {/* IGV Taxable Toggle */}
-                    <td className="py-2 px-3 text-center">
-                      <button
-                        type="button"
-                        title={currentItem.isTaxable !== false ? "Afecto a IGV 18%" : "Inafecto a IGV"}
-                        onClick={() => setValue(`items.${index}.isTaxable`, !(currentItem.isTaxable !== false))}
-                        className={`h-7 px-2 rounded inline-flex items-center gap-1 text-[11px] font-bold border transition-colors ${
-                          currentItem.isTaxable !== false
-                            ? "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100"
-                            : "bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100"
-                        }`}
-                      >
-                        {currentItem.isTaxable !== false ? (
-                          <>
-                            <CheckSquare className="h-3.5 w-3.5 text-blue-600" /> Afecto
-                          </>
-                        ) : (
-                          <>
-                            <Square className="h-3.5 w-3.5 text-amber-600" /> Inafecto
-                          </>
-                        )}
-                      </button>
-                    </td>
-
-                    {/* Actions: Trash Icon Button */}
-                    <td className="py-2 px-3 text-center">
-                      {fields.length > 1 && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => remove(index)}
-                          className="h-7 w-7 p-0 text-red-500 hover:bg-red-50 hover:text-red-600"
-                          title="Eliminar línea"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Mobile View: Stacked Cards */}
-        <div className="block md:hidden space-y-4">
+        <div className="space-y-4">
           {fields.map((field, index) => {
             const currentItem = watchedItems[index] || {};
             const itemCost = Number(currentItem.unitCost) || 0;
@@ -511,9 +272,30 @@ export function QuotationForm({ clients, concepts, initialData }: QuotationFormP
                       {index + 1}
                     </span>
                     <span className="font-semibold text-slate-800 text-sm">
-                      Línea #{index + 1}
+                      Línea de Servicio #{index + 1}
                     </span>
                   </div>
+
+                  {concepts.length > 0 && (
+                    <select
+                      className="text-xs text-blue-600 bg-blue-50 border border-blue-200 rounded px-2 py-1 cursor-pointer font-medium"
+                      onChange={(e) => {
+                        if (e.target.value) {
+                          handleSelectConcept(index, e.target.value);
+                        }
+                      }}
+                      defaultValue=""
+                    >
+                      <option value="" disabled>
+                        ⚡ Cargar del Catálogo...
+                      </option>
+                      {concepts.map((conc) => (
+                        <option key={conc.id} value={conc.name}>
+                          {conc.name} ({conc.defaultCurrency}) - {conc.isTaxable ? "Afecto IGV" : "Inafecto"}
+                        </option>
+                      ))}
+                    </select>
+                  )}
                 </div>
 
                 {/* Mobile-First Stacked Grid */}
@@ -521,18 +303,15 @@ export function QuotationForm({ clients, concepts, initialData }: QuotationFormP
                   {/* Concept Description (sm:col-span-3) */}
                   <div className="sm:col-span-3 space-y-1.5">
                     <Label className="text-xs font-semibold text-slate-700">Concepto / Servicio *</Label>
-                    <ConceptSelect
-                      index={index}
-                      conceptsList={conceptsList}
-                      handleSelectConcept={handleSelectConcept}
-                      onRequestCreateNew={handleRequestCreateNew}
-                    />
                     <Input
-                      type="text"
-                      placeholder="Escribe o edita la descripción del concepto..."
-                      className="h-9 text-xs font-medium bg-white border-slate-300 focus:border-blue-500"
+                      placeholder="Ej: Flete Internacional, Handling, Visto Bueno..."
                       {...register(`items.${index}.description` as const)}
                     />
+                    {errors.items?.[index]?.description && (
+                      <p className="text-xs text-red-500">
+                        {errors.items[index]?.description?.message}
+                      </p>
+                    )}
                   </div>
 
                   {/* Currency (sm:col-span-2) */}
@@ -549,15 +328,13 @@ export function QuotationForm({ clients, concepts, initialData }: QuotationFormP
 
                   {/* Unit Cost (sm:col-span-2) */}
                   <div className="sm:col-span-2 space-y-1.5">
-                    <Label className="text-xs font-semibold text-slate-700">Costo Unit. *</Label>
+                    <Label className="text-xs font-semibold text-slate-700">Costo Unit.</Label>
                     <Input
                       type="number"
                       step="0.01"
                       min="0"
-                      className="text-right font-semibold bg-white border-slate-300 focus:border-blue-500"
-                      {...register(`items.${index}.unitCost` as const, {
-                        setValueAs: (v) => (v === "" || v === null || v === undefined ? "" : isNaN(Number(v)) ? v : Number(v)),
-                      })}
+                      className="text-right font-medium bg-slate-50/50"
+                      {...register(`items.${index}.unitCost` as const, { valueAsNumber: true })}
                     />
                   </div>
 
@@ -568,10 +345,8 @@ export function QuotationForm({ clients, concepts, initialData }: QuotationFormP
                       type="number"
                       step="0.01"
                       min="0"
-                      className="text-right font-bold text-blue-900 border-blue-300 focus:border-blue-500 bg-white"
-                      {...register(`items.${index}.unitPrice` as const, {
-                        setValueAs: (v) => (v === "" || v === null || v === undefined ? "" : isNaN(Number(v)) ? v : Number(v)),
-                      })}
+                      className="text-right font-bold text-blue-900 border-blue-200"
+                      {...register(`items.${index}.unitPrice` as const, { valueAsNumber: true })}
                     />
                   </div>
 
@@ -581,10 +356,8 @@ export function QuotationForm({ clients, concepts, initialData }: QuotationFormP
                     <Input
                       type="number"
                       min="1"
-                      className="text-center font-medium px-1 bg-white border-slate-300 focus:border-blue-500"
-                      {...register(`items.${index}.quantity` as const, {
-                        setValueAs: (v) => (v === "" || v === null || v === undefined ? "" : isNaN(Number(v)) ? v : Number(v)),
-                      })}
+                      className="text-center font-medium px-1"
+                      {...register(`items.${index}.quantity` as const, { valueAsNumber: true })}
                     />
                   </div>
 
@@ -606,7 +379,7 @@ export function QuotationForm({ clients, concepts, initialData }: QuotationFormP
                   </div>
                 </div>
 
-                {/* Line Calculation Summary Footer */}
+                {/* Line Calculation Summary Footer (Cost, Sale, Profit) */}
                 <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t bg-slate-50/70 -mx-4 -mb-4 p-3 rounded-b-xl">
                   <div className="flex items-center gap-4 text-xs">
                     <div>
@@ -620,6 +393,7 @@ export function QuotationForm({ clients, concepts, initialData }: QuotationFormP
                   </div>
 
                   <div className="flex items-center gap-4">
+                    {/* Item Profit Badge */}
                     <div className="text-right">
                       <span className="text-[10px] uppercase font-bold text-slate-400 mr-1">Profit Línea:</span>
                       <span className={`font-black text-sm ${lineProfit >= 0 ? "text-emerald-600" : "text-red-600"}`}>
@@ -643,33 +417,6 @@ export function QuotationForm({ clients, concepts, initialData }: QuotationFormP
               </div>
             );
           })}
-        </div>
-
-        {/* Bottom Action Bar: Single "+ Agregar Ítem" Button */}
-        <div className="flex items-center justify-between pt-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              const defaultConcept = conceptsList[0];
-              append({
-                description: defaultConcept?.name || "",
-                currency: (defaultConcept?.defaultCurrency as "USD" | "PEN") || "USD",
-                unitCost: Number(((defaultConcept?.defaultPrice || 0) * 0.65).toFixed(2)),
-                unitPrice: defaultConcept?.defaultPrice || 0,
-                quantity: 1,
-                isTaxable: defaultConcept?.isTaxable !== false,
-              });
-            }}
-            className="text-blue-600 border-blue-200 hover:bg-blue-50 h-9 font-semibold text-xs flex items-center gap-1.5 shadow-sm"
-          >
-            <Plus className="h-4 w-4" /> Agregar Ítem
-          </Button>
-
-          <div className="text-xs text-slate-500 font-medium">
-            Total líneas: <span className="font-bold text-slate-800">{fields.length}</span>
-          </div>
         </div>
       </div>
 
