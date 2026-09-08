@@ -19,6 +19,9 @@ import {
   Anchor,
   Globe,
   Package,
+  FileUp,
+  Sparkles,
+  CheckCircle2,
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -26,7 +29,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatCurrency } from "@/lib/format";
 import { quotationSchema, QuotationFormValues } from "@/lib/validations/quotation";
-import { createQuotationAction } from "@/app/quotations/actions";
+import { createQuotationAction, parseQuotationPdfAction } from "@/app/quotations/actions";
 
 export const CATEGORY_OPTIONS = [
   { value: "GASTOS_ORIGEN", label: "Gastos de Origen", defaultTaxable: false },
@@ -58,6 +61,8 @@ interface QuotationFormProps {
 export function QuotationForm({ clients, concepts }: QuotationFormProps) {
   const [isPending, startTransition] = useTransition();
   const [serverError, setServerError] = useState<string | null>(null);
+  const [isParsingPdf, setIsParsingPdf] = useState(false);
+  const [pdfSuccessMessage, setPdfSuccessMessage] = useState<string | null>(null);
 
   const {
     register,
@@ -211,6 +216,51 @@ export function QuotationForm({ clients, concepts }: QuotationFormProps) {
     }
   }
 
+  async function handlePdfUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsParsingPdf(true);
+    setPdfSuccessMessage(null);
+    setServerError(null);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await parseQuotationPdfAction(formData);
+
+      // Auto fill metadata fields if present
+      if (res.metadata.origin) setValue("origin", res.metadata.origin);
+      if (res.metadata.destination) setValue("destination", res.metadata.destination);
+      if (res.metadata.incoterm) setValue("incoterm", res.metadata.incoterm);
+      if (res.metadata.shippingType) setValue("shippingType", res.metadata.shippingType);
+      if (res.metadata.shippingLine) setValue("shippingLine", res.metadata.shippingLine);
+      if (res.metadata.frequency) setValue("frequency", res.metadata.frequency);
+      if (res.metadata.transitTime) setValue("transitTime", res.metadata.transitTime);
+      if (res.metadata.cargoType) setValue("cargoType", res.metadata.cargoType);
+      if (res.metadata.packagesCount) setValue("packagesCount", res.metadata.packagesCount);
+      if (res.metadata.grossWeight) setValue("grossWeight", res.metadata.grossWeight);
+      if (res.metadata.volume) setValue("volume", res.metadata.volume);
+      if (res.metadata.loadType) setValue("loadType", res.metadata.loadType);
+      if (res.metadata.containersCount) setValue("containersCount", res.metadata.containersCount);
+      if (res.metadata.notes) setValue("notes", res.metadata.notes);
+
+      // Auto replace items if items found
+      if (res.items && res.items.length > 0) {
+        setValue("items", res.items as any);
+        setPdfSuccessMessage(`¡Éxito! Se extrajeron ${res.items.length} conceptos y datos de embarque desde el PDF. Revisa tus Costos y ajusta tus Precios de Venta.`);
+      } else {
+        setPdfSuccessMessage("Se analizaron los datos del embarque desde el PDF. Puedes agregar manualmente tus líneas de servicio.");
+      }
+    } catch (err: any) {
+      setServerError(err.message || "Error al procesar el archivo PDF.");
+    } finally {
+      setIsParsingPdf(false);
+      e.target.value = "";
+    }
+  }
+
   function onSubmit(values: QuotationFormValues) {
     setServerError(null);
     startTransition(async () => {
@@ -256,6 +306,53 @@ export function QuotationForm({ clients, concepts }: QuotationFormProps) {
           </Button>
         </div>
       </div>
+
+      {/* PDF Import Banner Card */}
+      <div className="rounded-xl border border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50/50 p-4 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-lg bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+            <Sparkles className="h-5 w-5" />
+          </div>
+          <div>
+            <h3 className="font-bold text-slate-900 text-sm">Importador Inteligente de Cotizaciones PDF</h3>
+            <p className="text-xs text-slate-600">
+              Sube el PDF recibido de tu Forwarder / Naviera para extraer automáticamente todos los datos y costos operativos.
+            </p>
+          </div>
+        </div>
+
+        <label className="inline-flex items-center gap-2 cursor-pointer shrink-0">
+          <input
+            type="file"
+            accept=".pdf"
+            className="hidden"
+            onChange={handlePdfUpload}
+            disabled={isParsingPdf}
+          />
+          <Button
+            type="button"
+            disabled={isParsingPdf}
+            className="bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs h-9 px-4 shadow-sm pointer-events-none"
+          >
+            {isParsingPdf ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Analizando PDF...
+              </>
+            ) : (
+              <>
+                <FileUp className="mr-2 h-4 w-4" /> Importar desde PDF de Forwarder
+              </>
+            )}
+          </Button>
+        </label>
+      </div>
+
+      {pdfSuccessMessage && (
+        <div className="rounded-lg bg-emerald-50 p-4 text-xs font-semibold text-emerald-800 border border-emerald-200 flex items-center gap-2">
+          <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+          {pdfSuccessMessage}
+        </div>
+      )}
 
       {serverError && (
         <div className="rounded-lg bg-red-50 p-4 text-sm text-red-600 border border-red-200">
@@ -741,7 +838,7 @@ export function QuotationForm({ clients, concepts }: QuotationFormProps) {
           {/* PEN Breakdown Card */}
           <div className="rounded-xl bg-slate-900 p-5 border border-slate-800 space-y-3">
             <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-              <span className="font-bold text-sm text-slate-300 flex items-center gap-1.5">
+              <span className="font-bold text-sm text-purple-400 flex items-center gap-1.5">
                 <Wallet className="h-4 w-4 text-purple-400" /> Moneda Soles (PEN)
               </span>
               <span className="text-xs font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
