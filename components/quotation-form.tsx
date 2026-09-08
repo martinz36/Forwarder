@@ -3,14 +3,15 @@
 import { useState, useTransition } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus, Trash2, Calculator, Loader2, ArrowLeft, TrendingUp, DollarSign, Wallet, CheckSquare, Square } from "lucide-react";
+import { Plus, Trash2, Calculator, Loader2, ArrowLeft, TrendingUp, DollarSign, Wallet, CheckSquare, Square, Tags } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatCurrency } from "@/lib/format";
 import { quotationSchema, QuotationFormValues } from "@/lib/validations/quotation";
-import { createQuotationAction } from "@/app/quotations/actions";
+import { createQuotationAction, updateQuotationAction } from "@/app/quotations/actions";
+import { CreateConceptDialog } from "@/components/create-concept-dialog";
 
 interface ClientOption {
   id: string;
@@ -29,6 +30,7 @@ interface ConceptOption {
 interface QuotationFormProps {
   clients: ClientOption[];
   concepts: ConceptOption[];
+  initialData?: QuotationFormValues & { id?: string; code?: string };
 }
 
 function ConceptCell({
@@ -130,9 +132,12 @@ function ConceptCell({
   );
 }
 
-export function QuotationForm({ clients, concepts }: QuotationFormProps) {
+export function QuotationForm({ clients, concepts, initialData }: QuotationFormProps) {
   const [isPending, startTransition] = useTransition();
   const [serverError, setServerError] = useState<string | null>(null);
+  const [conceptsList, setConceptsList] = useState<ConceptOption[]>(concepts);
+
+  const isEditing = !!initialData?.id;
 
   const {
     register,
@@ -143,7 +148,7 @@ export function QuotationForm({ clients, concepts }: QuotationFormProps) {
     formState: { errors },
   } = useForm<QuotationFormValues>({
     resolver: zodResolver(quotationSchema),
-    defaultValues: {
+    defaultValues: initialData || {
       clientId: clients[0]?.id || "",
       validUntil: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
       items: [
@@ -221,7 +226,7 @@ export function QuotationForm({ clients, concepts }: QuotationFormProps) {
 
   function handleSelectConcept(index: number, conceptName: string) {
     setValue(`items.${index}.description`, conceptName, { shouldValidate: true, shouldDirty: true });
-    const matched = concepts.find((c) => c.name === conceptName);
+    const matched = conceptsList.find((c) => c.name === conceptName);
     if (matched) {
       if (matched.defaultCurrency === "PEN" || matched.defaultCurrency === "USD") {
         setValue(`items.${index}.currency`, matched.defaultCurrency as "USD" | "PEN", { shouldValidate: true, shouldDirty: true });
@@ -237,11 +242,23 @@ export function QuotationForm({ clients, concepts }: QuotationFormProps) {
     }
   }
 
+  function handleConceptCreated(created: ConceptOption) {
+    setConceptsList((prev) => [...prev, created]);
+    const targetIndex = fields.length - 1;
+    if (targetIndex >= 0) {
+      handleSelectConcept(targetIndex, created.name);
+    }
+  }
+
   function onSubmit(values: QuotationFormValues) {
     setServerError(null);
     startTransition(async () => {
       try {
-        await createQuotationAction(values);
+        if (isEditing && initialData?.id) {
+          await updateQuotationAction(initialData.id, values);
+        } else {
+          await createQuotationAction(values);
+        }
       } catch (err: any) {
         setServerError(err.message || "Ocurrió un error al guardar la cotización.");
       }
@@ -254,19 +271,21 @@ export function QuotationForm({ clients, concepts }: QuotationFormProps) {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b pb-4">
         <div>
           <div className="flex items-center gap-2">
-            <Link href="/quotations">
+            <Link href={isEditing ? `/quotations/${initialData.id}` : "/quotations"}>
               <Button type="button" variant="outline" size="sm" className="h-8 w-8 p-0">
                 <ArrowLeft className="h-4 w-4" />
               </Button>
             </Link>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">Nueva Cotización Broker</h1>
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+              {isEditing ? `Editar Cotización ${initialData?.code || ""}` : "Nueva Cotización Broker"}
+            </h1>
           </div>
           <p className="mt-1 text-sm text-slate-500">
             Simulador de cotización en tiempo real con cálculo automático de Costos, Venta y Profit.
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <Link href="/quotations">
+          <Link href={isEditing ? `/quotations/${initialData.id}` : "/quotations"}>
             <Button type="button" variant="outline" disabled={isPending}>
               Cancelar
             </Button>
@@ -276,6 +295,8 @@ export function QuotationForm({ clients, concepts }: QuotationFormProps) {
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Guardando...
               </>
+            ) : isEditing ? (
+              "Guardar Cambios"
             ) : (
               "Guardar Cotización"
             )}
@@ -330,11 +351,22 @@ export function QuotationForm({ clients, concepts }: QuotationFormProps) {
 
       {/* Dynamic Item Form (DataGrid / Cards) */}
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold text-slate-900">Conceptos y Costos Operativos</h2>
-          <span className="text-xs text-slate-500 font-medium hidden sm:inline">
-            Selecciona una plantilla del catálogo o escribe un concepto libre para la operación
-          </span>
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div>
+            <h2 className="text-lg font-bold text-slate-900">Conceptos y Costos Operativos</h2>
+            <p className="text-xs text-slate-500 font-medium">
+              Selecciona una plantilla del catálogo o escribe un concepto libre para la operación
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <CreateConceptDialog
+              onSuccess={handleConceptCreated}
+              triggerText="+ Crear en Catálogo"
+              triggerVariant="outline"
+              triggerSize="sm"
+              triggerClassName="border-blue-200 text-blue-700 hover:bg-blue-50 text-xs font-semibold"
+            />
+          </div>
         </div>
 
         {errors.items && typeof errors.items.message === "string" && (
@@ -382,7 +414,7 @@ export function QuotationForm({ clients, concepts }: QuotationFormProps) {
                         index={index}
                         register={register}
                         setValue={setValue}
-                        concepts={concepts}
+                        concepts={conceptsList}
                         errors={errors}
                         handleSelectConcept={handleSelectConcept}
                         currentItem={currentItem}
@@ -524,7 +556,7 @@ export function QuotationForm({ clients, concepts }: QuotationFormProps) {
                       index={index}
                       register={register}
                       setValue={setValue}
-                      concepts={concepts}
+                      concepts={conceptsList}
                       errors={errors}
                       handleSelectConcept={handleSelectConcept}
                       currentItem={currentItem}

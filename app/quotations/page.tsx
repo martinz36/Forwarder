@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { FileText, Plus, Calendar, User, TrendingUp } from "lucide-react";
+import { FileText, Plus, Calendar, User, TrendingUp, Pencil } from "lucide-react";
 import prisma from "@/lib/prisma";
 import { formatCurrency, formatDate } from "@/lib/format";
 import {
@@ -100,22 +100,18 @@ export default async function QuotationsPage() {
                     <span className="font-bold text-slate-900">{formatCurrency(item.totalUsd, "USD")}</span>
                   </div>
                   <div className="flex justify-between items-center text-xs">
-                    <span className="text-slate-500">Venta Total PEN:</span>
-                    <span className="font-bold text-slate-900">{formatCurrency(item.totalPen, "PEN")}</span>
+                    <span className="text-slate-500">Profit Neta USD:</span>
+                    <span className="font-black text-emerald-600">{formatCurrency(item.profitUsd, "USD")}</span>
                   </div>
-                  <div className="flex justify-between items-center text-xs pt-1 border-t border-slate-200">
-                    <span className="font-bold text-emerald-700 flex items-center gap-1">
-                      <TrendingUp className="h-3.5 w-3.5" /> Profit Est.:
-                    </span>
-                    <span className="font-black text-emerald-700">
-                      {formatCurrency(item.profitUsd, "USD")} / {formatCurrency(item.profitPen, "PEN")}
-                    </span>
-                  </div>
-
-                  <div className="pt-2 flex items-center justify-between gap-2">
+                  <div className="flex items-center justify-end gap-2 pt-2 border-t">
+                    <Link href={`/quotations/${item.id}/edit`}>
+                      <Button variant="outline" size="sm" className="h-8 text-xs font-semibold text-slate-700 border-slate-200">
+                        <Pencil className="mr-1 h-3.5 w-3.5" /> Editar
+                      </Button>
+                    </Link>
                     <Link href={`/quotations/${item.id}`}>
-                      <Button variant="outline" size="sm" className="text-xs font-semibold text-blue-600 border-blue-200">
-                        <FileText className="mr-1 h-3.5 w-3.5" /> Ver / PDF
+                      <Button variant="outline" size="sm" className="h-8 text-xs font-semibold text-blue-600 border-blue-200">
+                        <FileText className="mr-1 h-3.5 w-3.5" /> Ver PDF
                       </Button>
                     </Link>
                     <ConvertQuotationButton
@@ -141,7 +137,7 @@ export default async function QuotationsPage() {
                     <TableHead className="font-semibold text-emerald-700 text-right">Profit USD ($)</TableHead>
                     <TableHead className="font-semibold text-slate-700 text-right">Venta PEN (S/)</TableHead>
                     <TableHead className="font-semibold text-emerald-700 text-right">Profit PEN (S/)</TableHead>
-                    <TableHead className="font-semibold text-slate-700 text-center">Acción</TableHead>
+                    <TableHead className="font-semibold text-slate-700 text-center">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -174,6 +170,11 @@ export default async function QuotationsPage() {
                       </TableCell>
                       <TableCell className="text-center">
                         <div className="flex items-center justify-center gap-2">
+                          <Link href={`/quotations/${item.id}/edit`}>
+                            <Button variant="outline" size="sm" className="h-8 text-xs font-semibold text-slate-700 border-slate-200 hover:bg-slate-50" title="Editar Cotización">
+                              <Pencil className="mr-1 h-3.5 w-3.5" /> Editar
+                            </Button>
+                          </Link>
                           <Link href={`/quotations/${item.id}`}>
                             <Button variant="outline" size="sm" className="h-8 text-xs font-semibold text-blue-600 border-blue-200 hover:bg-blue-50">
                               <FileText className="mr-1 h-3.5 w-3.5" /> PDF
