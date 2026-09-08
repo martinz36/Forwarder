@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { PDFParse } from "pdf-parse";
+import { extractText } from "unpdf";
 import prisma from "@/lib/prisma";
 import { quotationSchema, QuotationFormValues } from "@/lib/validations/quotation";
 
@@ -99,13 +99,10 @@ export async function parseQuotationPdfAction(formData: FormData) {
   }
 
   const arrayBuffer = await file.arrayBuffer();
-  const uint8Array = new Uint8Array(arrayBuffer);
 
-  // Modern pdf-parse v2.4+ PDFParse instance
-  const parser = new PDFParse({ data: uint8Array });
-  const textResult = await parser.getText();
-  const text = textResult?.text || "";
-  await parser.destroy();
+  // Extract text safely using unpdf (pure JS, zero native C++ bindings, 100% serverless safe)
+  const { text: textPages } = await extractText(arrayBuffer);
+  const text = Array.isArray(textPages) ? textPages.join("\n") : textPages || "";
 
   // 1. Extract Metadata using Regex
   const originMatch = text.match(/(?:Origen|ORIGEN)\s*:\s*([^\n\r]+)/i);
