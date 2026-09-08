@@ -286,26 +286,6 @@ export default async function QuotationDetailPage({ params }: QuotationDetailPag
             </div>
           )}
         </div>
-
-        {/* Internal Broker Profit Panel (Internal User Only) */}
-        <div className="rounded-xl bg-slate-950 text-white p-5 space-y-3">
-          <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-            <span className="font-bold text-sm text-emerald-400 flex items-center gap-2">
-              <TrendingUp className="h-4 w-4" /> Panel de Control Interno (Margen Broker)
-            </span>
-            <Badge className="bg-emerald-500/20 text-emerald-300 text-[10px]">USO INTERNO</Badge>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2 text-xs">
-            <div>
-              <span className="text-slate-400 block">Profit Proyectado USD:</span>
-              <span className="font-black text-emerald-400 text-lg">{formatCurrency(quotation.profitUsd, "USD")}</span>
-            </div>
-            <div>
-              <span className="text-slate-400 block">Profit Proyectado PEN:</span>
-              <span className="font-black text-emerald-400 text-lg">{formatCurrency(quotation.profitPen, "PEN")}</span>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   );
