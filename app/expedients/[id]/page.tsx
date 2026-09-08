@@ -59,6 +59,11 @@ export default async function ExpedientDetailPage({ params }: ExpedientDetailPag
               <Badge className="bg-blue-600 text-white font-semibold">
                 ESTADO: {expedient.status}
               </Badge>
+              {expedient.loadType && (
+                <Badge variant="outline" className="border-blue-300 text-blue-800 bg-blue-50 font-bold">
+                  {expedient.loadType}
+                </Badge>
+              )}
             </div>
             <p className="text-xs sm:text-sm text-slate-500">
               Cliente: <span className="font-semibold text-slate-800">{client.businessName}</span> ({client.documentNumber})

@@ -100,9 +100,14 @@ export default async function ExpedientsPage() {
                   return (
                     <TableRow key={exp.id} className="hover:bg-slate-50/80 transition-colors">
                       <TableCell className="text-left font-bold text-blue-600">
-                        <Link href={`/expedients/${exp.id}`} className="hover:underline">
+                        <Link href={`/expedients/${exp.id}`} className="hover:underline block">
                           {exp.code}
                         </Link>
+                        {exp.loadType && (
+                          <Badge variant="outline" className="text-[10px] font-bold border-blue-200 text-blue-700 bg-blue-50/50 mt-0.5">
+                            {exp.loadType}
+                          </Badge>
+                        )}
                       </TableCell>
 
                       <TableCell className="text-left font-medium text-slate-900">
