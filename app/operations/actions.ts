@@ -25,30 +25,34 @@ export async function createOperationFromQuotationAction(quotationId: string) {
   }
 
   if (quotation.operation) {
-    // Already converted, redirect to existing operation
     redirect(`/operations/${quotation.operation.id}`);
   }
 
   let newOperationId = "";
 
   await prisma.$transaction(async (tx) => {
-    // 1. Update quotation status to ACCEPTED
     await tx.quotation.update({
       where: { id: quotationId },
       data: { status: "ACCEPTED" },
     });
 
-    // 2. Create Operation
     const operation = await tx.operation.create({
       data: {
         quotationId: quotation.id,
+        expedientId: quotation.expedientId || null,
         status: "EN_TRANSITO",
       },
     });
 
+    if (quotation.expedientId) {
+      await tx.expedient.update({
+        where: { id: quotation.expedientId },
+        data: { status: "IN_TRANSIT" },
+      });
+    }
+
     newOperationId = operation.id;
 
-    // 3. Copy QuotationItems to OperationCharge (isExtraCharge = false)
     if (quotation.items.length > 0) {
       const chargesData = quotation.items.map((item) => {
         const totalCost = Number((item.unitCost * item.quantity).toFixed(2));
@@ -76,7 +80,8 @@ export async function createOperationFromQuotationAction(quotationId: string) {
 
   revalidatePath("/operations");
   revalidatePath("/quotations");
-  revalidatePath("/");
+  revalidatePath(`/quotations/${quotationId}`);
+
   redirect(`/operations/${newOperationId}`);
 }
 
@@ -133,9 +138,32 @@ export async function deleteExtraChargeAction(chargeId: string, operationId: str
     where: {
       id: chargeId,
       operationId,
-      isExtraCharge: true, // Safety check to prevent deleting base charges
+      isExtraCharge: true,
     },
   });
 
   revalidatePath(`/operations/${operationId}`);
+}
+
+export type OperationMilestoneKey =
+  | "hblApproved"
+  | "customsDocsSent"
+  | "taxesPaid"
+  | "transportDocsSent"
+  | "cargoDelivered";
+
+export async function toggleOperationMilestoneAction(
+  operationId: string,
+  milestone: OperationMilestoneKey,
+  currentValue: boolean
+) {
+  await prisma.operation.update({
+    where: { id: operationId },
+    data: {
+      [milestone]: !currentValue,
+    },
+  });
+
+  revalidatePath(`/operations/${operationId}`);
+  revalidatePath("/operations");
 }

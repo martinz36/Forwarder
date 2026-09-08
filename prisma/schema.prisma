@@ -8,6 +8,13 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum ExpedientStatus {
+  OPEN
+  QUOTING
+  IN_TRANSIT
+  CLOSED
+}
+
 enum QuotationStatus {
   DRAFT
   SENT
@@ -55,6 +62,7 @@ model Client {
   status         String       @default("ACTIVE")
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
+  expedients     Expedient[]
   quotations     Quotation[]
   notes          ClientNote[]
 }
@@ -68,9 +76,24 @@ model ClientNote {
   createdAt DateTime @default(now())
 }
 
+model Expedient {
+  id         String          @id @default(cuid())
+  code       String          @unique
+  clientId   String
+  client     Client          @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  status     ExpedientStatus @default(OPEN)
+  notes      String?         @db.Text
+  quotations Quotation[]
+  operations Operation[]
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+}
+
 model Quotation {
   id              String          @id @default(cuid())
   code            String          @unique
+  expedientId     String?
+  expedient       Expedient?      @relation(fields: [expedientId], references: [id], onDelete: SetNull)
   clientId        String
   client          Client          @relation(fields: [clientId], references: [id], onDelete: Cascade)
   status          QuotationStatus @default(DRAFT)
@@ -137,20 +160,30 @@ model ConceptCatalog {
 }
 
 model Operation {
-  id             String          @id @default(cuid())
-  quotationId    String          @unique
-  quotation      Quotation       @relation(fields: [quotationId], references: [id], onDelete: Cascade)
-  status         OperationStatus @default(EN_TRANSITO)
-  blNumber       String?
-  etd            DateTime?
-  eta            DateTime?
-  customsChannel CustomsChannel?
-  sharedToken    String          @unique @default(uuid())
-  charges        OperationCharge[]
-  documents      Document[]
-  liquidation    Liquidation?
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
+  id                String            @id @default(cuid())
+  expedientId       String?
+  expedient         Expedient?        @relation(fields: [expedientId], references: [id], onDelete: SetNull)
+  quotationId       String            @unique
+  quotation         Quotation         @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  status            OperationStatus   @default(EN_TRANSITO)
+  blNumber          String?
+  etd               DateTime?
+  eta               DateTime?
+  customsChannel    CustomsChannel?
+  sharedToken       String            @unique @default(uuid())
+
+  // Logistics Checklist Milestones
+  hblApproved       Boolean           @default(false)
+  customsDocsSent   Boolean           @default(false)
+  taxesPaid         Boolean           @default(false)
+  transportDocsSent Boolean           @default(false)
+  cargoDelivered    Boolean           @default(false)
+
+  charges           OperationCharge[]
+  documents         Document[]
+  liquidation       Liquidation?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
 }
 
 model OperationCharge {
@@ -178,6 +211,7 @@ model Document {
   name         String
   fileUrl      String
   documentType DocumentType @default(OTRO)
+  isPublic     Boolean      @default(false)
   uploadedBy   String       @default("BROKER")
   uploadedAt   DateTime     @default(now())
 }
@@ -202,7 +236,7 @@ model Liquidation {
   invoiceNumber      String?
   sunatPdfUrl        String?
   sunatCdrStatus     String?           @default("PENDING")
-  sunatNotes          String?
+  sunatNotes         String?
 
   receiptNumber      String?
   receiptGeneratedAt DateTime?

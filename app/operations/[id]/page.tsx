@@ -4,9 +4,12 @@ import { ArrowLeft, Ship, ShieldAlert, DollarSign, Wallet, FileText, CheckCircle
 import prisma from "@/lib/prisma";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { OperationHeaderForm } from "@/components/operation-header-form";
+import { OperationMilestones } from "@/components/operation-milestones";
 import { AddExtraChargeDialog } from "@/components/add-extra-charge-dialog";
 import { BrokerDocumentSection } from "@/components/broker-document-section";
 import { OperationChargesManager } from "@/components/operation-charges-manager";
+import { DownloadArrivalNoticeButton } from "@/components/pdf/download-arrival-notice-button";
+import { ArrivalNoticePdfData } from "@/components/pdf/arrival-notice-pdf";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
@@ -45,21 +48,89 @@ export default async function OperationDetailPage({ params }: OperationDetailPag
   let realCostPen = 0;
   let realSalePen = 0;
 
+  let taxableUsd = 0;
+  let nonTaxableUsd = 0;
+  let taxablePen = 0;
+  let nonTaxablePen = 0;
+
   operation.charges.forEach((charge) => {
+    const sale = charge.totalPrice;
+
     if (charge.currency === "PEN") {
       realCostPen += charge.totalCost;
       realSalePen += charge.totalPrice;
+
+      if (charge.isTaxable) taxablePen += sale;
+      else nonTaxablePen += sale;
     } else {
       realCostUsd += charge.totalCost;
       realSaleUsd += charge.totalPrice;
+
+      if (charge.isTaxable) taxableUsd += sale;
+      else nonTaxableUsd += sale;
     }
   });
 
   const realProfitUsd = realSaleUsd - realCostUsd;
   const realProfitPen = realSalePen - realCostPen;
 
+  // Data for Arrival Notice / Funds Request PDF
+  taxableUsd = Number(taxableUsd.toFixed(2));
+  const igvUsd = Number((taxableUsd * 0.18).toFixed(2));
+  const totalTaxableUsd = Number((taxableUsd + igvUsd).toFixed(2));
+  nonTaxableUsd = Number(nonTaxableUsd.toFixed(2));
+  const grandTotalUsd = Number((totalTaxableUsd + nonTaxableUsd).toFixed(2));
+
+  taxablePen = Number(taxablePen.toFixed(2));
+  const igvPen = Number((taxablePen * 0.18).toFixed(2));
+  const totalTaxablePen = Number((taxablePen + igvPen).toFixed(2));
+  nonTaxablePen = Number(nonTaxablePen.toFixed(2));
+  const grandTotalPen = Number((totalTaxablePen + nonTaxablePen).toFixed(2));
+
+  const opDisplayCode = operation.id.startsWith("OP-")
+    ? operation.id
+    : `OP-${operation.quotation.code.replace(/^COT-/, "")}`;
+
+  const arrivalNoticePdfData: ArrivalNoticePdfData = {
+    operationCode: opDisplayCode,
+    blNumber: operation.blNumber,
+    etd: operation.etd,
+    eta: operation.eta,
+    origin: operation.quotation.origin,
+    destination: operation.quotation.destination,
+    shippingLine: operation.quotation.shippingLine,
+    customsChannel: operation.customsChannel,
+    createdAt: new Date(),
+    client: {
+      name: operation.quotation.client.businessName,
+      documentType: operation.quotation.client.documentType,
+      documentNumber: operation.quotation.client.documentNumber,
+      address: operation.quotation.client.address,
+    },
+    charges: operation.charges.map((c) => ({
+      description: c.description,
+      category: c.category,
+      currency: c.currency,
+      unitPrice: c.unitPrice,
+      quantity: c.quantity,
+      totalPrice: c.totalPrice,
+      isTaxable: c.isTaxable,
+      isExtraCharge: c.isExtraCharge,
+    })),
+    subtotalTaxableUsd: taxableUsd,
+    igvUsd,
+    totalTaxableUsd,
+    totalNonTaxableUsd: nonTaxableUsd,
+    grandTotalUsd,
+    subtotalTaxablePen: taxablePen,
+    igvPen,
+    totalTaxablePen,
+    totalNonTaxablePen: nonTaxablePen,
+    grandTotalPen,
+  };
+
   return (
-    <div className="space-y-8 max-w-6xl mx-auto">
+    <div className="space-y-8 max-w-6xl mx-auto pb-12">
       {/* Top Header Navigation */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b pb-4">
         <div className="flex items-center gap-3">
@@ -71,7 +142,7 @@ export default async function OperationDetailPage({ params }: OperationDetailPag
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-                Operación {operation.quotation.code}
+                Operación {opDisplayCode}
               </h1>
               {operation.customsChannel && (
                 <Badge
@@ -88,18 +159,22 @@ export default async function OperationDetailPage({ params }: OperationDetailPag
               )}
             </div>
             <p className="text-sm text-slate-500">
-              Cliente: <span className="font-semibold text-slate-800">{operation.quotation.client.businessName}</span>
+              Cotización Origen: <span className="font-semibold text-slate-800">{operation.quotation.code}</span> • Cliente: <span className="font-semibold text-slate-800">{operation.quotation.client.businessName}</span>
             </p>
           </div>
         </div>
 
-        {operation.liquidation && (
-          <Link href={`/liquidations/${operation.liquidation.id}`}>
-            <Button className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs">
-              <Receipt className="mr-1.5 h-4 w-4" /> Ver Liquidación Final
-            </Button>
-          </Link>
-        )}
+        <div className="flex items-center gap-2 flex-wrap">
+          <DownloadArrivalNoticeButton data={arrivalNoticePdfData} />
+
+          {operation.liquidation && (
+            <Link href={`/liquidations/${operation.liquidation.id}`}>
+              <Button className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs">
+                <Receipt className="mr-1.5 h-4 w-4" /> Ver Liquidación Final
+              </Button>
+            </Link>
+          )}
+        </div>
       </div>
 
       {/* Operation Header Form Component */}
@@ -111,6 +186,18 @@ export default async function OperationDetailPage({ params }: OperationDetailPag
           etd: operation.etd,
           eta: operation.eta,
           customsChannel: operation.customsChannel,
+        }}
+      />
+
+      {/* Logistics Checklist Milestones Component */}
+      <OperationMilestones
+        operationId={operation.id}
+        milestones={{
+          hblApproved: operation.hblApproved,
+          customsDocsSent: operation.customsDocsSent,
+          taxesPaid: operation.taxesPaid,
+          transportDocsSent: operation.transportDocsSent,
+          cargoDelivered: operation.cargoDelivered,
         }}
       />
 

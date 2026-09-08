@@ -9,12 +9,15 @@ export interface CreateDocumentInput {
   fileUrl: string;
   documentType: "BL" | "FACTURA_COMERCIAL" | "PACKING_LIST" | "DAM" | "LIQUIDACION" | "OTRO";
   uploadedBy: "BROKER" | "CLIENT";
+  isPublic?: boolean;
 }
 
 export async function createDocumentAction(input: CreateDocumentInput) {
   if (!input.operationId || !input.name || !input.fileUrl) {
     throw new Error("Información del documento incompleta.");
   }
+
+  const isPublic = input.uploadedBy === "CLIENT" ? true : Boolean(input.isPublic);
 
   const doc = await prisma.document.create({
     data: {
@@ -23,6 +26,7 @@ export async function createDocumentAction(input: CreateDocumentInput) {
       fileUrl: input.fileUrl.trim(),
       documentType: input.documentType,
       uploadedBy: input.uploadedBy,
+      isPublic,
     },
   });
 

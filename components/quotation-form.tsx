@@ -56,9 +56,10 @@ interface ConceptOption {
 interface QuotationFormProps {
   clients: ClientOption[];
   concepts: ConceptOption[];
+  expedient?: { id: string; clientId: string; code: string } | null;
 }
 
-export function QuotationForm({ clients, concepts }: QuotationFormProps) {
+export function QuotationForm({ clients, concepts, expedient }: QuotationFormProps) {
   const [isPending, startTransition] = useTransition();
   const [serverError, setServerError] = useState<string | null>(null);
   const [isParsingPdf, setIsParsingPdf] = useState(false);
@@ -74,7 +75,8 @@ export function QuotationForm({ clients, concepts }: QuotationFormProps) {
   } = useForm<QuotationFormValues>({
     resolver: zodResolver(quotationSchema),
     defaultValues: {
-      clientId: clients[0]?.id || "",
+      clientId: expedient?.clientId || clients[0]?.id || "",
+      expedientId: expedient?.id || "",
       validUntil: "",
       modality: "IMPORTACIÓN MARÍTIMA",
       incoterm: "EXW",
@@ -307,6 +309,12 @@ export function QuotationForm({ clients, concepts }: QuotationFormProps) {
           <p className="mt-1 text-sm text-slate-500">
             Formato oficial de cotización de carga internacional con desglose de impuestos y rentabilidad.
           </p>
+          {expedient && (
+            <div className="mt-2 inline-flex items-center gap-2 bg-blue-50 border border-blue-200 text-blue-800 px-3 py-1 rounded-md text-xs font-semibold">
+              <span>Vinculada a Expediente: <strong>{expedient.code}</strong></span>
+              <input type="hidden" {...register("expedientId")} />
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-3">
           <Link href="/quotations">

@@ -7,12 +7,14 @@ import {
   Users, 
   FileText, 
   Ship, 
-  Anchor
+  Anchor,
+  Folder
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navigationItems = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
+  { name: "Expedientes", href: "/expedients", icon: Folder },
   { name: "Clientes", href: "/clients", icon: Users },
   { name: "Cotizaciones", href: "/quotations", icon: FileText },
   { name: "Operaciones", href: "/operations", icon: Ship },

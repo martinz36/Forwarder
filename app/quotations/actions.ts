@@ -57,6 +57,7 @@ export async function createQuotationAction(data: QuotationFormValues) {
       data: {
         code,
         clientId: validated.clientId,
+        expedientId: validated.expedientId || null,
         status: "DRAFT",
         validUntil: validated.validUntil ? new Date(validated.validUntil) : null,
         totalUsd,

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Link2, Copy, Check, FileText, Download, Eye, Trash2, UploadCloud, ShieldCheck, UserCheck, AlertCircle, FileUp, CheckCircle2, Loader2 } from "lucide-react";
+import { Link2, Copy, Check, FileText, Download, Eye, Trash2, UploadCloud, ShieldCheck, UserCheck, AlertCircle, FileUp, CheckCircle2, Loader2, Globe, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,6 +15,7 @@ interface DocumentItem {
   name: string;
   fileUrl: string;
   documentType: "BL" | "FACTURA_COMERCIAL" | "PACKING_LIST" | "DAM" | "LIQUIDACION" | "OTRO";
+  isPublic?: boolean;
   uploadedBy: string;
   uploadedAt: Date;
 }
@@ -33,6 +34,7 @@ export function BrokerDocumentSection({
   const [copied, setCopied] = useState(false);
   const [docName, setDocName] = useState("");
   const [docType, setDocType] = useState<"BL" | "FACTURA_COMERCIAL" | "PACKING_LIST" | "DAM" | "LIQUIDACION" | "OTRO">("BL");
+  const [isPublic, setIsPublic] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const { startUpload, isUploading } = useUploadThing("documentUploader", {
@@ -45,10 +47,12 @@ export function BrokerDocumentSection({
             name: docName.trim(),
             fileUrl: uploadedUrl,
             documentType: docType,
+            isPublic,
             uploadedBy: "BROKER",
           });
           setSelectedFile(null);
           setDocName("");
+          setIsPublic(false);
           alert("✓ Documento registrado e integrado al expediente exitosamente.");
         } catch (err: any) {
           alert(err.message || "Error al registrar el documento.");
@@ -90,13 +94,13 @@ export function BrokerDocumentSection({
       alert("Por favor selecciona un archivo.");
       return;
     }
-    await startUpload([selectedFile]);
+
+    startUpload([selectedFile]);
   }
 
   function formatFileSize(bytes: number) {
-    if (bytes < 1024 * 1024) {
-      return (bytes / 1024).toFixed(1) + " KB";
-    }
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
     return (bytes / (1024 * 1024)).toFixed(1) + " MB";
   }
 
@@ -116,7 +120,7 @@ export function BrokerDocumentSection({
                 Portal Público del Cliente (Shared Link)
               </h3>
               <p className="text-xs text-slate-600">
-                Comparte este enlace seguro con el importador para que vea el estado de su carga y descargue documentos.
+                Comparte este enlace seguro con el importador. Los archivos marcados como <strong>Públicos</strong> serán visibles para el cliente.
               </p>
             </div>
           </div>
@@ -175,6 +179,29 @@ export function BrokerDocumentSection({
               <option value="OTRO">Otro Documento</option>
             </select>
           </div>
+        </div>
+
+        {/* Privacy Toggle Control */}
+        <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
+          <input
+            type="checkbox"
+            id="isPublicToggle"
+            checked={isPublic}
+            onChange={(e) => setIsPublic(e.target.checked)}
+            className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+          />
+          <Label htmlFor="isPublicToggle" className="text-xs font-semibold text-slate-800 cursor-pointer flex items-center gap-2">
+            <span>Visible para el Cliente en Portal Público (`/shared/${sharedToken}`)</span>
+            {isPublic ? (
+              <Badge className="bg-emerald-100 text-emerald-800 border-emerald-300 text-[10px] gap-1">
+                <Globe className="h-3 w-3 text-emerald-600" /> PÚBLICO
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="text-slate-500 bg-white text-[10px] gap-1">
+                <Lock className="h-3 w-3 text-slate-400" /> PRIVADO (SOLO BROKER)
+              </Badge>
+            )}
+          </Label>
         </div>
 
         {/* Step 2: File Picker & Action Area */}
@@ -274,62 +301,65 @@ export function BrokerDocumentSection({
             {documents.map((doc) => (
               <div key={doc.id} className="rounded-xl border bg-white p-4 shadow-sm space-y-3 flex flex-col justify-between">
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between gap-1 flex-wrap">
                     <Badge variant="outline" className="text-[10px] font-bold uppercase">
                       {doc.documentType}
                     </Badge>
-
-                    {doc.uploadedBy === "BROKER" ? (
-                      <Badge className="bg-blue-100 text-blue-800 text-[10px] font-medium border-blue-200">
-                        <ShieldCheck className="mr-1 h-3 w-3" /> Broker
+                    {doc.isPublic ? (
+                      <Badge className="bg-emerald-100 text-emerald-800 border-emerald-300 text-[10px]">
+                        🌐 PÚBLICO
                       </Badge>
                     ) : (
-                      <Badge className="bg-purple-100 text-purple-800 text-[10px] font-medium border-purple-200">
-                        <UserCheck className="mr-1 h-3 w-3" /> Cliente
+                      <Badge variant="outline" className="text-slate-500 bg-slate-100 text-[10px]">
+                        🔒 PRIVADO
                       </Badge>
                     )}
                   </div>
 
-                  <h4 className="font-semibold text-slate-900 text-sm leading-tight flex items-start gap-2">
-                    <FileText className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
-                    <span className="truncate">{doc.name}</span>
+                  <h4 className="font-bold text-slate-900 text-sm line-clamp-2 leading-tight">
+                    {doc.name}
                   </h4>
 
-                  <p className="text-[11px] text-slate-400">
-                    Subido: {formatDate(doc.uploadedAt)}
-                  </p>
+                  <div className="flex items-center justify-between text-xs text-slate-500 pt-1">
+                    <span className="flex items-center gap-1">
+                      {doc.uploadedBy === "CLIENT" ? (
+                        <UserCheck className="h-3.5 w-3.5 text-blue-600" />
+                      ) : (
+                        <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
+                      )}
+                      {doc.uploadedBy === "CLIENT" ? "Cliente" : "Broker"}
+                    </span>
+                    <span>{formatDate(doc.uploadedAt)}</span>
+                  </div>
                 </div>
 
-                <div className="pt-2 border-t flex items-center justify-between gap-1">
-                  <div className="flex items-center gap-2">
-                    <a
-                      href={doc.fileUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-800 hover:underline"
-                      title="Ver Online"
-                    >
-                      <Eye className="h-3.5 w-3.5" /> Ver Online
-                    </a>
+                <div className="pt-3 border-t flex items-center justify-between gap-1">
+                  <a
+                    href={doc.fileUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-md text-xs font-semibold transition-colors"
+                  >
+                    <Eye className="h-3.5 w-3.5" /> Ver Online
+                  </a>
 
-                    <a
-                      href={doc.fileUrl}
-                      download={doc.name}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-xs font-semibold text-slate-600 hover:text-slate-800 hover:underline"
-                      title="Descargar Archivo"
-                    >
-                      <Download className="h-3.5 w-3.5" /> Descargar
-                    </a>
-                  </div>
+                  <a
+                    href={doc.fileUrl}
+                    download
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-slate-100 text-slate-700 hover:bg-slate-200 rounded-md text-xs font-semibold transition-colors"
+                  >
+                    <Download className="h-3.5 w-3.5" /> Descargar
+                  </a>
 
                   <Button
+                    type="button"
                     variant="ghost"
                     size="sm"
                     onClick={() => handleDelete(doc.id)}
-                    title="Borrar documento"
-                    className="text-red-500 hover:bg-red-50 hover:text-red-600 h-7 w-7 p-0"
+                    className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                    title="Eliminar del expediente"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </Button>

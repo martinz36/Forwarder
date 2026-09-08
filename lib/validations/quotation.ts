@@ -12,6 +12,7 @@ export const quotationItemSchema = z.object({
 
 export const quotationSchema = z.object({
   clientId: z.string().min(1, "Debes seleccionar un cliente."),
+  expedientId: z.string().optional(),
   validUntil: z.string().optional(),
 
   // Shipment metadata fields & Pre-Alerta document headers

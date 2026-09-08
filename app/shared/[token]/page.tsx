@@ -22,6 +22,12 @@ export default async function SharedPortalPage({ params }: SharedPortalPageProps
         include: { client: true },
       },
       documents: {
+        where: {
+          OR: [
+            { uploadedBy: "CLIENT" },
+            { uploadedBy: "BROKER", isPublic: true },
+          ],
+        },
         orderBy: { uploadedAt: "desc" },
       },
     },
