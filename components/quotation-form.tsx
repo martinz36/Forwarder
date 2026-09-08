@@ -37,21 +37,16 @@ function ConceptSelect({
   index,
   conceptsList,
   handleSelectConcept,
-  currentItem,
   onRequestCreateNew,
 }: {
   index: number;
   conceptsList: ConceptOption[];
   handleSelectConcept: (index: number, conceptName: string) => void;
-  currentItem: any;
   onRequestCreateNew: (index: number) => void;
 }) {
-  const currentDesc = currentItem?.description || "";
-  const hasMatch = conceptsList.some((c) => c.name === currentDesc);
-
   return (
     <select
-      className="text-xs h-8 text-slate-800 bg-white border border-input rounded-md px-2.5 font-medium cursor-pointer w-full focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+      className="text-[11px] h-7 text-slate-600 bg-slate-50 border border-slate-200 rounded px-2 font-medium cursor-pointer w-full focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
       onChange={(e) => {
         const val = e.target.value;
         if (val === "__CREATE_NEW__") {
@@ -60,10 +55,10 @@ function ConceptSelect({
           handleSelectConcept(index, val);
         }
       }}
-      value={hasMatch ? currentDesc : currentDesc ? "__CUSTOM_VAL__" : ""}
+      value=""
     >
       <option value="" disabled>
-        ⚡ Seleccionar concepto del catálogo...
+        ⚡ Cargar tarifa del catálogo...
       </option>
       <option value="__CREATE_NEW__" className="font-bold text-blue-600 bg-blue-50">
         ➕ + Crear nuevo concepto en catálogo...
@@ -73,11 +68,6 @@ function ConceptSelect({
           {c.name} ({c.defaultCurrency === "PEN" ? "S/" : "$"} {c.defaultPrice ?? 0}) - {c.isTaxable ? "Afecto 18%" : "Inafecto"}
         </option>
       ))}
-      {!hasMatch && currentDesc && (
-        <option value="__CUSTOM_VAL__">
-          {currentDesc}
-        </option>
-      )}
     </select>
   );
 }
@@ -378,14 +368,19 @@ export function QuotationForm({ clients, concepts, initialData }: QuotationFormP
                       {index + 1}
                     </td>
 
-                    {/* Single Line Clean Concept Select */}
-                    <td className="py-2 px-3">
+                    {/* Catalog Loader + Fully Editable Description Text Input */}
+                    <td className="py-2 px-3 space-y-1">
                       <ConceptSelect
                         index={index}
                         conceptsList={conceptsList}
                         handleSelectConcept={handleSelectConcept}
-                        currentItem={currentItem}
                         onRequestCreateNew={handleRequestCreateNew}
+                      />
+                      <Input
+                        type="text"
+                        placeholder="Escribe o edita la descripción del concepto..."
+                        className="h-8 text-xs font-medium bg-white border-slate-300 focus:border-blue-500"
+                        {...register(`items.${index}.description` as const)}
                       />
                     </td>
 
@@ -405,8 +400,10 @@ export function QuotationForm({ clients, concepts, initialData }: QuotationFormP
                       <Input
                         type="number"
                         min="1"
-                        className="h-8 text-xs text-center font-medium px-1"
-                        {...register(`items.${index}.quantity` as const, { valueAsNumber: true })}
+                        className="h-8 text-xs text-center font-medium px-1 bg-white border-slate-300 focus:border-blue-500"
+                        {...register(`items.${index}.quantity` as const, {
+                          setValueAs: (v) => (v === "" || v === null || v === undefined ? "" : isNaN(Number(v)) ? v : Number(v)),
+                        })}
                       />
                     </td>
 
@@ -417,7 +414,9 @@ export function QuotationForm({ clients, concepts, initialData }: QuotationFormP
                         step="0.01"
                         min="0"
                         className="h-8 text-xs text-right font-semibold bg-white border-slate-300 focus:border-blue-500"
-                        {...register(`items.${index}.unitCost` as const, { valueAsNumber: true })}
+                        {...register(`items.${index}.unitCost` as const, {
+                          setValueAs: (v) => (v === "" || v === null || v === undefined ? "" : isNaN(Number(v)) ? v : Number(v)),
+                        })}
                       />
                     </td>
 
@@ -427,8 +426,10 @@ export function QuotationForm({ clients, concepts, initialData }: QuotationFormP
                         type="number"
                         step="0.01"
                         min="0"
-                        className="h-8 text-xs text-right font-bold text-blue-900 border-blue-200"
-                        {...register(`items.${index}.unitPrice` as const, { valueAsNumber: true })}
+                        className="h-8 text-xs text-right font-bold text-blue-900 border-blue-300 focus:border-blue-500 bg-white"
+                        {...register(`items.${index}.unitPrice` as const, {
+                          setValueAs: (v) => (v === "" || v === null || v === undefined ? "" : isNaN(Number(v)) ? v : Number(v)),
+                        })}
                       />
                     </td>
 
@@ -524,8 +525,13 @@ export function QuotationForm({ clients, concepts, initialData }: QuotationFormP
                       index={index}
                       conceptsList={conceptsList}
                       handleSelectConcept={handleSelectConcept}
-                      currentItem={currentItem}
                       onRequestCreateNew={handleRequestCreateNew}
+                    />
+                    <Input
+                      type="text"
+                      placeholder="Escribe o edita la descripción del concepto..."
+                      className="h-9 text-xs font-medium bg-white border-slate-300 focus:border-blue-500"
+                      {...register(`items.${index}.description` as const)}
                     />
                   </div>
 
@@ -549,7 +555,9 @@ export function QuotationForm({ clients, concepts, initialData }: QuotationFormP
                       step="0.01"
                       min="0"
                       className="text-right font-semibold bg-white border-slate-300 focus:border-blue-500"
-                      {...register(`items.${index}.unitCost` as const, { valueAsNumber: true })}
+                      {...register(`items.${index}.unitCost` as const, {
+                        setValueAs: (v) => (v === "" || v === null || v === undefined ? "" : isNaN(Number(v)) ? v : Number(v)),
+                      })}
                     />
                   </div>
 
@@ -560,8 +568,10 @@ export function QuotationForm({ clients, concepts, initialData }: QuotationFormP
                       type="number"
                       step="0.01"
                       min="0"
-                      className="text-right font-bold text-blue-900 border-blue-200"
-                      {...register(`items.${index}.unitPrice` as const, { valueAsNumber: true })}
+                      className="text-right font-bold text-blue-900 border-blue-300 focus:border-blue-500 bg-white"
+                      {...register(`items.${index}.unitPrice` as const, {
+                        setValueAs: (v) => (v === "" || v === null || v === undefined ? "" : isNaN(Number(v)) ? v : Number(v)),
+                      })}
                     />
                   </div>
 
@@ -571,8 +581,10 @@ export function QuotationForm({ clients, concepts, initialData }: QuotationFormP
                     <Input
                       type="number"
                       min="1"
-                      className="text-center font-medium px-1"
-                      {...register(`items.${index}.quantity` as const, { valueAsNumber: true })}
+                      className="text-center font-medium px-1 bg-white border-slate-300 focus:border-blue-500"
+                      {...register(`items.${index}.quantity` as const, {
+                        setValueAs: (v) => (v === "" || v === null || v === undefined ? "" : isNaN(Number(v)) ? v : Number(v)),
+                      })}
                     />
                   </div>
 
