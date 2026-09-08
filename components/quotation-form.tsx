@@ -229,26 +229,186 @@ export function QuotationForm({ clients, concepts }: QuotationFormProps) {
         </div>
       </div>
 
-      {/* Dynamic Item Form */}
+      {/* Dynamic Item Form (DataGrid / Cards) */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-bold text-slate-900">Conceptos y Costos Operativos</h2>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => append({ description: "", currency: "USD", unitCost: 0, unitPrice: 0, quantity: 1, isTaxable: true })}
-            className="text-blue-600 border-blue-200 hover:bg-blue-50"
-          >
-            <Plus className="mr-1.5 h-4 w-4" /> Agregar Ítem
-          </Button>
+          <span className="text-xs text-slate-500 font-medium hidden sm:inline">
+            Formulario denso estilo Excel • Navegación rápida con Tab
+          </span>
         </div>
 
         {errors.items && typeof errors.items.message === "string" && (
           <p className="text-xs font-medium text-red-500">{errors.items.message}</p>
         )}
 
-        <div className="space-y-4">
+        {/* Desktop View: Dense DataGrid Table */}
+        <div className="hidden md:block overflow-x-auto border rounded-xl bg-white shadow-sm">
+          <table className="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr className="bg-slate-50 border-b text-slate-700 font-semibold">
+                <th className="py-2.5 px-3 w-10 text-center">#</th>
+                <th className="py-2.5 px-3 min-w-[220px]">Concepto / Servicio</th>
+                <th className="py-2.5 px-3 w-28">Moneda</th>
+                <th className="py-2.5 px-3 w-20 text-center">Cant.</th>
+                <th className="py-2.5 px-3 w-32 text-right">Costo Unit.</th>
+                <th className="py-2.5 px-3 w-32 text-right">Venta Unit.</th>
+                <th className="py-2.5 px-3 w-32 text-right">Profit Línea</th>
+                <th className="py-2.5 px-3 w-28 text-center">IGV (18%)</th>
+                <th className="py-2.5 px-3 w-12 text-center"></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {fields.map((field, index) => {
+                const currentItem = watchedItems[index] || {};
+                const itemCost = Number(currentItem.unitCost) || 0;
+                const itemPrice = Number(currentItem.unitPrice) || 0;
+                const itemQty = Number(currentItem.quantity) || 0;
+
+                const lineCost = itemCost * itemQty;
+                const lineSale = itemPrice * itemQty;
+                const lineProfit = lineSale - lineCost;
+                const curr = currentItem.currency || "USD";
+
+                return (
+                  <tr key={field.id} className="hover:bg-slate-50/80 transition-colors">
+                    {/* Line Index */}
+                    <td className="py-2 px-3 text-center font-bold text-slate-400">
+                      {index + 1}
+                    </td>
+
+                    {/* Concept Description + Catalog Selector */}
+                    <td className="py-2 px-3 space-y-1">
+                      <div className="flex items-center gap-1.5">
+                        <Input
+                          placeholder="Ej: Flete Internacional, Handling..."
+                          className="h-8 text-xs font-medium"
+                          {...register(`items.${index}.description` as const)}
+                        />
+                        {concepts.length > 0 && (
+                          <select
+                            className="text-[11px] h-8 text-blue-700 bg-blue-50 border border-blue-200 rounded px-1.5 font-semibold cursor-pointer max-w-[130px] shrink-0"
+                            onChange={(e) => {
+                              if (e.target.value) {
+                                handleSelectConcept(index, e.target.value);
+                              }
+                            }}
+                            defaultValue=""
+                          >
+                            <option value="" disabled>⚡ Catálogo...</option>
+                            {concepts.map((c) => (
+                              <option key={c.id} value={c.name}>
+                                {c.name}
+                              </option>
+                            ))}
+                          </select>
+                        )}
+                      </div>
+                      {errors.items?.[index]?.description && (
+                        <p className="text-[11px] text-red-500 font-medium">
+                          {errors.items[index]?.description?.message}
+                        </p>
+                      )}
+                    </td>
+
+                    {/* Currency */}
+                    <td className="py-2 px-3">
+                      <select
+                        {...register(`items.${index}.currency` as const)}
+                        className="flex h-8 w-full rounded-md border border-input bg-white px-2 text-xs font-bold shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                      >
+                        <option value="USD">USD ($)</option>
+                        <option value="PEN">PEN (S/)</option>
+                      </select>
+                    </td>
+
+                    {/* Quantity */}
+                    <td className="py-2 px-3">
+                      <Input
+                        type="number"
+                        min="1"
+                        className="h-8 text-xs text-center font-medium px-1"
+                        {...register(`items.${index}.quantity` as const, { valueAsNumber: true })}
+                      />
+                    </td>
+
+                    {/* Unit Cost */}
+                    <td className="py-2 px-3">
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        className="h-8 text-xs text-right font-medium bg-slate-50/50"
+                        {...register(`items.${index}.unitCost` as const, { valueAsNumber: true })}
+                      />
+                    </td>
+
+                    {/* Unit Price */}
+                    <td className="py-2 px-3">
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        className="h-8 text-xs text-right font-bold text-blue-900 border-blue-200"
+                        {...register(`items.${index}.unitPrice` as const, { valueAsNumber: true })}
+                      />
+                    </td>
+
+                    {/* Line Profit (Read Only) */}
+                    <td className="py-2 px-3 text-right font-black text-xs">
+                      <span className={lineProfit >= 0 ? "text-emerald-600" : "text-red-600"}>
+                        {formatCurrency(lineProfit, curr as "USD" | "PEN")}
+                      </span>
+                    </td>
+
+                    {/* IGV Taxable Toggle */}
+                    <td className="py-2 px-3 text-center">
+                      <button
+                        type="button"
+                        title={currentItem.isTaxable !== false ? "Afecto a IGV 18%" : "Inafecto a IGV"}
+                        onClick={() => setValue(`items.${index}.isTaxable`, !(currentItem.isTaxable !== false))}
+                        className={`h-7 px-2 rounded inline-flex items-center gap-1 text-[11px] font-bold border transition-colors ${
+                          currentItem.isTaxable !== false
+                            ? "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100"
+                            : "bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100"
+                        }`}
+                      >
+                        {currentItem.isTaxable !== false ? (
+                          <>
+                            <CheckSquare className="h-3.5 w-3.5 text-blue-600" /> Afecto
+                          </>
+                        ) : (
+                          <>
+                            <Square className="h-3.5 w-3.5 text-amber-600" /> Inafecto
+                          </>
+                        )}
+                      </button>
+                    </td>
+
+                    {/* Actions: Trash Icon Button */}
+                    <td className="py-2 px-3 text-center">
+                      {fields.length > 1 && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => remove(index)}
+                          className="h-7 w-7 p-0 text-red-500 hover:bg-red-50 hover:text-red-600"
+                          title="Eliminar línea"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Mobile View: Stacked Cards */}
+        <div className="block md:hidden space-y-4">
           {fields.map((field, index) => {
             const currentItem = watchedItems[index] || {};
             const itemCost = Number(currentItem.unitCost) || 0;
@@ -379,7 +539,7 @@ export function QuotationForm({ clients, concepts }: QuotationFormProps) {
                   </div>
                 </div>
 
-                {/* Line Calculation Summary Footer (Cost, Sale, Profit) */}
+                {/* Line Calculation Summary Footer */}
                 <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t bg-slate-50/70 -mx-4 -mb-4 p-3 rounded-b-xl">
                   <div className="flex items-center gap-4 text-xs">
                     <div>
@@ -393,7 +553,6 @@ export function QuotationForm({ clients, concepts }: QuotationFormProps) {
                   </div>
 
                   <div className="flex items-center gap-4">
-                    {/* Item Profit Badge */}
                     <div className="text-right">
                       <span className="text-[10px] uppercase font-bold text-slate-400 mr-1">Profit Línea:</span>
                       <span className={`font-black text-sm ${lineProfit >= 0 ? "text-emerald-600" : "text-red-600"}`}>
@@ -417,6 +576,23 @@ export function QuotationForm({ clients, concepts }: QuotationFormProps) {
               </div>
             );
           })}
+        </div>
+
+        {/* Bottom Action Bar: Single "+ Agregar Ítem" Button */}
+        <div className="flex items-center justify-between pt-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => append({ description: "", currency: "USD", unitCost: 0, unitPrice: 0, quantity: 1, isTaxable: true })}
+            className="text-blue-600 border-blue-200 hover:bg-blue-50 h-9 font-semibold text-xs flex items-center gap-1.5 shadow-sm"
+          >
+            <Plus className="h-4 w-4" /> Agregar Ítem
+          </Button>
+
+          <div className="text-xs text-slate-500 font-medium">
+            Total líneas: <span className="font-bold text-slate-800">{fields.length}</span>
+          </div>
         </div>
       </div>
 
