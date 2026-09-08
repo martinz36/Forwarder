@@ -69,8 +69,11 @@ export function CreateConceptDialog({
 
   const isEditing = !!conceptToEdit;
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  function handleSubmit(e?: React.FormEvent | React.MouseEvent) {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     setError(null);
 
     if (!name.trim()) {
@@ -132,7 +135,11 @@ export function CreateConceptDialog({
         </DialogTrigger>
       )}
 
-      <DialogContent className="sm:max-w-md bg-white">
+      <DialogContent
+        className="sm:max-w-md bg-white"
+        onClick={(e) => e.stopPropagation()}
+        onPointerDown={(e) => e.stopPropagation()}
+      >
         <DialogHeader>
           <div className="flex items-center gap-2">
             <div className="rounded-lg bg-blue-100 p-2 text-blue-700">
@@ -149,7 +156,11 @@ export function CreateConceptDialog({
           </div>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4 pt-2">
+        <form
+          onSubmit={handleSubmit}
+          onClick={(e) => e.stopPropagation()}
+          className="space-y-4 pt-2"
+        >
           {error && (
             <div className="p-3 text-xs rounded-md bg-red-50 text-red-600 border border-red-200">
               {error}
@@ -234,14 +245,19 @@ export function CreateConceptDialog({
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => setOpen(false)}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setOpen(false);
+              }}
               disabled={isPending}
             >
               Cancelar
             </Button>
             <Button
-              type="submit"
+              type="button"
               size="sm"
+              onClick={(e) => handleSubmit(e)}
               className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs"
               disabled={isPending}
             >

@@ -13,18 +13,19 @@ const conceptSchema = z.object({
 
 export async function createConceptAction(data: z.infer<typeof conceptSchema>) {
   const validated = conceptSchema.parse(data);
+  const trimmedName = validated.name.trim();
 
   const existing = await prisma.conceptCatalog.findUnique({
-    where: { name: validated.name.trim() },
+    where: { name: trimmedName },
   });
 
   if (existing) {
-    throw new Error("Ya existe un concepto registrado con este nombre en el catálogo.");
+    return existing;
   }
 
   const created = await prisma.conceptCatalog.create({
     data: {
-      name: validated.name.trim(),
+      name: trimmedName,
       defaultCurrency: validated.defaultCurrency,
       defaultPrice: validated.defaultPrice ?? 0,
       isTaxable: validated.isTaxable,
@@ -32,28 +33,28 @@ export async function createConceptAction(data: z.infer<typeof conceptSchema>) {
   });
 
   revalidatePath("/catalog");
-  revalidatePath("/quotations/new");
   return created;
 }
 
 export async function updateConceptAction(id: string, data: z.infer<typeof conceptSchema>) {
   const validated = conceptSchema.parse(data);
+  const trimmedName = validated.name.trim();
 
   const existing = await prisma.conceptCatalog.findFirst({
     where: {
-      name: validated.name.trim(),
+      name: trimmedName,
       NOT: { id },
     },
   });
 
   if (existing) {
-    throw new Error("Ya existe otro concepto registrado con este nombre.");
+    return existing;
   }
 
   const updated = await prisma.conceptCatalog.update({
     where: { id },
     data: {
-      name: validated.name.trim(),
+      name: trimmedName,
       defaultCurrency: validated.defaultCurrency,
       defaultPrice: validated.defaultPrice ?? 0,
       isTaxable: validated.isTaxable,
@@ -61,7 +62,6 @@ export async function updateConceptAction(id: string, data: z.infer<typeof conce
   });
 
   revalidatePath("/catalog");
-  revalidatePath("/quotations/new");
   return updated;
 }
 
@@ -71,5 +71,4 @@ export async function deleteConceptAction(id: string) {
   });
 
   revalidatePath("/catalog");
-  revalidatePath("/quotations/new");
 }

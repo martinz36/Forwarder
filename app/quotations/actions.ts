@@ -5,6 +5,12 @@ import { redirect } from "next/navigation";
 import prisma from "@/lib/prisma";
 import { quotationSchema, QuotationFormValues } from "@/lib/validations/quotation";
 
+function parseValidUntil(validUntil?: string | null): Date | null {
+  if (!validUntil || !validUntil.trim()) return null;
+  const d = new Date(validUntil);
+  return isNaN(d.getTime()) ? null : d;
+}
+
 export async function createQuotationAction(data: QuotationFormValues) {
   const validated = quotationSchema.parse(data);
 
@@ -56,7 +62,7 @@ export async function createQuotationAction(data: QuotationFormValues) {
         code,
         clientId: validated.clientId,
         status: "DRAFT",
-        validUntil: validated.validUntil ? new Date(validated.validUntil) : null,
+        validUntil: parseValidUntil(validated.validUntil),
         totalUsd,
         totalPen,
         profitUsd,
@@ -129,7 +135,7 @@ export async function updateQuotationAction(quotationId: string, data: Quotation
       where: { id: quotationId },
       data: {
         clientId: validated.clientId,
-        validUntil: validated.validUntil ? new Date(validated.validUntil) : null,
+        validUntil: parseValidUntil(validated.validUntil),
         totalUsd,
         totalPen,
         profitUsd,
