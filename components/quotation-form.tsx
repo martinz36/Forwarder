@@ -31,14 +31,14 @@ interface QuotationFormProps {
   concepts: ConceptOption[];
 }
 
-function ConceptSearchInput({
+function ConceptCell({
   index,
   register,
   setValue,
   concepts,
   errors,
   handleSelectConcept,
-  placeholder = "Escribe cualquier concepto libre...",
+  currentItem,
 }: {
   index: number;
   register: any;
@@ -46,77 +46,83 @@ function ConceptSearchInput({
   concepts: ConceptOption[];
   errors: any;
   handleSelectConcept: (index: number, conceptName: string) => void;
-  placeholder?: string;
+  currentItem: any;
 }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [filterQuery, setFilterQuery] = useState("");
-
-  const filteredConcepts = concepts.filter((c) =>
-    c.name.toLowerCase().includes(filterQuery.toLowerCase())
+  const [isCustom, setIsCustom] = useState<boolean>(
+    !concepts.some((c) => c.name === currentItem?.description)
   );
 
   return (
-    <div className="relative w-full">
-      <div className="flex items-center gap-1.5">
-        <Input
-          placeholder={placeholder}
-          className="h-8 text-xs font-medium w-full"
-          {...register(`items.${index}.description` as const, {
-            onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
-              setFilterQuery(e.target.value);
-            },
-          })}
-          onFocus={() => setIsOpen(true)}
-          onBlur={() => setTimeout(() => setIsOpen(false), 200)}
-        />
-        {concepts.length > 0 && (
-          <button
-            type="button"
-            tabIndex={-1}
-            onClick={() => setIsOpen((prev) => !prev)}
-            className="h-8 px-2 text-[11px] font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded hover:bg-blue-100 shrink-0 flex items-center gap-1 cursor-pointer transition-colors"
-            title="Ver catálogo de plantillas"
+    <div className="space-y-1.5 py-1">
+      <div className="flex items-center justify-between gap-1">
+        {!isCustom && concepts.length > 0 ? (
+          <select
+            className="text-xs h-8 text-blue-900 bg-blue-50/80 border border-blue-200 rounded px-2 font-semibold cursor-pointer w-full focus:ring-1 focus:ring-blue-500"
+            onChange={(e) => {
+              const val = e.target.value;
+              if (val === "__CUSTOM__") {
+                setIsCustom(true);
+                setValue(`items.${index}.description`, "", { shouldValidate: true, shouldDirty: true });
+              } else if (val) {
+                handleSelectConcept(index, val);
+              }
+            }}
+            value={
+              concepts.some((c) => c.name === currentItem?.description)
+                ? currentItem?.description
+                : ""
+            }
           >
-            ⚡ Catálogo
-          </button>
+            <option value="" disabled>⚡ Seleccionar del Catálogo...</option>
+            {concepts.map((c) => (
+              <option key={c.id} value={c.name}>
+                {c.name} ({c.defaultCurrency === "PEN" ? "S/" : "$"} {c.defaultPrice ?? 0}) - {c.isTaxable ? "Afecto 18%" : "Inafecto"}
+              </option>
+            ))}
+            <option value="__CUSTOM__">✏️ + Escribir concepto libre / personalizado...</option>
+          </select>
+        ) : (
+          <div className="flex items-center gap-1 w-full">
+            <Input
+              placeholder="Escribe el concepto libre o personalizado..."
+              className="h-8 text-xs font-medium w-full border-slate-300 focus:border-blue-500"
+              {...register(`items.${index}.description` as const)}
+            />
+            {concepts.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setIsCustom(false)}
+                className="h-8 px-2 text-[11px] font-bold text-blue-700 bg-blue-50 border border-blue-200 rounded hover:bg-blue-100 shrink-0 cursor-pointer transition-colors"
+                title="Volver a seleccionar del catálogo"
+              >
+                ⚡ Catálogo
+              </button>
+            )}
+          </div>
         )}
       </div>
 
-      {/* Floating Dropdown Suggestion List */}
-      {isOpen && filteredConcepts.length > 0 && (
-        <div className="absolute z-50 left-0 right-0 mt-1 max-h-48 overflow-y-auto bg-white border border-slate-200 rounded-lg shadow-xl divide-y divide-slate-100">
-          <div className="p-1.5 bg-slate-50 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-            Plantillas del Catálogo (Clic para autocompletar)
-          </div>
-          {filteredConcepts.map((c) => (
-            <button
-              key={c.id}
-              type="button"
-              onMouseDown={(e) => {
-                e.preventDefault(); // prevent blur before click registers
-                handleSelectConcept(index, c.name);
-                setIsOpen(false);
-              }}
-              className="w-full text-left px-3 py-2 hover:bg-blue-50 transition-colors flex items-center justify-between text-xs cursor-pointer"
-            >
-              <div>
-                <span className="font-semibold text-slate-800">{c.name}</span>
-                <span className="text-[10px] text-slate-400 ml-2">
-                  {c.isTaxable ? "Afecto 18%" : "Inafecto"}
-                </span>
-              </div>
-              <div className="text-right shrink-0 ml-2">
-                <span className="font-bold text-blue-600">
-                  {c.defaultCurrency === "PEN" ? "S/" : "$"} {c.defaultPrice ?? 0}
-                </span>
-              </div>
-            </button>
-          ))}
+      {/* If a catalog item is active, allow quick text customization */}
+      {!isCustom && currentItem?.description && (
+        <div className="flex items-center gap-1.5 pt-0.5">
+          <Input
+            placeholder="Ajustar descripción..."
+            className="h-7 text-[11px] text-slate-700 bg-slate-50/70 border-slate-200 w-full"
+            {...register(`items.${index}.description` as const)}
+          />
+          <button
+            type="button"
+            onClick={() => setIsCustom(true)}
+            className="text-[10px] font-semibold text-slate-500 hover:text-blue-600 underline shrink-0 px-1 cursor-pointer"
+            title="Cambiar a concepto libre"
+          >
+            Modo libre
+          </button>
         </div>
       )}
 
       {errors.items?.[index]?.description && (
-        <p className="text-[11px] text-red-500 font-medium mt-1">
+        <p className="text-[11px] text-red-500 font-medium">
           {errors.items[index]?.description?.message}
         </p>
       )}
@@ -327,7 +333,7 @@ export function QuotationForm({ clients, concepts }: QuotationFormProps) {
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-bold text-slate-900">Conceptos y Costos Operativos</h2>
           <span className="text-xs text-slate-500 font-medium hidden sm:inline">
-            Escribe directamente cualquier concepto libre o haz clic en ⚡ Catálogo para autocompletar
+            Selecciona una plantilla del catálogo o escribe un concepto libre para la operación
           </span>
         </div>
 
@@ -370,15 +376,16 @@ export function QuotationForm({ clients, concepts }: QuotationFormProps) {
                       {index + 1}
                     </td>
 
-                    {/* Free-text Concept Input + Smart Catalog Suggestions */}
+                    {/* Dual Mode Concept Cell (Catalog Select vs Custom Text) */}
                     <td className="py-2 px-3">
-                      <ConceptSearchInput
+                      <ConceptCell
                         index={index}
                         register={register}
                         setValue={setValue}
                         concepts={concepts}
                         errors={errors}
                         handleSelectConcept={handleSelectConcept}
+                        currentItem={currentItem}
                       />
                     </td>
 
@@ -513,13 +520,14 @@ export function QuotationForm({ clients, concepts }: QuotationFormProps) {
                   {/* Concept Description (sm:col-span-3) */}
                   <div className="sm:col-span-3 space-y-1.5">
                     <Label className="text-xs font-semibold text-slate-700">Concepto / Servicio *</Label>
-                    <ConceptSearchInput
+                    <ConceptCell
                       index={index}
                       register={register}
                       setValue={setValue}
                       concepts={concepts}
                       errors={errors}
                       handleSelectConcept={handleSelectConcept}
+                      currentItem={currentItem}
                     />
                   </div>
 
