@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ConvertQuotationButton } from "@/components/convert-quotation-button";
+import { QuotationActionsMenu } from "@/components/quotation-actions-menu";
 
 export const dynamic = "force-dynamic";
 
@@ -32,7 +32,7 @@ const statusLabelMap: Record<string, string> = {
 
 export default async function QuotationsPage() {
   const quotations = await prisma.quotation.findMany({
-    include: { client: true, operation: true },
+    include: { client: true, operation: true, items: true },
     orderBy: { createdAt: "desc" },
   });
 
@@ -78,7 +78,9 @@ export default async function QuotationsPage() {
             {quotations.map((item) => (
               <div key={item.id} className="rounded-xl border bg-white p-4 shadow-sm space-y-3">
                 <div className="flex items-center justify-between border-b pb-2">
-                  <span className="font-bold text-slate-900 text-base">{item.code}</span>
+                  <Link href={`/quotations/${item.id}`} className="font-bold text-blue-600 hover:underline text-base">
+                    {item.code}
+                  </Link>
                   <Badge variant={statusVariantMap[item.status] || "secondary"}>
                     {statusLabelMap[item.status] || item.status}
                   </Badge>
@@ -112,16 +114,9 @@ export default async function QuotationsPage() {
                     </span>
                   </div>
 
-                  <div className="pt-2 flex items-center justify-between gap-2">
-                    <Link href={`/quotations/${item.id}`}>
-                      <Button variant="outline" size="sm" className="text-xs font-semibold text-blue-600 border-blue-200">
-                        <FileText className="mr-1 h-3.5 w-3.5" /> Ver / PDF
-                      </Button>
-                    </Link>
-                    <ConvertQuotationButton
-                      quotationId={item.id}
-                      existingOperationId={item.operation?.id}
-                    />
+                  <div className="pt-2 flex items-center justify-between border-t border-slate-200">
+                    <span className="text-xs font-semibold text-slate-500">Acciones del Menú:</span>
+                    <QuotationActionsMenu quotation={item} />
                   </div>
                 </div>
               </div>
@@ -141,13 +136,13 @@ export default async function QuotationsPage() {
                     <TableHead className="font-semibold text-emerald-700 text-right">Profit USD ($)</TableHead>
                     <TableHead className="font-semibold text-slate-700 text-right">Venta PEN (S/)</TableHead>
                     <TableHead className="font-semibold text-emerald-700 text-right">Profit PEN (S/)</TableHead>
-                    <TableHead className="font-semibold text-slate-700 text-center">Acción</TableHead>
+                    <TableHead className="font-semibold text-slate-700 text-center w-24">Acción</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {quotations.map((item) => (
                     <TableRow key={item.id} className="hover:bg-slate-50/80 transition-colors">
-                      <TableCell className="font-bold text-slate-900 text-left">
+                      <TableCell className="font-bold text-left">
                         <Link href={`/quotations/${item.id}`} className="text-blue-600 hover:underline">
                           {item.code}
                         </Link>
@@ -172,18 +167,8 @@ export default async function QuotationsPage() {
                       <TableCell className="text-right font-black text-emerald-600">
                         {formatCurrency(item.profitPen, "PEN")}
                       </TableCell>
-                      <TableCell className="text-center">
-                        <div className="flex items-center justify-center gap-2">
-                          <Link href={`/quotations/${item.id}`}>
-                            <Button variant="outline" size="sm" className="h-8 text-xs font-semibold text-blue-600 border-blue-200 hover:bg-blue-50">
-                              <FileText className="mr-1 h-3.5 w-3.5" /> PDF
-                            </Button>
-                          </Link>
-                          <ConvertQuotationButton
-                            quotationId={item.id}
-                            existingOperationId={item.operation?.id}
-                          />
-                        </div>
+                      <TableCell className="text-center w-24">
+                        <QuotationActionsMenu quotation={item} />
                       </TableCell>
                     </TableRow>
                   ))}

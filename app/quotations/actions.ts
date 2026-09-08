@@ -266,3 +266,24 @@ export async function parseQuotationPdfAction(formData: FormData) {
     rawTextLength: text.length,
   };
 }
+
+export async function deleteQuotationAction(quotationId: string) {
+  const quotation = await prisma.quotation.findUnique({
+    where: { id: quotationId },
+    select: { clientId: true },
+  });
+
+  if (!quotation) {
+    throw new Error("La cotización no existe.");
+  }
+
+  await prisma.quotation.delete({
+    where: { id: quotationId },
+  });
+
+  revalidatePath("/quotations");
+  revalidatePath("/");
+  if (quotation.clientId) {
+    revalidatePath(`/clients/${quotation.clientId}`);
+  }
+}
