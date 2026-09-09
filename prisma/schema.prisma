@@ -161,30 +161,31 @@ model ConceptCatalog {
 }
 
 model Operation {
-  id                String            @id @default(cuid())
+  id                String             @id @default(cuid())
   expedientId       String?
-  expedient         Expedient?        @relation(fields: [expedientId], references: [id], onDelete: SetNull)
-  quotationId       String            @unique
-  quotation         Quotation         @relation(fields: [quotationId], references: [id], onDelete: Cascade)
-  status            OperationStatus   @default(EN_TRANSITO)
+  expedient         Expedient?         @relation(fields: [expedientId], references: [id], onDelete: SetNull)
+  quotationId       String             @unique
+  quotation         Quotation          @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  status            OperationStatus    @default(EN_TRANSITO)
   blNumber          String?
   etd               DateTime?
   eta               DateTime?
   customsChannel    CustomsChannel?
-  sharedToken       String            @unique @default(uuid())
+  sharedToken       String             @unique @default(uuid())
 
   // Logistics Checklist Milestones
-  hblApproved       Boolean           @default(false)
-  customsDocsSent   Boolean           @default(false)
-  taxesPaid         Boolean           @default(false)
-  transportDocsSent Boolean           @default(false)
-  cargoDelivered    Boolean           @default(false)
+  hblApproved       Boolean            @default(false)
+  customsDocsSent   Boolean            @default(false)
+  taxesPaid         Boolean            @default(false)
+  transportDocsSent Boolean            @default(false)
+  cargoDelivered    Boolean            @default(false)
 
   charges           OperationCharge[]
   documents         Document[]
   liquidation       Liquidation?
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
+  commercialInvoice CommercialInvoice?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
 }
 
 model OperationCharge {
@@ -244,4 +245,34 @@ model Liquidation {
 
   createdAt          DateTime          @default(now())
   updatedAt          DateTime          @updatedAt
+}
+
+model CommercialInvoice {
+  id            String        @id @default(cuid())
+  operationId   String        @unique
+  operation     Operation     @relation(fields: [operationId], references: [id], onDelete: Cascade)
+  invoiceNumber String?
+  fobTotal      Float         @default(0)
+  cifTotal      Float         @default(0)
+  exchangeRate  Float         @default(3.75)
+  items         InvoiceItem[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+model InvoiceItem {
+  id                  String            @id @default(cuid())
+  commercialInvoiceId String
+  commercialInvoice   CommercialInvoice @relation(fields: [commercialInvoiceId], references: [id], onDelete: Cascade)
+  sku                 String?
+  description         String
+  quantity            Int               @default(1)
+  unitFob             Float             @default(0)
+  totalFob            Float             @default(0)
+  allocatedExpenseUsd Float             @default(0)
+  finalUnitCostUsd    Float             @default(0)
+  allocatedExpensePen Float             @default(0)
+  finalUnitCostPen    Float             @default(0)
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
 }

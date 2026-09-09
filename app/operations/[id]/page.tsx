@@ -8,6 +8,7 @@ import { OperationMilestones } from "@/components/operation-milestones";
 import { AddExtraChargeDialog } from "@/components/add-extra-charge-dialog";
 import { BrokerDocumentSection } from "@/components/broker-document-section";
 import { OperationChargesManager } from "@/components/operation-charges-manager";
+import { LandedCostCalculator } from "@/components/landed-cost-calculator";
 import { DownloadArrivalNoticeButton } from "@/components/pdf/download-arrival-notice-button";
 import { ArrivalNoticePdfData } from "@/components/pdf/arrival-notice-pdf";
 import { Badge } from "@/components/ui/badge";
@@ -35,6 +36,13 @@ export default async function OperationDetailPage({ params }: OperationDetailPag
         orderBy: { uploadedAt: "desc" },
       },
       liquidation: true,
+      commercialInvoice: {
+        include: {
+          items: {
+            orderBy: { createdAt: "asc" },
+          },
+        },
+      },
     },
   });
 
@@ -211,17 +219,26 @@ export default async function OperationDetailPage({ params }: OperationDetailPag
       </div>
 
       {/* Operation Charges & IGV Manager (Taxable Toggles & Liquidation Generator) */}
-      <div className="pt-2">
+      <div className="pt-2 space-y-4">
         <OperationChargesManager
           operationId={operation.id}
           charges={operation.charges}
           existingLiquidationId={operation.liquidation?.id}
         />
+
+        <div className="flex justify-end">
+          <AddExtraChargeDialog operationId={operation.id} />
+        </div>
       </div>
 
-      {/* Extra Charges Adder Button Section */}
-      <div className="flex justify-end pt-2">
-        <AddExtraChargeDialog operationId={operation.id} />
+      {/* Landed Cost Import Calculator Component */}
+      <div className="pt-2">
+        <LandedCostCalculator
+          operationId={operation.id}
+          totalLogisticsChargesUsd={realSaleUsd}
+          totalLogisticsChargesPen={realSalePen}
+          existingInvoice={operation.commercialInvoice as any}
+        />
       </div>
 
       {/* Real Financial Profit Panel (Base + Extra Charges) */}
