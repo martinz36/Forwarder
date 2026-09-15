@@ -62,10 +62,16 @@ interface OperationsTableViewProps {
 }
 
 const statusLabelMap: Record<string, string> = {
+  COORDINANDO_ORIGEN: "Coordinando Origen",
+  POR_RECOGER: "Por Recoger",
+  EN_ALMACEN_ORIGEN: "En Almacén Origen",
   EN_TRANSITO: "En Tránsito",
+  EN_ADUANA_DESTINO: "En Aduana Destino",
+  EN_REPARTO: "En Reparto",
+  ENTREGADO: "Entregado",
+  LIQUIDADO: "Liquidado",
   EN_ADUANA: "En Aduana",
   RETIRADO: "Retirado",
-  LIQUIDADO: "Liquidado",
 };
 
 export function OperationsTableView({ operations }: OperationsTableViewProps) {

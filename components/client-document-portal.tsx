@@ -33,10 +33,16 @@ interface ClientDocumentPortalProps {
 }
 
 const statusLabelMap: Record<string, string> = {
-  EN_TRANSITO: "En Tránsito Marítimo / Aéreo",
-  EN_ADUANA: "En Proceso de Despacho Aduanero",
-  RETIRADO: "Carga Retirada del Depósito",
+  COORDINANDO_ORIGEN: "Coordinación Logística en Origen",
+  POR_RECOGER: "Pendiente de Recojo en Proveedor",
+  EN_ALMACEN_ORIGEN: "En Almacén / Terminal de Origen",
+  EN_TRANSITO: "En Tránsito Internacional",
+  EN_ADUANA_DESTINO: "En Proceso de Despacho Aduanero",
+  EN_REPARTO: "En Reparto / Transporte Local",
+  ENTREGADO: "Mercancía Entregada en Almacén",
   LIQUIDADO: "Despacho Liquidado & Finalizado",
+  EN_ADUANA: "En Aduana",
+  RETIRADO: "Carga Retirada",
 };
 
 export function ClientDocumentPortal({

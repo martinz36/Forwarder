@@ -41,6 +41,7 @@ export async function createOperationFromQuotationAction(quotationId: string) {
         quotationId: quotation.id,
         expedientId: quotation.expedientId || null,
         status: "EN_TRANSITO",
+        incoterm: quotation.incoterm || "FOB",
       },
     });
 
@@ -91,19 +92,24 @@ export async function updateOperationHeaderAction(
 ) {
   const validated = operationHeaderSchema.parse(data);
 
-  await prisma.operation.update({
+  const operation = await prisma.operation.update({
     where: { id: operationId },
     data: {
       status: validated.status,
+      incoterm: validated.incoterm ? validated.incoterm.trim().toUpperCase() : undefined,
       blNumber: validated.blNumber ? validated.blNumber.trim() : null,
       etd: validated.etd ? new Date(validated.etd) : null,
       eta: validated.eta ? new Date(validated.eta) : null,
       customsChannel: validated.customsChannel ? (validated.customsChannel as any) : null,
     },
+    select: { sharedToken: true },
   });
 
   revalidatePath(`/operations/${operationId}`);
   revalidatePath("/operations");
+  if (operation?.sharedToken) {
+    revalidatePath(`/shared/${operation.sharedToken}`);
+  }
 }
 
 export async function addExtraChargeAction(

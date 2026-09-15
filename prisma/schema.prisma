@@ -23,9 +23,13 @@ enum QuotationStatus {
 }
 
 enum OperationStatus {
+  COORDINANDO_ORIGEN
+  POR_RECOGER
+  EN_ALMACEN_ORIGEN
   EN_TRANSITO
-  EN_ADUANA
-  RETIRADO
+  EN_ADUANA_DESTINO
+  EN_REPARTO
+  ENTREGADO
   LIQUIDADO
 }
 
@@ -168,6 +172,7 @@ model Operation {
   quotationId       String             @unique
   quotation         Quotation          @relation(fields: [quotationId], references: [id], onDelete: Cascade)
   status            OperationStatus    @default(EN_TRANSITO)
+  incoterm          String?            @default("FOB")
   blNumber          String?
   etd               DateTime?
   eta               DateTime?
@@ -215,6 +220,7 @@ model Document {
   fileUrl      String
   documentType DocumentType @default(OTRO)
   isPublic     Boolean      @default(false)
+  isDraft      Boolean      @default(true)
   uploadedBy   String       @default("BROKER")
   uploadedAt   DateTime     @default(now())
 }

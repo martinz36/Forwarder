@@ -4,9 +4,8 @@ import { ArrowLeft, Ship, ShieldAlert, DollarSign, Wallet, FileText, CheckCircle
 import prisma from "@/lib/prisma";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { OperationHeaderForm } from "@/components/operation-header-form";
-import { OperationMilestones } from "@/components/operation-milestones";
+import { SmartDocumentsTab } from "@/components/smart-documents-tab";
 import { AddExtraChargeDialog } from "@/components/add-extra-charge-dialog";
-import { BrokerDocumentSection } from "@/components/broker-document-section";
 import { OperationChargesManager } from "@/components/operation-charges-manager";
 import { LandedCostCalculator } from "@/components/landed-cost-calculator";
 import { DownloadArrivalNoticeButton } from "@/components/pdf/download-arrival-notice-button";
@@ -99,6 +98,8 @@ export default async function OperationDetailPage({ params }: OperationDetailPag
     ? operation.id
     : `OP-${operation.quotation.code.replace(/^COT-/, "")}`;
 
+  const currentIncoterm = operation.incoterm || operation.quotation.incoterm || "FOB";
+
   const arrivalNoticePdfData: ArrivalNoticePdfData = {
     operationCode: opDisplayCode,
     blNumber: operation.blNumber,
@@ -148,10 +149,13 @@ export default async function OperationDetailPage({ params }: OperationDetailPag
             </Button>
           </Link>
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-2xl font-bold tracking-tight text-slate-900">
                 Operación {opDisplayCode}
               </h1>
+              <Badge className="bg-blue-100 text-blue-800 border-blue-200 font-bold text-xs">
+                INCOTERM: {currentIncoterm}
+              </Badge>
               {operation.customsChannel && (
                 <Badge
                   className={
@@ -166,7 +170,7 @@ export default async function OperationDetailPage({ params }: OperationDetailPag
                 </Badge>
               )}
             </div>
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-slate-500 mt-0.5">
               Cotización Origen: <span className="font-semibold text-slate-800">{operation.quotation.code}</span> • Cliente: <span className="font-semibold text-slate-800">{operation.quotation.client.businessName}</span>
             </p>
           </div>
@@ -190,6 +194,7 @@ export default async function OperationDetailPage({ params }: OperationDetailPag
         operationId={operation.id}
         initialData={{
           status: operation.status,
+          incoterm: currentIncoterm,
           blNumber: operation.blNumber,
           etd: operation.etd,
           eta: operation.eta,
@@ -197,21 +202,9 @@ export default async function OperationDetailPage({ params }: OperationDetailPag
         }}
       />
 
-      {/* Logistics Checklist Milestones Component */}
-      <OperationMilestones
-        operationId={operation.id}
-        milestones={{
-          hblApproved: operation.hblApproved,
-          customsDocsSent: operation.customsDocsSent,
-          taxesPaid: operation.taxesPaid,
-          transportDocsSent: operation.transportDocsSent,
-          cargoDelivered: operation.cargoDelivered,
-        }}
-      />
-
-      {/* Shared Client Documents Section */}
+      {/* Smart Checklist & Document Versioning Section */}
       <div className="pt-2">
-        <BrokerDocumentSection
+        <SmartDocumentsTab
           operationId={operation.id}
           sharedToken={operation.sharedToken}
           documents={operation.documents}

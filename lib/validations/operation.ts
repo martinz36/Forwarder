@@ -1,7 +1,17 @@
 import { z } from "zod";
 
 export const operationHeaderSchema = z.object({
-  status: z.enum(["EN_TRANSITO", "EN_ADUANA", "RETIRADO", "LIQUIDADO"]),
+  status: z.enum([
+    "COORDINANDO_ORIGEN",
+    "POR_RECOGER",
+    "EN_ALMACEN_ORIGEN",
+    "EN_TRANSITO",
+    "EN_ADUANA_DESTINO",
+    "EN_REPARTO",
+    "ENTREGADO",
+    "LIQUIDADO",
+  ]),
+  incoterm: z.string().optional(),
   blNumber: z.string().optional(),
   etd: z.string().optional(),
   eta: z.string().optional(),

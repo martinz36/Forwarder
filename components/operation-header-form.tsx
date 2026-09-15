@@ -10,7 +10,8 @@ import { updateOperationHeaderAction } from "@/app/operations/actions";
 interface OperationHeaderFormProps {
   operationId: string;
   initialData: {
-    status: "EN_TRANSITO" | "EN_ADUANA" | "RETIRADO" | "LIQUIDADO";
+    status: string;
+    incoterm?: string | null;
     blNumber?: string | null;
     etd?: Date | null;
     eta?: Date | null;
@@ -31,6 +32,7 @@ export function OperationHeaderForm({ operationId, initialData }: OperationHeade
     const formData = new FormData(event.currentTarget);
 
     const status = formData.get("status") as any;
+    const incoterm = formData.get("incoterm") as string;
     const blNumber = formData.get("blNumber") as string;
     const etd = formData.get("etd") as string;
     const eta = formData.get("eta") as string;
@@ -40,12 +42,13 @@ export function OperationHeaderForm({ operationId, initialData }: OperationHeade
       try {
         await updateOperationHeaderAction(operationId, {
           status,
+          incoterm,
           blNumber,
           etd,
           eta,
           customsChannel,
         });
-        setSuccessMsg("Datos operativos actualizados correctamente.");
+        setSuccessMsg("Datos operativos e Incoterm actualizados.");
       } catch (err: any) {
         alert(err.message || "Error al actualizar la operación.");
       }
@@ -54,7 +57,7 @@ export function OperationHeaderForm({ operationId, initialData }: OperationHeade
 
   return (
     <form onSubmit={handleSubmit} className="rounded-xl border bg-white p-6 shadow-sm space-y-4">
-      <div className="flex items-center justify-between border-b pb-3">
+      <div className="flex items-center justify-between border-b pb-3 flex-wrap gap-2">
         <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
           <Ship className="h-5 w-5 text-blue-600" /> Control de Despacho & Seguimiento
         </h2>
@@ -65,22 +68,40 @@ export function OperationHeaderForm({ operationId, initialData }: OperationHeade
         )}
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-5">
+      <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-6">
+        {/* Incoterm */}
         <div className="space-y-1.5">
-          <Label htmlFor="status" className="text-xs font-semibold text-slate-700">Estado Operativo</Label>
+          <Label htmlFor="incoterm" className="text-xs font-semibold text-slate-700">Incoterm</Label>
+          <Input
+            id="incoterm"
+            name="incoterm"
+            placeholder="Ej: EXW, FOB, CIF"
+            defaultValue={initialData.incoterm || "FOB"}
+            className="h-9 text-xs font-bold uppercase text-blue-800 bg-blue-50/50 border-blue-200"
+          />
+        </div>
+
+        {/* Estado Operativo Detallado */}
+        <div className="space-y-1.5 sm:col-span-2 md:col-span-2">
+          <Label htmlFor="status" className="text-xs font-semibold text-slate-700">Estado Logístico Contextual *</Label>
           <select
             id="status"
             name="status"
             defaultValue={initialData.status}
-            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-xs font-semibold shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            className="flex h-9 w-full rounded-md border border-input bg-white px-3 py-1 text-xs font-bold shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring text-slate-900"
           >
-            <option value="EN_TRANSITO">EN TRÁNSITO</option>
-            <option value="EN_ADUANA">EN ADUANA</option>
-            <option value="RETIRADO">RETIRADO</option>
-            <option value="LIQUIDADO">LIQUIDADO</option>
+            <option value="COORDINANDO_ORIGEN">🛫 COORDINANDO EN ORIGEN</option>
+            <option value="POR_RECOGER">📦 POR RECOGER (PROVEEDOR)</option>
+            <option value="EN_ALMACEN_ORIGEN">🏢 EN ALMACÉN DE ORIGEN</option>
+            <option value="EN_TRANSITO">🚢 EN TRÁNSITO INTERNACIONAL</option>
+            <option value="EN_ADUANA_DESTINO">🛃 EN ADUANA DE DESTINO</option>
+            <option value="EN_REPARTO">🚚 EN REPARTO / TRANSPORTE LOCAL</option>
+            <option value="ENTREGADO">✅ ENTREGADO EN ALMACÉN CLIENTE</option>
+            <option value="LIQUIDADO">🧾 LIQUIDADO</option>
           </select>
         </div>
 
+        {/* BL Number */}
         <div className="space-y-1.5">
           <Label htmlFor="blNumber" className="text-xs font-semibold text-slate-700">BL / HBL / Guía</Label>
           <Input
@@ -92,23 +113,26 @@ export function OperationHeaderForm({ operationId, initialData }: OperationHeade
           />
         </div>
 
+        {/* ETD */}
         <div className="space-y-1.5">
           <Label htmlFor="etd" className="text-xs font-semibold text-slate-700">ETD (Salida Origen)</Label>
           <Input id="etd" name="etd" type="date" defaultValue={defaultEtd} className="h-9 text-xs" />
         </div>
 
+        {/* ETA */}
         <div className="space-y-1.5">
-          <Label htmlFor="eta" className="text-xs font-semibold text-slate-700">ETA (Llegada Callao)</Label>
+          <Label htmlFor="eta" className="text-xs font-semibold text-slate-700">ETA (Llegada Destino)</Label>
           <Input id="eta" name="eta" type="date" defaultValue={defaultEta} className="h-9 text-xs" />
         </div>
 
-        <div className="space-y-1.5">
-          <Label htmlFor="customsChannel" className="text-xs font-semibold text-slate-700">Canal de Aduana</Label>
+        {/* Canal de Aduana */}
+        <div className="space-y-1.5 sm:col-span-2 md:col-span-6">
+          <Label htmlFor="customsChannel" className="text-xs font-semibold text-slate-700">Canal de Aduana (SUNAT)</Label>
           <select
             id="customsChannel"
             name="customsChannel"
             defaultValue={initialData.customsChannel || ""}
-            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-xs font-bold shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            className="flex h-9 w-full rounded-md border border-input bg-white px-3 py-1 text-xs font-bold shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           >
             <option value="">Por Asignar</option>
             <option value="VERDE">🟢 CANAL VERDE (Levante Automático)</option>
