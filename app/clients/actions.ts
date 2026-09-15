@@ -16,7 +16,7 @@ export async function createClientAction(data: ClientFormValues) {
     throw new Error(`El número de documento ${validated.documentNumber} ya está registrado para ${existing.businessName}.`);
   }
 
-  await prisma.client.create({
+  const newClient = await prisma.client.create({
     data: {
       documentType: validated.documentType,
       documentNumber: validated.documentNumber.trim(),
@@ -31,6 +31,12 @@ export async function createClientAction(data: ClientFormValues) {
 
   revalidatePath("/clients");
   revalidatePath("/quotations/new");
+
+  return {
+    id: newClient.id,
+    businessName: newClient.businessName,
+    documentNumber: newClient.documentNumber,
+  };
 }
 
 export async function updateClientAction(clientId: string, data: ClientFormValues) {

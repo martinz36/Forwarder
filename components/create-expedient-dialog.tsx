@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { FolderPlus, Loader2, Ship, Package, Plane, Truck } from "lucide-react";
+import { useState, useEffect } from "react";
+import { FolderPlus, Loader2, Ship, Package, Plane, Truck, UserPlus, X, Check } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -13,8 +13,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { createExpedientAction } from "@/app/expedients/actions";
+import { createClientAction } from "@/app/clients/actions";
 
 interface ClientOption {
   id: string;
@@ -26,8 +26,9 @@ interface CreateExpedientDialogProps {
   clients: ClientOption[];
 }
 
-export function CreateExpedientDialog({ clients }: CreateExpedientDialogProps) {
+export function CreateExpedientDialog({ clients: initialClients }: CreateExpedientDialogProps) {
   const [open, setOpen] = useState(false);
+  const [clientList, setClientList] = useState<ClientOption[]>(initialClients);
   const [selectedClientId, setSelectedClientId] = useState("");
   const [loadType, setLoadType] = useState<"FCL" | "LCL" | "AÉREO" | "TERRESTRE">("FCL");
   const [customCode, setCustomCode] = useState("");
@@ -35,7 +36,21 @@ export function CreateExpedientDialog({ clients }: CreateExpedientDialogProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const selectedClient = clients.find((c) => c.id === selectedClientId);
+  // Inline Client Creation state
+  const [isCreatingClient, setIsCreatingClient] = useState(false);
+  const [newBusinessName, setNewBusinessName] = useState("");
+  const [newDocumentType, setNewDocumentType] = useState<"RUC" | "DNI" | "CE">("RUC");
+  const [newDocumentNumber, setNewDocumentNumber] = useState("");
+  const [newEmail, setNewEmail] = useState("");
+  const [newPhone, setNewPhone] = useState("");
+  const [clientLoading, setClientLoading] = useState(false);
+  const [inlineClientError, setInlineClientError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setClientList(initialClients);
+  }, [initialClients]);
+
+  const selectedClient = clientList.find((c) => c.id === selectedClientId);
 
   // Generate live code preview
   let codePreview = "EXP-2026-CLIENTE-FCL-0001";
@@ -54,6 +69,45 @@ export function CreateExpedientDialog({ clients }: CreateExpedientDialogProps) {
     const year = new Date().getFullYear();
     codePreview = `EXP-${year}-${slug}-${loadType}-0001`;
   }
+
+  const handleCreateClient = async (e: React.FormEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!newBusinessName.trim()) {
+      setInlineClientError("Ingresa la razón social o nombre.");
+      return;
+    }
+    if (!newDocumentNumber.trim()) {
+      setInlineClientError("Ingresa el número de documento.");
+      return;
+    }
+
+    try {
+      setClientLoading(true);
+      setInlineClientError(null);
+      const newClient = await createClientAction({
+        businessName: newBusinessName,
+        documentType: newDocumentType,
+        documentNumber: newDocumentNumber,
+        email: newEmail,
+        phone: newPhone,
+      });
+
+      setClientList((prev) => [newClient, ...prev]);
+      setSelectedClientId(newClient.id);
+      setIsCreatingClient(false);
+      setNewBusinessName("");
+      setNewDocumentNumber("");
+      setNewEmail("");
+      setNewPhone("");
+    } catch (err: any) {
+      console.error(err);
+      setInlineClientError(err?.message || "Error al crear el cliente.");
+    } finally {
+      setClientLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -86,7 +140,7 @@ export function CreateExpedientDialog({ clients }: CreateExpedientDialogProps) {
           <span>Abrir Nuevo Expediente</span>
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-slate-900">
             <FolderPlus className="h-5 w-5 text-blue-600" />
@@ -104,25 +158,151 @@ export function CreateExpedientDialog({ clients }: CreateExpedientDialogProps) {
             </div>
           )}
 
-          {/* Client Selection */}
+          {/* Client Selection & Inline Creation */}
           <div className="space-y-1.5">
-            <Label htmlFor="client-select" className="text-sm font-semibold text-slate-700">
-              1. Cliente Importador *
-            </Label>
-            <select
-              id="client-select"
-              value={selectedClientId}
-              onChange={(e) => setSelectedClientId(e.target.value)}
-              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
-              required
-            >
-              <option value="">-- Selecciona un Cliente --</option>
-              {clients.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.businessName} ({c.documentNumber})
-                </option>
-              ))}
-            </select>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="client-select" className="text-sm font-semibold text-slate-700">
+                1. Cliente Importador *
+              </Label>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setIsCreatingClient(!isCreatingClient);
+                  setInlineClientError(null);
+                }}
+                className="h-7 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50 px-2 gap-1 font-medium"
+              >
+                {isCreatingClient ? (
+                  <>
+                    <X className="h-3.5 w-3.5" />
+                    <span>Cancelar</span>
+                  </>
+                ) : (
+                  <>
+                    <UserPlus className="h-3.5 w-3.5" />
+                    <span>+ Crear Nuevo Cliente</span>
+                  </>
+                )}
+              </Button>
+            </div>
+
+            {isCreatingClient ? (
+              <div className="p-3 bg-blue-50/60 border border-blue-200 rounded-xl space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-blue-900 flex items-center gap-1.5">
+                    <UserPlus className="h-3.5 w-3.5 text-blue-600" />
+                    Nuevo Cliente Express
+                  </span>
+                </div>
+
+                {inlineClientError && (
+                  <div className="p-2 text-xs text-red-700 bg-red-50 border border-red-200 rounded">
+                    {inlineClientError}
+                  </div>
+                )}
+
+                <div className="space-y-1">
+                  <Label className="text-[11px] font-semibold text-slate-700">
+                    Razón Social / Nombre *
+                  </Label>
+                  <Input
+                    placeholder="Ej. Nave Espacial S.A.C."
+                    value={newBusinessName}
+                    onChange={(e) => setNewBusinessName(e.target.value)}
+                    className="h-8 text-xs bg-white"
+                  />
+                </div>
+
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="space-y-1">
+                    <Label className="text-[11px] font-semibold text-slate-700">Tipo Doc *</Label>
+                    <select
+                      value={newDocumentType}
+                      onChange={(e: any) => setNewDocumentType(e.target.value as "RUC" | "DNI" | "CE")}
+                      className="w-full h-8 rounded-md border border-slate-300 bg-white px-2 text-xs focus:border-blue-500 focus:outline-none"
+                    >
+                      <option value="RUC">RUC</option>
+                      <option value="DNI">DNI</option>
+                      <option value="CE">CE</option>
+                    </select>
+                  </div>
+                  <div className="col-span-2 space-y-1">
+                    <Label className="text-[11px] font-semibold text-slate-700">N° Documento *</Label>
+                    <Input
+                      placeholder="20123456789"
+                      value={newDocumentNumber}
+                      onChange={(e) => setNewDocumentNumber(e.target.value)}
+                      className="h-8 text-xs bg-white font-mono"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1">
+                    <Label className="text-[11px] font-semibold text-slate-700">Email (Opcional)</Label>
+                    <Input
+                      type="email"
+                      placeholder="contacto@empresa.com"
+                      value={newEmail}
+                      onChange={(e) => setNewEmail(e.target.value)}
+                      className="h-8 text-xs bg-white"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[11px] font-semibold text-slate-700">Teléfono (Opcional)</Label>
+                    <Input
+                      placeholder="+51 987654321"
+                      value={newPhone}
+                      onChange={(e) => setNewPhone(e.target.value)}
+                      className="h-8 text-xs bg-white"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-2 pt-1">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setIsCreatingClient(false)}
+                    className="h-7 text-xs text-slate-600"
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={handleCreateClient}
+                    disabled={clientLoading}
+                    className="h-7 text-xs bg-blue-600 hover:bg-blue-700 text-white font-semibold gap-1"
+                  >
+                    {clientLoading ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Check className="h-3.5 w-3.5" />
+                    )}
+                    <span>Guardar y Seleccionar</span>
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <select
+                id="client-select"
+                value={selectedClientId}
+                onChange={(e) => setSelectedClientId(e.target.value)}
+                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                required
+              >
+                <option value="">-- Selecciona un Cliente --</option>
+                {clientList.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.businessName} ({c.documentNumber})
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
 
           {/* Load Type Selector (FCL / LCL / AÉREO / TERRESTRE) */}
