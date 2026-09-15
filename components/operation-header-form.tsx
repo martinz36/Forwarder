@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { updateOperationHeaderAction } from "@/app/operations/actions";
 
+import { ThreeColumnDatePicker } from "@/components/ui/three-column-date-picker";
+
 interface OperationHeaderFormProps {
   operationId: string;
   initialData: {
@@ -25,6 +27,9 @@ export function OperationHeaderForm({ operationId, initialData }: OperationHeade
 
   const defaultEtd = initialData.etd ? new Date(initialData.etd).toISOString().split("T")[0] : "";
   const defaultEta = initialData.eta ? new Date(initialData.eta).toISOString().split("T")[0] : "";
+
+  const [etdValue, setEtdValue] = useState<string>(defaultEtd);
+  const [etaValue, setEtaValue] = useState<string>(defaultEta);
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -116,13 +121,25 @@ export function OperationHeaderForm({ operationId, initialData }: OperationHeade
         {/* ETD */}
         <div className="space-y-1.5">
           <Label htmlFor="etd" className="text-xs font-semibold text-slate-700">ETD (Salida Origen)</Label>
-          <Input id="etd" name="etd" type="date" defaultValue={defaultEtd} className="h-9 text-xs" />
+          <ThreeColumnDatePicker
+            id="etd"
+            name="etd"
+            value={etdValue}
+            onChange={setEtdValue}
+            placeholder="Seleccionar ETD"
+          />
         </div>
 
         {/* ETA */}
         <div className="space-y-1.5">
           <Label htmlFor="eta" className="text-xs font-semibold text-slate-700">ETA (Llegada Destino)</Label>
-          <Input id="eta" name="eta" type="date" defaultValue={defaultEta} className="h-9 text-xs" />
+          <ThreeColumnDatePicker
+            id="eta"
+            name="eta"
+            value={etaValue}
+            onChange={setEtaValue}
+            placeholder="Seleccionar ETA"
+          />
         </div>
 
         {/* Canal de Aduana */}

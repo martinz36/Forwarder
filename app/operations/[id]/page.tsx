@@ -13,6 +13,8 @@ import { ArrivalNoticePdfData } from "@/components/pdf/arrival-notice-pdf";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
+import { seedDefaultChecklistItemsAction } from "@/app/operations/checklist-actions";
+
 export const dynamic = "force-dynamic";
 
 interface OperationDetailPageProps {
@@ -34,6 +36,9 @@ export default async function OperationDetailPage({ params }: OperationDetailPag
       documents: {
         orderBy: { uploadedAt: "desc" },
       },
+      checklistItems: {
+        orderBy: { order: "asc" },
+      },
       liquidation: true,
       commercialInvoice: {
         include: {
@@ -47,6 +52,16 @@ export default async function OperationDetailPage({ params }: OperationDetailPag
 
   if (!operation) {
     notFound();
+  }
+
+  // Auto-seed checklist items if empty (backward compatibility)
+  let checklistItems = operation.checklistItems;
+  if (checklistItems.length === 0) {
+    await seedDefaultChecklistItemsAction(operation.id);
+    checklistItems = await prisma.checklistItem.findMany({
+      where: { operationId: operation.id },
+      orderBy: { order: "asc" },
+    });
   }
 
   // Financial totals calculation
@@ -208,6 +223,7 @@ export default async function OperationDetailPage({ params }: OperationDetailPag
           operationId={operation.id}
           sharedToken={operation.sharedToken}
           documents={operation.documents}
+          checklistItems={checklistItems}
         />
       </div>
 

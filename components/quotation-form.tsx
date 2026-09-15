@@ -30,6 +30,7 @@ import { Label } from "@/components/ui/label";
 import { formatCurrency } from "@/lib/format";
 import { quotationSchema, QuotationFormValues } from "@/lib/validations/quotation";
 import { createQuotationAction, parseQuotationPdfAction } from "@/app/quotations/actions";
+import { ThreeColumnDatePicker } from "@/components/ui/three-column-date-picker";
 
 export const CATEGORY_OPTIONS = [
   { value: "GASTOS_ORIGEN", label: "Gastos de Origen", defaultTaxable: false },
@@ -424,7 +425,11 @@ export function QuotationForm({ clients, concepts, expedient }: QuotationFormPro
           <Label htmlFor="validUntil" className="font-semibold text-slate-800">
             Fecha de Validez
           </Label>
-          <Input id="validUntil" type="date" {...register("validUntil")} className="h-10" />
+          <ThreeColumnDatePicker
+            value={watch("validUntil")}
+            onChange={(val) => setValue("validUntil", val)}
+            placeholder="Seleccionar Fecha de Validez"
+          />
           {errors.validUntil && (
             <p className="text-xs font-medium text-red-500">{errors.validUntil.message}</p>
           )}
@@ -456,12 +461,20 @@ export function QuotationForm({ clients, concepts, expedient }: QuotationFormPro
 
           <div className="space-y-1.5">
             <Label className="text-xs font-bold text-slate-900">E.T.D</Label>
-            <Input placeholder="Ej: 13/08/2026" {...register("etd")} className="h-9 text-xs font-medium" />
+            <ThreeColumnDatePicker
+              value={watch("etd")}
+              onChange={(val) => setValue("etd", val)}
+              placeholder="Seleccionar E.T.D"
+            />
           </div>
 
           <div className="space-y-1.5">
             <Label className="text-xs font-bold text-slate-900">E.T.A</Label>
-            <Input placeholder="Ej: 07/09/2026" {...register("eta")} className="h-9 text-xs font-medium" />
+            <ThreeColumnDatePicker
+              value={watch("eta")}
+              onChange={(val) => setValue("eta", val)}
+              placeholder="Seleccionar E.T.A"
+            />
           </div>
 
           <div className="space-y-1.5">

@@ -77,6 +77,51 @@ export async function createOperationFromQuotationAction(quotationId: string) {
         data: chargesData,
       });
     }
+
+    // Seed default checklist items for new operation
+    const defaultChecklist = [
+      {
+        title: "1. Bill of Lading (HBL / BL / Guía Aérea)",
+        description: "Documento de transporte principal emitido por naviera o agente de origen.",
+        documentType: "BL",
+        order: 1,
+      },
+      {
+        title: "2. Factura Comercial & Packing List",
+        description: "Documentación comercial del exportador necesaria para transmisión aduanera.",
+        documentType: "FACTURA_COMERCIAL",
+        order: 2,
+      },
+      {
+        title: "3. DAM / Declaración de Aduana",
+        description: "Declaración Aduanera de Mercancías numerada ante SUNAT.",
+        documentType: "DAM",
+        order: 3,
+      },
+      {
+        title: "4. Volante & Guía de Transporte Local",
+        description: "Autorización de retiro de depósito temporal y transporte de entrega en almacén.",
+        documentType: "OTRO",
+        order: 4,
+      },
+      {
+        title: "5. Liquidación de Gastos Operativos",
+        description: "Documento de cobranza final de servicios logísticos y reembolsos de despacho.",
+        documentType: "LIQUIDACION",
+        order: 5,
+      },
+    ];
+
+    await tx.checklistItem.createMany({
+      data: defaultChecklist.map((item) => ({
+        operationId: operation.id,
+        title: item.title,
+        description: item.description,
+        documentType: item.documentType,
+        order: item.order,
+        isCompleted: false,
+      })),
+    });
   });
 
   revalidatePath("/operations");

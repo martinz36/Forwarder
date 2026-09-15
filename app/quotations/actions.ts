@@ -268,14 +268,52 @@ export async function parseQuotationPdfAction(formData: FormData) {
   };
 }
 
-export async function deleteQuotationAction(quotationId: string) {
+export async function updateQuotationStatusAction(quotationId: string, status: "DRAFT" | "SENT" | "ACCEPTED" | "REJECTED") {
+  if (!quotationId) {
+    throw new Error("ID de cotización no proporcionado.");
+  }
+
   const quotation = await prisma.quotation.findUnique({
     where: { id: quotationId },
-    select: { clientId: true },
+    include: { operation: true },
   });
 
   if (!quotation) {
-    throw new Error("La cotización no existe.");
+    throw new Error("La cotización especificada no existe.");
+  }
+
+  if (status === "ACCEPTED" && !quotation.operation) {
+    // If accepting a quotation, create operation
+    const { createOperationFromQuotationAction } = await import("@/app/operations/actions");
+    await createOperationFromQuotationAction(quotationId);
+    return;
+  }
+
+  await prisma.quotation.update({
+    where: { id: quotationId },
+    data: { status },
+  });
+
+  revalidatePath("/quotations");
+  revalidatePath(`/quotations/${quotationId}`);
+  revalidatePath("/");
+  if (quotation.clientId) {
+    revalidatePath(`/clients/${quotation.clientId}`);
+  }
+}
+
+export async function deleteQuotationAction(quotationId: string) {
+  const quotation = await prisma.quotation.findUnique({
+    where: { id: quotationId },
+    include: { operation: true },
+  });
+
+  if (!quotation) {
+    throw new Error("La cotización especificada no existe.");
+  }
+
+  if (quotation.status === "ACCEPTED" || quotation.operation) {
+    throw new Error("No se puede eliminar una cotización que ha sido aceptada o cuenta con una operación asociada.");
   }
 
   await prisma.quotation.delete({

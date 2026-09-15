@@ -13,6 +13,8 @@ import {
   ExternalLink,
   Trash2,
   Loader2,
+  XCircle,
+  CheckCircle2,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -36,7 +38,7 @@ import {
 
 import { QuotationPDF, QuotationPdfData } from "@/components/pdf/quotation-pdf";
 import { createOperationFromQuotationAction } from "@/app/operations/actions";
-import { deleteQuotationAction } from "@/app/quotations/actions";
+import { deleteQuotationAction, updateQuotationStatusAction } from "@/app/quotations/actions";
 
 interface QuotationItemData {
   description: string;
@@ -222,6 +224,17 @@ export function QuotationActionsMenu({ quotation }: QuotationActionsMenuProps) {
     });
   }
 
+  function handleRejectQuotation() {
+    if (!confirm("¿Deseas marcar esta cotización como Rechazada?")) return;
+    startTransition(async () => {
+      try {
+        await updateQuotationStatusAction(quotation.id, "REJECTED");
+      } catch (err: any) {
+        alert(err.message || "Error al rechazar cotización.");
+      }
+    });
+  }
+
   async function handleDeleteConfirm() {
     try {
       setIsDeleting(true);
@@ -266,9 +279,9 @@ export function QuotationActionsMenu({ quotation }: QuotationActionsMenuProps) {
               )}
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
+          <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuItem asChild>
-              <Link href={`/quotations/${quotation.id}`} className="cursor-pointer">
+              <Link href={`/quotations/${quotation.id}`} className="cursor-pointer font-medium">
                 <Eye className="mr-2 h-4 w-4 text-blue-600" />
                 <span>Ver Detalles</span>
               </Link>
@@ -289,27 +302,40 @@ export function QuotationActionsMenu({ quotation }: QuotationActionsMenuProps) {
             {/* Conditional Status Action */}
             {hasOperation && quotation.operation?.id ? (
               <DropdownMenuItem asChild>
-                <Link href={`/operations/${quotation.operation.id}`} className="cursor-pointer">
+                <Link href={`/operations/${quotation.operation.id}`} className="cursor-pointer font-semibold text-blue-700">
                   <ExternalLink className="mr-2 h-4 w-4 text-blue-600" />
-                  <span>Ver Operación</span>
+                  <span>Ver Operación Activa</span>
                 </Link>
               </DropdownMenuItem>
             ) : (
-              <DropdownMenuItem onClick={handleConvertOperation} className="cursor-pointer">
-                <Ship className="mr-2 h-4 w-4 text-emerald-600" />
-                <span>Generar Operación</span>
-              </DropdownMenuItem>
+              <>
+                <DropdownMenuItem onClick={handleConvertOperation} className="cursor-pointer font-bold text-emerald-700 focus:bg-emerald-50">
+                  <CheckCircle2 className="mr-2 h-4 w-4 text-emerald-600" />
+                  <span>Aprobar (Crear Operación)</span>
+                </DropdownMenuItem>
+
+                {quotation.status !== "REJECTED" && (
+                  <DropdownMenuItem onClick={handleRejectQuotation} className="cursor-pointer text-slate-700 focus:bg-slate-100">
+                    <XCircle className="mr-2 h-4 w-4 text-rose-500" />
+                    <span>Marcar como Rechazada</span>
+                  </DropdownMenuItem>
+                )}
+              </>
             )}
 
-            <DropdownMenuSeparator />
+            {!hasOperation && (
+              <>
+                <DropdownMenuSeparator />
 
-            <DropdownMenuItem
-              onClick={() => setShowDeleteDialog(true)}
-              className="text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer"
-            >
-              <Trash2 className="mr-2 h-4 w-4 text-red-600" />
-              <span>Eliminar</span>
-            </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => setShowDeleteDialog(true)}
+                  className="text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer font-medium"
+                >
+                  <Trash2 className="mr-2 h-4 w-4 text-red-600" />
+                  <span>Eliminar Cotización</span>
+                </DropdownMenuItem>
+              </>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

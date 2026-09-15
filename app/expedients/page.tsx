@@ -13,6 +13,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CreateExpedientDialog } from "@/components/create-expedient-dialog";
+import { ExpedientActionsMenu } from "@/components/expedient-actions-menu";
+import { ensureExpedientExternalCodesAction } from "@/app/expedients/actions";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +26,9 @@ const expedientStatusMap: Record<string, { label: string; className: string }> =
 };
 
 export default async function ExpedientsPage() {
+  // Ensure legacy expedients have an external code populated
+  await ensureExpedientExternalCodesAction();
+
   const expedients = await prisma.expedient.findMany({
     include: {
       client: true,
@@ -82,7 +87,7 @@ export default async function ExpedientsPage() {
             <Table>
               <TableHeader className="bg-slate-50">
                 <TableRow>
-                  <TableHead className="font-semibold text-slate-700 text-left">Código Expediente</TableHead>
+                  <TableHead className="font-semibold text-slate-700 text-left">Ref. Externa / Expediente</TableHead>
                   <TableHead className="font-semibold text-slate-700 text-left">Cliente / Razón Social</TableHead>
                   <TableHead className="font-semibold text-slate-700 text-center">Estado</TableHead>
                   <TableHead className="font-semibold text-slate-700 text-left">Cotizaciones</TableHead>
@@ -97,17 +102,26 @@ export default async function ExpedientsPage() {
                     className: "bg-slate-100 text-slate-700 border-slate-200",
                   };
 
+                  const primaryCode = exp.externalCode || exp.code;
+
                   return (
                     <TableRow key={exp.id} className="hover:bg-slate-50/80 transition-colors">
                       <TableCell className="text-left font-bold text-blue-600">
-                        <Link href={`/expedients/${exp.id}`} className="hover:underline block">
-                          {exp.code}
+                        <Link href={`/expedients/${exp.id}`} className="hover:underline text-sm font-extrabold text-blue-700 block">
+                          {primaryCode}
                         </Link>
-                        {exp.loadType && (
-                          <Badge variant="outline" className="text-[10px] font-bold border-blue-200 text-blue-700 bg-blue-50/50 mt-0.5">
-                            {exp.loadType}
-                          </Badge>
-                        )}
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          {exp.externalCode && (
+                            <span className="text-[10px] text-slate-400 font-mono truncate max-w-[140px]" title={exp.code}>
+                              {exp.code}
+                            </span>
+                          )}
+                          {exp.loadType && (
+                            <Badge variant="outline" className="text-[10px] font-bold border-blue-200 text-blue-700 bg-blue-50/50">
+                              {exp.loadType}
+                            </Badge>
+                          )}
+                        </div>
                       </TableCell>
 
                       <TableCell className="text-left font-medium text-slate-900">
@@ -131,14 +145,14 @@ export default async function ExpedientsPage() {
                               <Link
                                 key={q.id}
                                 href={`/quotations/${q.id}`}
-                                className="inline-flex items-center gap-1 font-mono text-blue-600 hover:underline block"
+                                className="inline-flex items-center gap-1 font-mono text-blue-600 hover:underline block text-[11px]"
                               >
                                 <FileText className="h-3 w-3" /> {q.code}
                               </Link>
                             ))}
                           </div>
                         ) : (
-                          <span className="text-slate-400 italic">Sin cotización</span>
+                          <span className="text-slate-400 italic text-xs">Sin cotización</span>
                         )}
                       </TableCell>
 
@@ -147,12 +161,14 @@ export default async function ExpedientsPage() {
                       </TableCell>
 
                       <TableCell className="text-center">
-                        <Link href={`/expedients/${exp.id}`}>
-                          <Button size="sm" variant="outline" className="h-8 gap-1 text-xs">
-                            <span>Ver Expediente</span>
-                            <ArrowRight className="h-3.5 w-3.5" />
-                          </Button>
-                        </Link>
+                        <ExpedientActionsMenu
+                          expedient={{
+                            id: exp.id,
+                            code: exp.code,
+                            externalCode: exp.externalCode,
+                            operationsCount: exp.operations.length,
+                          }}
+                        />
                       </TableCell>
                     </TableRow>
                   );

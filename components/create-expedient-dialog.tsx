@@ -126,9 +126,11 @@ export function CreateExpedientDialog({ clients: initialClients }: CreateExpedie
     try {
       setLoading(true);
       setError(null);
+      const transportMode = loadType === "AÉREO" ? "AIR" : loadType === "LCL" ? "LCL" : "FCL";
       await createExpedientAction({
         clientId: selectedClientId,
         loadType,
+        transportMode,
         customCode,
         notes,
       });
@@ -373,14 +375,29 @@ export function CreateExpedientDialog({ clients: initialClients }: CreateExpedie
           </div>
 
           {/* Live Code Preview Banner */}
-          <div className="p-3 bg-slate-900 text-white rounded-xl space-y-1">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
-              Vista Previa del Código de Expediente:
-            </span>
-            <div className="font-mono font-bold text-emerald-400 text-base">
-              {codePreview}
-            </div>
-          </div>
+          {(() => {
+            const prefix = loadType === "AÉREO" ? "A" : loadType === "LCL" ? "L" : loadType === "TERRESTRE" ? "T" : "M";
+            const extCodePreview = `${prefix}-2026-0001`;
+            return (
+              <div className="p-3.5 bg-slate-900 text-white rounded-xl space-y-2 border border-slate-800">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                    Referencia Externa (Correos / Clientes):
+                  </span>
+                  <span className="text-[10px] font-bold bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded border border-blue-500/30">
+                    Modo: {prefix === "A" ? "Aéreo (A)" : prefix === "L" ? "LCL (L)" : "FCL (M)"}
+                  </span>
+                </div>
+                <div className="font-mono font-black text-emerald-400 text-lg flex items-center justify-between">
+                  <span>{extCodePreview}</span>
+                  <span className="text-xs text-slate-400 font-normal">Código Corto Oficial</span>
+                </div>
+                <div className="text-[11px] text-slate-400 border-t border-slate-800 pt-1.5 font-mono">
+                  Interno: {codePreview}
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Custom Code Overwrite Option */}
           <div className="space-y-1.5">

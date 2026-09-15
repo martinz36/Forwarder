@@ -11,6 +11,7 @@ export interface CreateDocumentInput {
   uploadedBy: "BROKER" | "CLIENT";
   isPublic?: boolean;
   isDraft?: boolean;
+  checklistItemId?: string;
 }
 
 export async function createDocumentAction(input: CreateDocumentInput) {
@@ -56,6 +57,22 @@ export async function createDocumentAction(input: CreateDocumentInput) {
           isPublic,
           isDraft,
         },
+      });
+    }
+
+    // Automatic Checklist Item Completion
+    if (input.checklistItemId) {
+      await prisma.checklistItem.update({
+        where: { id: input.checklistItemId },
+        data: { isCompleted: true },
+      });
+    } else {
+      await prisma.checklistItem.updateMany({
+        where: {
+          operationId: input.operationId,
+          documentType: input.documentType,
+        },
+        data: { isCompleted: true },
       });
     }
 
@@ -130,9 +147,33 @@ export async function toggleDocumentDraftStatusAction(documentId: string, operat
 
 export async function deleteDocumentAction(documentId: string, operationId: string) {
   try {
+    const docToDelete = await prisma.document.findUnique({
+      where: { id: documentId },
+      select: { documentType: true },
+    });
+
     await prisma.document.delete({
       where: { id: documentId },
     });
+
+    if (docToDelete) {
+      const remainingDocCount = await prisma.document.count({
+        where: {
+          operationId,
+          documentType: docToDelete.documentType,
+        },
+      });
+
+      if (remainingDocCount === 0) {
+        await prisma.checklistItem.updateMany({
+          where: {
+            operationId,
+            documentType: docToDelete.documentType,
+          },
+          data: { isCompleted: false },
+        });
+      }
+    }
 
     const operation = await prisma.operation.findUnique({
       where: { id: operationId },
