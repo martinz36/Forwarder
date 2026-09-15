@@ -49,11 +49,15 @@ export function CreateClientDialog() {
     setServerError(null);
     startTransition(async () => {
       try {
-        await createClientAction(values);
+        const res = await createClientAction(values);
+        if (!res.success) {
+          setServerError(res.error || "Error al registrar cliente.");
+          return;
+        }
         reset();
         setOpen(false);
       } catch (err: any) {
-        setServerError(err.message || "Error al registrar cliente.");
+        setServerError(typeof err?.message === "string" ? err.message : "Error al registrar cliente.");
       }
     });
   }

@@ -86,7 +86,7 @@ export function CreateExpedientDialog({ clients: initialClients }: CreateExpedie
     try {
       setClientLoading(true);
       setInlineClientError(null);
-      const newClient = await createClientAction({
+      const res = await createClientAction({
         businessName: newBusinessName,
         documentType: newDocumentType,
         documentNumber: newDocumentNumber,
@@ -94,6 +94,12 @@ export function CreateExpedientDialog({ clients: initialClients }: CreateExpedie
         phone: newPhone,
       });
 
+      if (!res.success || !res.client) {
+        setInlineClientError(res.error || "Error al crear el cliente.");
+        return;
+      }
+
+      const newClient = res.client;
       setClientList((prev) => [newClient, ...prev]);
       setSelectedClientId(newClient.id);
       setIsCreatingClient(false);
@@ -103,7 +109,8 @@ export function CreateExpedientDialog({ clients: initialClients }: CreateExpedie
       setNewPhone("");
     } catch (err: any) {
       console.error(err);
-      setInlineClientError(err?.message || "Error al crear el cliente.");
+      const msg = typeof err?.message === "string" ? err.message : "Error inesperado al crear el cliente.";
+      setInlineClientError(msg);
     } finally {
       setClientLoading(false);
     }
@@ -198,8 +205,8 @@ export function CreateExpedientDialog({ clients: initialClients }: CreateExpedie
                 </div>
 
                 {inlineClientError && (
-                  <div className="p-2 text-xs text-red-700 bg-red-50 border border-red-200 rounded">
-                    {inlineClientError}
+                  <div className="p-2 text-xs text-red-700 bg-red-50 border border-red-200 rounded font-medium">
+                    {String(inlineClientError)}
                   </div>
                 )}
 
