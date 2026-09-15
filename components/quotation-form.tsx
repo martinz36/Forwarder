@@ -49,6 +49,7 @@ interface ConceptOption {
   name: string;
   category?: string;
   defaultCurrency: string;
+  defaultCost?: number | null;
   defaultPrice: number | null;
   isTaxable?: boolean;
 }
@@ -216,9 +217,13 @@ export function QuotationForm({ clients, concepts, expedient }: QuotationFormPro
       if (matched.defaultCurrency === "PEN" || matched.defaultCurrency === "USD") {
         setValue(`items.${index}.currency`, matched.defaultCurrency as "USD" | "PEN");
       }
+      if (matched.defaultCost !== null && matched.defaultCost !== undefined) {
+        setValue(`items.${index}.unitCost`, matched.defaultCost);
+      } else if (matched.defaultPrice !== null && matched.defaultPrice !== undefined) {
+        setValue(`items.${index}.unitCost`, Number((matched.defaultPrice * 0.65).toFixed(2)));
+      }
       if (matched.defaultPrice !== null && matched.defaultPrice !== undefined) {
         setValue(`items.${index}.unitPrice`, matched.defaultPrice);
-        setValue(`items.${index}.unitCost`, Number((matched.defaultPrice * 0.65).toFixed(2)));
       }
       if (matched.isTaxable !== undefined) {
         setValue(`items.${index}.isTaxable`, matched.isTaxable);
@@ -520,227 +525,222 @@ export function QuotationForm({ clients, concepts, expedient }: QuotationFormPro
         </div>
       </div>
 
-      {/* Dynamic Items Form */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
+      {/* Dynamic Items Form - Dense DataGrid Layout */}
+      <div className="rounded-xl border bg-white p-5 shadow-sm space-y-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b pb-3">
           <div>
-            <h2 className="text-lg font-bold text-slate-900">Conceptos y Costos Operativos</h2>
-            <p className="text-xs text-slate-500">Clasifica los conceptos por categoría (Gastos de Origen, Flete, Gastos Locales).</p>
+            <h2 className="text-base font-bold text-slate-900">Conceptos y Costos Operativos</h2>
+            <p className="text-xs text-slate-500">
+              Desglose por líneas de servicio. La rentabilidad y totales se resumen al final de la cotización.
+            </p>
           </div>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() =>
-              append({
-                description: "",
-                category: "GASTOS_LOCALES",
-                currency: "USD",
-                unitCost: 0,
-                unitPrice: 0,
-                quantity: 1,
-                isTaxable: true,
-              })
-            }
-            className="text-blue-600 border-blue-200 hover:bg-blue-50 font-semibold"
-          >
-            <Plus className="mr-1.5 h-4 w-4" /> Agregar Ítem
-          </Button>
+          <div className="flex items-center gap-2 flex-wrap">
+            {concepts.length > 0 && (
+              <select
+                className="h-8 text-xs text-blue-700 bg-blue-50 border border-blue-200 rounded-lg px-2.5 font-semibold cursor-pointer"
+                onChange={(e) => {
+                  if (e.target.value) {
+                    const matched = concepts.find((c) => c.name === e.target.value);
+                    append({
+                      description: matched ? matched.name : e.target.value,
+                      category: (matched?.category as any) || "GASTOS_LOCALES",
+                      currency: (matched?.defaultCurrency as "USD" | "PEN") || "USD",
+                      unitCost: matched?.defaultCost ?? 0,
+                      unitPrice: matched?.defaultPrice ?? 0,
+                      quantity: 1,
+                      isTaxable: matched?.isTaxable !== false,
+                    });
+                    e.target.value = "";
+                  }
+                }}
+                defaultValue=""
+              >
+                <option value="" disabled>
+                  ⚡ Cargar del Catálogo...
+                </option>
+                {concepts.map((conc) => (
+                  <option key={conc.id} value={conc.name}>
+                    {conc.name} ({conc.defaultCurrency})
+                  </option>
+                ))}
+              </select>
+            )}
+
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                append({
+                  description: "",
+                  category: "GASTOS_LOCALES",
+                  currency: "USD",
+                  unitCost: 0,
+                  unitPrice: 0,
+                  quantity: 1,
+                  isTaxable: true,
+                })
+              }
+              className="text-blue-600 border-blue-200 hover:bg-blue-50 font-bold h-8 text-xs gap-1"
+            >
+              <Plus className="h-3.5 w-3.5" /> Agregar Línea
+            </Button>
+          </div>
         </div>
 
         {errors.items && typeof errors.items.message === "string" && (
           <p className="text-xs font-medium text-red-500">{errors.items.message}</p>
         )}
 
-        <div className="space-y-4">
-          {fields.map((field, index) => {
-            const currentItem = watchedItems[index] || {};
-            const itemCost = Number(currentItem.unitCost) || 0;
-            const itemPrice = Number(currentItem.unitPrice) || 0;
-            const itemQty = Number(currentItem.quantity) || 0;
+        {/* Compact Table */}
+        <div className="overflow-x-auto rounded-lg border border-slate-200">
+          <table className="w-full text-left text-xs border-collapse">
+            <thead className="bg-slate-100 text-slate-700 font-bold uppercase tracking-wider text-[11px] border-b border-slate-200">
+              <tr>
+                <th className="py-2.5 px-2 text-center w-8">#</th>
+                <th className="py-2.5 px-3 min-w-[150px]">Categoría *</th>
+                <th className="py-2.5 px-3 min-w-[220px]">Concepto / Servicio *</th>
+                <th className="py-2.5 px-2 w-20 text-center">Moneda</th>
+                <th className="py-2.5 px-2 w-24 text-right">Costo U.</th>
+                <th className="py-2.5 px-2 w-24 text-right text-blue-700">Precio V. *</th>
+                <th className="py-2.5 px-2 w-16 text-center">Cant.</th>
+                <th className="py-2.5 px-2 w-24 text-center">IGV</th>
+                <th className="py-2.5 px-3 w-28 text-right">Subtotal Venta</th>
+                <th className="py-2.5 px-2 w-10 text-center"></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-200 bg-white">
+              {fields.map((field, index) => {
+                const currentItem = watchedItems[index] || {};
+                const itemPrice = Number(currentItem.unitPrice) || 0;
+                const itemQty = Number(currentItem.quantity) || 0;
+                const lineSale = itemPrice * itemQty;
+                const curr = currentItem.currency || "USD";
 
-            const lineCost = itemCost * itemQty;
-            const lineSale = itemPrice * itemQty;
-            const lineProfit = lineSale - lineCost;
-            const curr = currentItem.currency || "USD";
-
-            return (
-              <div
-                key={field.id}
-                className="rounded-xl border bg-white p-4 shadow-sm space-y-4 transition-all hover:border-slate-300"
-              >
-                {/* Line Header */}
-                <div className="flex items-center justify-between border-b pb-2 flex-wrap gap-2">
-                  <div className="flex items-center gap-2">
-                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-900 text-white font-bold text-xs">
+                return (
+                  <tr key={field.id} className="hover:bg-slate-50/80 transition-colors">
+                    {/* # */}
+                    <td className="py-2 px-2 text-center font-bold text-slate-400">
                       {index + 1}
-                    </span>
-                    <span className="font-semibold text-slate-800 text-sm">
-                      Línea de Servicio #{index + 1}
-                    </span>
-                  </div>
+                    </td>
 
-                  {concepts.length > 0 && (
-                    <select
-                      className="text-xs text-blue-600 bg-blue-50 border border-blue-200 rounded px-2.5 py-1 cursor-pointer font-medium"
-                      onChange={(e) => {
-                        if (e.target.value) {
-                          handleSelectConcept(index, e.target.value);
-                        }
-                      }}
-                      defaultValue=""
-                    >
-                      <option value="" disabled>
-                        ⚡ Cargar del Catálogo...
-                      </option>
-                      {concepts.map((conc) => (
-                        <option key={conc.id} value={conc.name}>
-                          {conc.name} ({conc.defaultCurrency})
-                        </option>
-                      ))}
-                    </select>
-                  )}
-                </div>
-
-                {/* Mobile-First Grid */}
-                <div className="grid gap-4 sm:grid-cols-12 sm:items-end">
-                  {/* Category (sm:col-span-3) */}
-                  <div className="sm:col-span-3 space-y-1.5">
-                    <Label className="text-xs font-semibold text-slate-700">Categoría *</Label>
-                    <select
-                      value={currentItem.category || "GASTOS_LOCALES"}
-                      onChange={(e) => handleCategoryChange(index, e.target.value)}
-                      className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-xs shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring font-bold text-slate-800"
-                    >
-                      {CATEGORY_OPTIONS.map((cat) => (
-                        <option key={cat.value} value={cat.value}>
-                          {cat.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Concept Description (sm:col-span-3) */}
-                  <div className="sm:col-span-3 space-y-1.5">
-                    <Label className="text-xs font-semibold text-slate-700">Concepto / Servicio *</Label>
-                    <Input
-                      placeholder="Ej: Flete Internacional, Handling, Visto Bueno..."
-                      {...register(`items.${index}.description` as const)}
-                      className="h-9 text-xs"
-                    />
-                    {errors.items?.[index]?.description && (
-                      <p className="text-xs text-red-500">
-                        {errors.items[index]?.description?.message}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Currency (sm:col-span-2) */}
-                  <div className="sm:col-span-2 space-y-1.5">
-                    <Label className="text-xs font-semibold text-slate-700">Moneda</Label>
-                    <select
-                      {...register(`items.${index}.currency` as const)}
-                      className="flex h-9 w-full rounded-md border border-input bg-transparent px-2 py-1 text-xs shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring font-semibold"
-                    >
-                      <option value="USD">USD ($)</option>
-                      <option value="PEN">PEN (S/)</option>
-                    </select>
-                  </div>
-
-                  {/* Unit Cost (sm:col-span-1) */}
-                  <div className="sm:col-span-1 space-y-1.5">
-                    <Label className="text-xs font-semibold text-slate-700">Costo U.</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      className="text-right font-medium bg-slate-50/50 h-9 text-xs px-1"
-                      {...register(`items.${index}.unitCost` as const, { valueAsNumber: true })}
-                    />
-                  </div>
-
-                  {/* Unit Price (sm:col-span-1) */}
-                  <div className="sm:col-span-1 space-y-1.5">
-                    <Label className="text-xs font-semibold text-blue-700">Precio V.*</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      className="text-right font-bold text-blue-900 border-blue-200 h-9 text-xs px-1"
-                      {...register(`items.${index}.unitPrice` as const, { valueAsNumber: true })}
-                    />
-                  </div>
-
-                  {/* Quantity (sm:col-span-1) */}
-                  <div className="sm:col-span-1 space-y-1.5">
-                    <Label className="text-xs font-semibold text-slate-700">Cant.</Label>
-                    <Input
-                      type="number"
-                      min="1"
-                      className="text-center font-medium px-1 h-9 text-xs"
-                      {...register(`items.${index}.quantity` as const, { valueAsNumber: true })}
-                    />
-                  </div>
-
-                  {/* Taxable Toggle (sm:col-span-1) */}
-                  <div className="sm:col-span-1 space-y-1.5">
-                    <Label className="text-xs font-semibold text-slate-700">IGV</Label>
-                    <button
-                      type="button"
-                      onClick={() => setValue(`items.${index}.isTaxable`, !(currentItem.isTaxable !== false))}
-                      className={`flex h-9 w-full items-center justify-center gap-1 px-1 rounded-md text-[11px] font-bold border transition-colors ${
-                        currentItem.isTaxable !== false
-                          ? "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100"
-                          : "bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100"
-                      }`}
-                    >
-                      {currentItem.isTaxable !== false ? (
-                        <CheckSquare className="h-3 w-3 text-blue-600 shrink-0" />
-                      ) : (
-                        <Square className="h-3 w-3 text-amber-600 shrink-0" />
-                      )}
-                      <span className="truncate">{currentItem.isTaxable !== false ? "18%" : "Inafecto"}</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Line Calculation Summary Footer */}
-                <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t bg-slate-50/70 -mx-4 -mb-4 p-3 rounded-b-xl">
-                  <div className="flex items-center gap-4 text-xs">
-                    <div>
-                      <span className="text-slate-500 font-medium">Costo Línea: </span>
-                      <span className="font-semibold text-slate-700">{formatCurrency(lineCost, curr as "USD" | "PEN")}</span>
-                    </div>
-                    <div>
-                      <span className="text-slate-500 font-medium">Venta Línea: </span>
-                      <span className="font-bold text-slate-900">{formatCurrency(lineSale, curr as "USD" | "PEN")}</span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-4">
-                    <div className="text-right">
-                      <span className="text-[10px] uppercase font-bold text-slate-400 mr-1">Profit Línea:</span>
-                      <span className={`font-black text-sm ${lineProfit >= 0 ? "text-emerald-600" : "text-red-600"}`}>
-                        {formatCurrency(lineProfit, curr as "USD" | "PEN")}
-                      </span>
-                    </div>
-
-                    {fields.length > 1 && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => remove(index)}
-                        className="text-red-500 hover:bg-red-50 hover:text-red-600 h-8 px-2"
+                    {/* Categoría */}
+                    <td className="py-2 px-2">
+                      <select
+                        value={currentItem.category || "GASTOS_LOCALES"}
+                        onChange={(e) => handleCategoryChange(index, e.target.value)}
+                        className="w-full h-8 rounded border border-slate-300 bg-white px-2 text-xs font-bold text-slate-800 focus:border-blue-500 focus:outline-none"
                       >
-                        <Trash2 className="h-4 w-4 mr-1" /> Eliminar
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
+                        {CATEGORY_OPTIONS.map((cat) => (
+                          <option key={cat.value} value={cat.value}>
+                            {cat.label}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+
+                    {/* Concepto / Servicio */}
+                    <td className="py-2 px-2">
+                      <Input
+                        placeholder="Ej: Flete Internacional, Handling..."
+                        {...register(`items.${index}.description` as const)}
+                        className="h-8 text-xs font-medium"
+                      />
+                      {errors.items?.[index]?.description && (
+                        <p className="text-[10px] text-red-500 mt-0.5">
+                          {errors.items[index]?.description?.message}
+                        </p>
+                      )}
+                    </td>
+
+                    {/* Moneda */}
+                    <td className="py-2 px-2 text-center">
+                      <select
+                        {...register(`items.${index}.currency` as const)}
+                        className="w-full h-8 rounded border border-slate-300 bg-white px-1 text-xs font-semibold text-center focus:border-blue-500 focus:outline-none"
+                      >
+                        <option value="USD">USD</option>
+                        <option value="PEN">PEN</option>
+                      </select>
+                    </td>
+
+                    {/* Costo U. */}
+                    <td className="py-2 px-2 text-right">
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        className="text-right font-medium bg-slate-50 h-8 text-xs px-1.5"
+                        {...register(`items.${index}.unitCost` as const, { valueAsNumber: true })}
+                      />
+                    </td>
+
+                    {/* Precio V. */}
+                    <td className="py-2 px-2 text-right">
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        className="text-right font-bold text-blue-900 border-blue-300 h-8 text-xs px-1.5"
+                        {...register(`items.${index}.unitPrice` as const, { valueAsNumber: true })}
+                      />
+                    </td>
+
+                    {/* Cant. */}
+                    <td className="py-2 px-2 text-center">
+                      <Input
+                        type="number"
+                        min="1"
+                        className="text-center font-medium h-8 text-xs px-1"
+                        {...register(`items.${index}.quantity` as const, { valueAsNumber: true })}
+                      />
+                    </td>
+
+                    {/* IGV */}
+                    <td className="py-2 px-2 text-center">
+                      <button
+                        type="button"
+                        onClick={() => setValue(`items.${index}.isTaxable`, !(currentItem.isTaxable !== false))}
+                        className={`flex h-8 w-full items-center justify-center gap-1 px-1 rounded text-[11px] font-bold border transition-colors ${
+                          currentItem.isTaxable !== false
+                            ? "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100"
+                            : "bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100"
+                        }`}
+                      >
+                        {currentItem.isTaxable !== false ? (
+                          <CheckSquare className="h-3 w-3 text-blue-600 shrink-0" />
+                        ) : (
+                          <Square className="h-3 w-3 text-amber-600 shrink-0" />
+                        )}
+                        <span>{currentItem.isTaxable !== false ? "18%" : "Inafect."}</span>
+                      </button>
+                    </td>
+
+                    {/* Subtotal Venta */}
+                    <td className="py-2 px-3 text-right font-bold text-slate-900">
+                      {formatCurrency(lineSale, curr as "USD" | "PEN")}
+                    </td>
+
+                    {/* Acciones */}
+                    <td className="py-2 px-2 text-center">
+                      {fields.length > 1 && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => remove(index)}
+                          className="text-slate-400 hover:text-red-600 hover:bg-red-50 h-7 w-7 p-0"
+                          title="Eliminar fila"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       </div>
 
