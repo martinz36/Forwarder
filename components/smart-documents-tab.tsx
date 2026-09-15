@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useRef } from "react";
 import {
   FileText,
   UploadCloud,
@@ -93,35 +93,45 @@ export function SmartDocumentsTab({
 
   // Uploading state tracking per slot
   const [uploadingSlotType, setUploadingSlotType] = useState<string | null>(null);
+  const uploadingSlotRef = useRef<string | null>(null);
 
   const { startUpload, isUploading } = useUploadThing("documentUploader", {
     onClientUploadComplete: async (res) => {
-      if (res && res[0] && uploadingSlotType) {
+      const activeSlotType = uploadingSlotRef.current || uploadingSlotType;
+      if (res && res[0] && activeSlotType) {
         const uploadedUrl = res[0].url;
         try {
-          const slotInfo = REQUIRED_SLOTS.find((s) => s.type === uploadingSlotType);
+          const slotInfo = REQUIRED_SLOTS.find((s) => s.type === activeSlotType);
           const docName = slotInfo ? slotInfo.title.replace(/^\d+\.\s*/, "") : "Documento Operativo";
 
-          await createDocumentAction({
+          const result = await createDocumentAction({
             operationId,
             name: docName,
             fileUrl: uploadedUrl,
-            documentType: uploadingSlotType as any,
+            documentType: activeSlotType as any,
             isPublic: true, // default public for client portal
             isDraft: true, // starts as Draft (Borrador)
             uploadedBy: "BROKER",
           });
 
-          alert(`✓ Documento (${uploadingSlotType}) subido e hito cumplido automáticamente.`);
+          if (!result.success) {
+            alert(result.error || "Error al registrar documento.");
+          }
         } catch (err: any) {
-          alert(err?.message || "Error al registrar documento.");
+          console.error(err);
+          alert(typeof err?.message === "string" ? err.message : "Error al registrar documento.");
         } finally {
+          uploadingSlotRef.current = null;
           setUploadingSlotType(null);
         }
+      } else {
+        uploadingSlotRef.current = null;
+        setUploadingSlotType(null);
       }
     },
     onUploadError: (error: Error) => {
       alert(`Error de subida: ${error.message}`);
+      uploadingSlotRef.current = null;
       setUploadingSlotType(null);
     },
   });
@@ -138,8 +148,10 @@ export function SmartDocumentsTab({
 
   function handleFileUpload(slotType: string, e: React.ChangeEvent<HTMLInputElement>) {
     if (e.target.files && e.target.files[0]) {
+      uploadingSlotRef.current = slotType;
       setUploadingSlotType(slotType);
       startUpload([e.target.files[0]]);
+      e.target.value = "";
     }
   }
 
