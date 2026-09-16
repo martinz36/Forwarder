@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CreateExpedientDialog } from "@/components/create-expedient-dialog";
 import { ExpedientActionsMenu } from "@/components/expedient-actions-menu";
+import { CopyCodeButton } from "@/components/ui/copy-button";
 import { ensureExpedientExternalCodesAction } from "@/app/expedients/actions";
 
 export const dynamic = "force-dynamic";
@@ -107,9 +108,12 @@ export default async function ExpedientsPage() {
                   return (
                     <TableRow key={exp.id} className="hover:bg-slate-50/80 transition-colors">
                       <TableCell className="text-left font-bold text-blue-600">
-                        <Link href={`/expedients/${exp.id}`} className="hover:underline text-sm font-extrabold text-blue-700 block">
-                          {primaryCode}
-                        </Link>
+                        <div className="flex items-center gap-1.5">
+                          <Link href={`/expedients/${exp.id}`} className="hover:underline text-sm font-extrabold text-blue-700">
+                            {primaryCode}
+                          </Link>
+                          <CopyCodeButton text={primaryCode} title={`Copiar ${primaryCode}`} />
+                        </div>
                         <div className="flex items-center gap-1.5 mt-0.5">
                           {exp.externalCode && (
                             <span className="text-[10px] text-slate-400 font-mono truncate max-w-[140px]" title={exp.code}>

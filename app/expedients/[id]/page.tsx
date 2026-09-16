@@ -5,6 +5,7 @@ import prisma from "@/lib/prisma";
 import { formatDate, formatCurrency } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { CopyCodeButton } from "@/components/ui/copy-button";
 
 export const dynamic = "force-dynamic";
 
@@ -40,6 +41,7 @@ export default async function ExpedientDetailPage({ params }: ExpedientDetailPag
   }
 
   const { client } = expedient;
+  const displayCode = expedient.externalCode || expedient.code;
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto pb-12">
@@ -53,9 +55,15 @@ export default async function ExpedientDetailPage({ params }: ExpedientDetailPag
           </Link>
           <div>
             <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-                Expediente {expedient.code}
+              <h1 className="text-2xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
+                <span>Expediente {displayCode}</span>
+                <CopyCodeButton text={displayCode} title={`Copiar ${displayCode}`} />
               </h1>
+              {expedient.externalCode && (
+                <span className="text-xs font-mono text-slate-400 font-normal">
+                  ({expedient.code})
+                </span>
+              )}
               <Badge className="bg-blue-600 text-white font-semibold">
                 ESTADO: {expedient.status}
               </Badge>
