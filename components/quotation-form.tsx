@@ -31,6 +31,14 @@ import { formatCurrency } from "@/lib/format";
 import { quotationSchema, QuotationFormValues } from "@/lib/validations/quotation";
 import { createQuotationAction, parseQuotationPdfAction, getClientPriceHistoryAction, PriceHistoryItem } from "@/app/quotations/actions";
 import { ThreeColumnDatePicker } from "@/components/ui/three-column-date-picker";
+import { CreatableCombobox, ComboboxOption } from "@/components/ui/creatable-combobox";
+import {
+  OFFICIAL_INCOTERMS,
+  getPortsAction,
+  createPortAction,
+  getPartnersAction,
+  createPartnerAction,
+} from "@/app/catalog/port-partner-actions";
 
 export const CATEGORY_OPTIONS = [
   { value: "GASTOS_ORIGEN", label: "Gastos de Origen", defaultTaxable: false },
@@ -67,6 +75,9 @@ export function QuotationForm({ clients, concepts, expedient }: QuotationFormPro
   const [isParsingPdf, setIsParsingPdf] = useState(false);
   const [pdfSuccessMessage, setPdfSuccessMessage] = useState<string | null>(null);
   const [priceHistory, setPriceHistory] = useState<PriceHistoryItem[]>([]);
+  const [ports, setPorts] = useState<Array<{ id: string; code: string; name: string }>>([]);
+  const [shippers, setShippers] = useState<Array<{ id: string; name: string }>>([]);
+  const [carriers, setCarriers] = useState<Array<{ id: string; name: string }>>([]);
 
   const {
     register,
@@ -138,6 +149,58 @@ export function QuotationForm({ clients, concepts, expedient }: QuotationFormPro
       });
     }
   }, [selectedClientId]);
+
+  useEffect(() => {
+    getPortsAction().then((res) => {
+      if (res.success && res.data) setPorts(res.data);
+    });
+    getPartnersAction("SHIPPER").then((res) => {
+      if (res.success && res.data) setShippers(res.data);
+    });
+    getPartnersAction("CARRIER").then((res) => {
+      if (res.success && res.data) setCarriers(res.data);
+    });
+  }, []);
+
+  const portOptions: ComboboxOption[] = ports.map((p) => ({
+    id: p.id,
+    label: p.name,
+    sublabel: p.code,
+  }));
+
+  const shipperOptions: ComboboxOption[] = shippers.map((s) => ({
+    id: s.id,
+    label: s.name,
+  }));
+
+  const carrierOptions: ComboboxOption[] = carriers.map((c) => ({
+    id: c.id,
+    label: c.name,
+  }));
+
+  async function handleCreatePort(name: string): Promise<ComboboxOption | null> {
+    const res = await createPortAction(name);
+    if (res.success && res.data) {
+      const newPort = res.data;
+      setPorts((prev) => [...prev, newPort]);
+      return { id: newPort.id, label: newPort.name, sublabel: newPort.code };
+    }
+    return null;
+  }
+
+  async function handleCreatePartner(name: string, type: "SHIPPER" | "CARRIER"): Promise<ComboboxOption | null> {
+    const res = await createPartnerAction(name, type);
+    if (res.success && res.data) {
+      const newPartner = res.data;
+      if (type === "SHIPPER") {
+        setShippers((prev) => [...prev, newPartner]);
+      } else {
+        setCarriers((prev) => [...prev, newPartner]);
+      }
+      return { id: newPartner.id, label: newPartner.name };
+    }
+    return null;
+  }
 
   // Live calculations for Summary
   let liveCostUsd = 0;
@@ -443,22 +506,53 @@ export function QuotationForm({ clients, concepts, expedient }: QuotationFormPro
         <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
           <div className="space-y-1.5">
             <Label className="text-xs font-bold text-slate-900">NAVE / LÍNEA</Label>
-            <Input placeholder="Ej: MAERSK SALTORO Vº.631E" {...register("shippingLine")} className="h-9 text-xs font-medium" />
+            <CreatableCombobox
+              value={watch("shippingLine") || ""}
+              onChange={(val) => setValue("shippingLine", val)}
+              options={carrierOptions}
+              placeholder="Buscar o crear NAVE / Línea"
+              createLabelPrefix="Crear naviera/línea"
+              onCreate={(name) => handleCreatePartner(name, "CARRIER")}
+            />
           </div>
 
           <div className="space-y-1.5">
             <Label className="text-xs font-bold text-slate-900">POL (Puerto Carga / Origen)</Label>
-            <Input placeholder="Ej: SHANGHAI, NINGBO" {...register("origin")} className="h-9 text-xs font-medium" />
+            <CreatableCombobox
+              value={watch("origin") || ""}
+              onChange={(val) => setValue("origin", val)}
+              options={portOptions}
+              placeholder="Buscar o crear POL (ej. SHANGHAI)"
+              createLabelPrefix="Crear puerto"
+              onCreate={handleCreatePort}
+            />
           </div>
 
           <div className="space-y-1.5">
             <Label className="text-xs font-bold text-slate-900">POD (Puerto Descarga / Destino)</Label>
-            <Input placeholder="Ej: CALLAO - PERU" {...register("destination")} className="h-9 text-xs font-medium" />
+            <CreatableCombobox
+              value={watch("destination") || ""}
+              onChange={(val) => setValue("destination", val)}
+              options={portOptions}
+              placeholder="Buscar o crear POD (ej. CALLAO)"
+              createLabelPrefix="Crear puerto"
+              onCreate={handleCreatePort}
+            />
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-xs font-bold text-slate-900">INCOTERM</Label>
-            <Input placeholder="Ej: EXW, FOB, CIF" {...register("incoterm")} className="h-9 text-xs font-medium uppercase" />
+            <Label className="text-xs font-bold text-slate-900">INCOTERM *</Label>
+            <select
+              {...register("incoterm")}
+              className="flex h-9 w-full rounded-md border border-input bg-white px-3 py-1 text-xs font-bold text-slate-800 shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            >
+              <option value="">Seleccionar Incoterm...</option>
+              {OFFICIAL_INCOTERMS.map((inc) => (
+                <option key={inc.value} value={inc.value}>
+                  {inc.label}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div className="space-y-1.5">
@@ -486,7 +580,14 @@ export function QuotationForm({ clients, concepts, expedient }: QuotationFormPro
 
           <div className="space-y-1.5">
             <Label className="text-xs font-bold text-slate-900">SHIPPER / PROVEEDOR</Label>
-            <Input placeholder="Ej: Jiaxing Whatz Games Co.,Ltd" {...register("shipper")} className="h-9 text-xs font-medium" />
+            <CreatableCombobox
+              value={watch("shipper") || ""}
+              onChange={(val) => setValue("shipper", val)}
+              options={shipperOptions}
+              placeholder="Buscar o crear Shipper"
+              createLabelPrefix="Crear proveedor"
+              onCreate={(name) => handleCreatePartner(name, "SHIPPER")}
+            />
           </div>
 
           <div className="space-y-1.5">

@@ -9,6 +9,8 @@ import { updateOperationHeaderAction } from "@/app/operations/actions";
 
 import { ThreeColumnDatePicker } from "@/components/ui/three-column-date-picker";
 
+import { OFFICIAL_INCOTERMS } from "@/app/catalog/port-partner-actions";
+
 interface OperationHeaderFormProps {
   operationId: string;
   initialData: {
@@ -77,13 +79,18 @@ export function OperationHeaderForm({ operationId, initialData }: OperationHeade
         {/* Incoterm */}
         <div className="space-y-1.5">
           <Label htmlFor="incoterm" className="text-xs font-semibold text-slate-700">Incoterm</Label>
-          <Input
+          <select
             id="incoterm"
             name="incoterm"
-            placeholder="Ej: EXW, FOB, CIF"
             defaultValue={initialData.incoterm || "FOB"}
-            className="h-9 text-xs font-bold uppercase text-blue-800 bg-blue-50/50 border-blue-200"
-          />
+            className="flex h-9 w-full rounded-md border border-blue-200 bg-blue-50/50 px-3 py-1 text-xs font-bold text-blue-800 shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          >
+            {OFFICIAL_INCOTERMS.map((inc) => (
+              <option key={inc.value} value={inc.value}>
+                {inc.label}
+              </option>
+            ))}
+          </select>
         </div>
 
         {/* Estado Operativo Detallado */}
