@@ -1,5 +1,6 @@
 "use client";
 
+import { MarivanLogo } from "@/components/ui/marivan-logo";
 import { useState } from "react";
 import Link from "next/link";
 import {
@@ -175,15 +176,7 @@ export function MasterClientPortal({
       {/* Brand Header */}
       <header className="border-b bg-slate-900 text-white shadow-md sticky top-0 z-20">
         <div className="max-w-6xl mx-auto px-4 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white shadow">
-              <Anchor className="h-6 w-6" />
-            </div>
-            <div>
-              <h1 className="font-bold text-lg leading-tight tracking-wide">{companyName}</h1>
-              <p className="text-xs text-slate-400">Portal Maestro de Carga & Seguimiento Logístico</p>
-            </div>
-          </div>
+          <MarivanLogo variant="white" size="md" />
 
           <div className="flex items-center gap-2 self-stretch sm:self-auto justify-between sm:justify-end">
             <div className="text-right sm:text-right">

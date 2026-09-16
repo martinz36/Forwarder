@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
+import { MarivanLogo } from "@/components/ui/marivan-logo";
 import { UploadCloud, FileText, Download, Eye, ShieldCheck, UserCheck, Anchor, AlertCircle, CheckCircle2, FileUp, Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -131,15 +132,7 @@ export function ClientDocumentPortal({
       {/* Brand Header Navbar */}
       <header className="border-b bg-slate-900 text-white shadow-sm">
         <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white shadow">
-              <Anchor className="h-6 w-6" />
-            </div>
-            <div>
-              <h1 className="font-bold text-lg leading-tight">Portal de Seguimiento de Carga</h1>
-              <p className="text-xs text-slate-400">Agencia de Aduanas & Forwarding Perú</p>
-            </div>
-          </div>
+          <MarivanLogo variant="white" size="md" />
           <Badge variant="outline" className="text-xs border-slate-700 text-slate-300">
             {clientName}
           </Badge>

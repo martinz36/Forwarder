@@ -1,4 +1,5 @@
 import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
+import { PdfHeader } from "./pdf-header";
 
 export interface AdvanceChargePdfItem {
   description: string;
@@ -265,23 +266,13 @@ export function AdvanceRequestPDF({ data }: { data: AdvanceRequestPdfData }) {
   return (
     <Document>
       <Page size="A4" style={styles.page}>
-        {/* Header */}
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.companyName}>MARIVAN LOGISTICS SAC</Text>
-            <Text style={styles.companySub}>Agenciamiento Aduanero & Logística Internacional</Text>
-            <Text style={styles.companySub}>Calle Españoletto 115, Dpto. 101, San Borja • Tel: 969 3010 95</Text>
-          </View>
-          <View style={styles.docBox}>
-            <Text style={styles.docTitle}>SOLICITUD DE ANTICIPO DE FONDOS</Text>
-            <Text style={styles.docCode}>
-              {data.externalCode || data.operationCode}
-            </Text>
-            <Text style={{ fontSize: 7, color: "#64748b", marginTop: 2 }}>
-              Fecha Emisión: {formatDateStr(data.createdAt)}
-            </Text>
-          </View>
-        </View>
+        {/* Header with Unified Marivan Logo */}
+        <PdfHeader
+          docTitle="SOLICITUD DE ANTICIPO DE FONDOS"
+          docCode={`N° ${data.externalCode || data.operationCode}`}
+          docSubtitle={`FECHA: ${formatDateStr(data.createdAt)}`}
+          codeColor="#0284c7"
+        />
 
         {/* Informative Notice Box */}
         <View style={styles.noticeBox}>

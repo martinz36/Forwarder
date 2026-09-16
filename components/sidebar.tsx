@@ -19,6 +19,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+import { MarivanLogo } from "@/components/ui/marivan-logo";
+
 const navigationItems = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
   { name: "Expedientes", href: "/expedients", icon: Folder },
@@ -65,15 +67,7 @@ export function Sidebar() {
     <>
       {/* Mobile Sticky Top Navigation Bar (Visible on screens < md) */}
       <div className="md:hidden flex h-14 w-full items-center justify-between border-b border-slate-800 bg-slate-900 px-4 text-white shrink-0 z-40">
-        <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600 text-white shadow-sm">
-            <Anchor className="h-4 w-4" />
-          </div>
-          <div>
-            <h1 className="font-bold text-sm leading-tight text-white">Marivan Logistics</h1>
-            <p className="text-[10px] text-slate-400">Sistema ERP/CRM</p>
-          </div>
-        </div>
+        <MarivanLogo variant="white" size="sm" />
 
         <button
           type="button"
@@ -111,21 +105,13 @@ export function Sidebar() {
           )}
         >
           <div className={cn("flex items-center gap-3 min-w-0", isCollapsed && "md:hidden")}>
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-white shadow-md">
-              <Anchor className="h-5 w-5" />
-            </div>
-            <div className="truncate">
-              <h1 className="font-bold text-base leading-tight tracking-wide text-white truncate">
-                Marivan Logistics
-              </h1>
-              <p className="text-xs text-slate-400 truncate">Operador Logístico Perú</p>
-            </div>
+            <MarivanLogo variant="white" size="sm" />
           </div>
 
           {/* Icon-only header logo when collapsed on desktop */}
           {isCollapsed && (
-            <div className="hidden md:flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-white shadow-md" title="Marivan Logistics">
-              <Anchor className="h-5 w-5" />
+            <div className="hidden md:flex">
+              <MarivanLogo variant="icon" size="sm" />
             </div>
           )}
 

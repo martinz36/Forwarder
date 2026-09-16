@@ -1,6 +1,7 @@
 import React from "react";
 import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
 import { formatCurrency, formatDate } from "@/lib/format";
+import { PdfHeader } from "./pdf-header";
 
 export interface QuotationPdfItem {
   description: string;
@@ -308,23 +309,12 @@ export function QuotationPDF({ data }: { data: QuotationPdfData }) {
   return (
     <Document>
       <Page size="A4" style={styles.page}>
-        {/* Header */}
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.companyName}>MARIVAN LOGISTICS SAC</Text>
-            <Text style={styles.companySub}>Agenciamiento Aduanero & Logística Internacional</Text>
-            <Text style={styles.companySub}>Calle Españoletto 115, Dpto. 101, San Borja • Tel: 969 3010 95</Text>
-          </View>
-          <View style={styles.docBox}>
-            <Text style={styles.docTitle}>
-              {data.modality ? `COTIZACIÓN DE ${data.modality}` : "COTIZACIÓN COMERCIAL"}
-            </Text>
-            <Text style={styles.docCode}>N° {data.code}</Text>
-            <Text style={{ fontSize: 7, color: "#64748b", marginTop: 2 }}>
-              Fecha: {formatDate(data.createdAt)}
-            </Text>
-          </View>
-        </View>
+        {/* Header with Unified Marivan Logo */}
+        <PdfHeader
+          docTitle={data.modality ? `COTIZACIÓN DE ${data.modality}` : "COTIZACIÓN COMERCIAL"}
+          docCode={`N° ${data.code}`}
+          docSubtitle={`FECHA: ${formatDate(data.createdAt)}`}
+        />
 
         {/* Salutation & Client */}
         <View style={styles.salutationBox}>

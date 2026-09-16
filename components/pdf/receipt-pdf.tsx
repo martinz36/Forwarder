@@ -1,4 +1,5 @@
 import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
+import { PdfHeader } from "./pdf-header";
 
 export interface ReceiptPdfItem {
   description: string;
@@ -222,21 +223,13 @@ export function ReceiptPDF({ data }: { data: ReceiptPdfData }) {
   return (
     <Document>
       <Page size="A4" style={styles.page}>
-        {/* Header */}
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.companyName}>MARIVAN LOGISTICS SAC</Text>
-            <Text style={styles.companySub}>Agenciamiento Aduanero & Logística Internacional</Text>
-            <Text style={styles.companySub}>Calle Españoletto 115, Dpto. 101, San Borja • Tel: 969 3010 95</Text>
-          </View>
-          <View style={styles.docBox}>
-            <Text style={styles.docTitle}>RECIBO DE REEMBOLSO DE GASTOS</Text>
-            <Text style={styles.docCode}>N° {data.receiptNumber}</Text>
-            <Text style={{ fontSize: 7, color: "#64748b", marginTop: 2 }}>
-              Fecha Emisión: {formatDateStr(data.createdAt)}
-            </Text>
-          </View>
-        </View>
+        {/* Header with Unified Marivan Logo */}
+        <PdfHeader
+          docTitle="RECIBO DE REEMBOLSO DE GASTOS"
+          docCode={`N° ${data.receiptNumber}`}
+          docSubtitle={`FECHA: ${formatDateStr(data.createdAt)}`}
+          codeColor="#b45309"
+        />
 
         {/* Legal Disclaimer Box */}
         <View style={styles.internalNoticeBox}>

@@ -1,6 +1,7 @@
 import React from "react";
 import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
 import { formatCurrency, formatDate } from "@/lib/format";
+import { PdfHeader } from "./pdf-header";
 
 export interface ArrivalNoticeChargeItem {
   description: string;
@@ -227,21 +228,13 @@ export function ArrivalNoticePDF({ data }: { data: ArrivalNoticePdfData }) {
   return (
     <Document title={`Aviso_Llegada_${data.operationCode}`}>
       <Page size="A4" style={styles.page}>
-        {/* Header */}
-        <View style={styles.headerContainer}>
-          <View>
-            <Text style={styles.companyName}>MARIVAN LOGISTICS SAC</Text>
-            <Text style={styles.subCompany}>Calle Españoletto 115, Dpto. 101, San Borja • Tel: 969 3010 95</Text>
-            <Text style={styles.subCompany}>Agenciamiento Aduanero & Logística Internacional</Text>
-          </View>
-          <View style={styles.documentTitleBox}>
-            <Text style={styles.documentTitle}>AVISO DE LLEGADA</Text>
-            <Text style={styles.documentSubTitle}>SOLICITUD DE FONDOS</Text>
-            <Text style={{ fontSize: 8, color: "#64748b", marginTop: 4 }}>
-              Ref: {data.operationCode}
-            </Text>
-          </View>
-        </View>
+        {/* Header with Unified Marivan Logo */}
+        <PdfHeader
+          docTitle="AVISO DE LLEGADA / FONDOS"
+          docCode={`N° ${data.operationCode}`}
+          docSubtitle={`FECHA: ${formatDate(data.createdAt)}`}
+          codeColor="#d97706"
+        />
 
         {/* Client & Metadata Grid */}
         <View style={styles.metaGrid}>
