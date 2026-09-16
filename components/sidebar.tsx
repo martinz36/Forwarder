@@ -1,16 +1,21 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { 
-  LayoutDashboard, 
-  Users, 
-  FileText, 
-  Ship, 
+import {
+  LayoutDashboard,
+  Users,
+  FileText,
+  Ship,
   Anchor,
   Folder,
   Tag,
-  Settings
+  Settings,
+  ChevronLeft,
+  ChevronRight,
+  Menu,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -26,49 +31,163 @@ const navigationItems = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
+
+  // Read saved collapse preference from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem("sidebar_collapsed");
+    if (saved !== null) {
+      setIsCollapsed(saved === "true");
+    }
+  }, []);
+
+  // Save collapse state to localStorage
+  const toggleCollapse = () => {
+    setIsCollapsed((prev) => {
+      const nextState = !prev;
+      localStorage.setItem("sidebar_collapsed", String(nextState));
+      return nextState;
+    });
+  };
+
+  // Close mobile drawer on navigation
+  useEffect(() => {
+    setIsMobileOpen(false);
+  }, [pathname]);
+
+  // Hide sidebar completely on public portal pages
+  if (pathname.startsWith("/portal") || pathname.startsWith("/shared")) {
+    return null;
+  }
 
   return (
-    <aside className="flex h-screen w-64 flex-col border-r bg-slate-900 text-slate-100">
-      {/* Brand Header */}
-      <div className="flex h-16 items-center gap-3 border-b border-slate-800 px-6">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-600 text-white shadow-md">
-          <Anchor className="h-5 w-5" />
+    <>
+      {/* Mobile Sticky Top Navigation Bar (Visible on screens < md) */}
+      <div className="md:hidden flex h-14 w-full items-center justify-between border-b border-slate-800 bg-slate-900 px-4 text-white shrink-0 z-40">
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600 text-white shadow-sm">
+            <Anchor className="h-4 w-4" />
+          </div>
+          <div>
+            <h1 className="font-bold text-sm leading-tight text-white">Marivan Logistics</h1>
+            <p className="text-[10px] text-slate-400">Sistema ERP/CRM</p>
+          </div>
         </div>
-        <div>
-          <h1 className="font-bold text-base leading-tight tracking-wide text-white">Marivan Logistics</h1>
-          <p className="text-xs text-slate-400">Operador Logístico Perú</p>
-        </div>
+
+        <button
+          type="button"
+          onClick={() => setIsMobileOpen(!isMobileOpen)}
+          className="rounded-lg p-2 text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
+          aria-label="Abrir menú"
+        >
+          {isMobileOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+        </button>
       </div>
 
-      {/* Navigation Links */}
-      <nav className="flex-1 space-y-1.5 px-3 py-4">
-        {navigationItems.map((item) => {
-          const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
-          const Icon = item.icon;
-          return (
-            <Link
-              key={item.name}
-              href={item.href}
-              className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
-                isActive
-                  ? "bg-blue-600 text-white shadow-sm"
-                  : "text-slate-300 hover:bg-slate-800 hover:text-white"
-              )}
-            >
-              <Icon className={cn("h-5 w-5", isActive ? "text-white" : "text-slate-400")} />
-              {item.name}
-            </Link>
-          );
-        })}
-      </nav>
+      {/* Mobile Drawer Overlay Backdrop */}
+      {isMobileOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-slate-950/70 backdrop-blur-xs md:hidden"
+          onClick={() => setIsMobileOpen(false)}
+        />
+      )}
 
-      {/* Footer info */}
-      <div className="border-t border-slate-800 p-4 text-xs text-slate-400">
-        <p className="font-semibold text-slate-300">Marivan Logistics SAC</p>
-        <p className="mt-0.5">Sistema Aduanero & Logístico</p>
-      </div>
-    </aside>
+      {/* Main Desktop & Mobile Sidebar Container */}
+      <aside
+        className={cn(
+          "fixed inset-y-0 left-0 z-50 flex h-full flex-col border-r border-slate-800 bg-slate-900 text-slate-100 transition-all duration-300 ease-in-out md:static md:z-auto",
+          // Mobile responsive drawer positioning
+          isMobileOpen ? "translate-x-0 w-64" : "-translate-x-full md:translate-x-0",
+          // Desktop collapse widths
+          isCollapsed ? "md:w-16" : "md:w-64"
+        )}
+      >
+        {/* Brand Header & Toggle Button */}
+        <div
+          className={cn(
+            "flex h-16 items-center border-b border-slate-800 px-4 transition-all",
+            isCollapsed ? "justify-center md:px-2" : "justify-between"
+          )}
+        >
+          <div className={cn("flex items-center gap-3 min-w-0", isCollapsed && "md:hidden")}>
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-white shadow-md">
+              <Anchor className="h-5 w-5" />
+            </div>
+            <div className="truncate">
+              <h1 className="font-bold text-base leading-tight tracking-wide text-white truncate">
+                Marivan Logistics
+              </h1>
+              <p className="text-xs text-slate-400 truncate">Operador Logístico Perú</p>
+            </div>
+          </div>
+
+          {/* Icon-only header logo when collapsed on desktop */}
+          {isCollapsed && (
+            <div className="hidden md:flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-white shadow-md" title="Marivan Logistics">
+              <Anchor className="h-5 w-5" />
+            </div>
+          )}
+
+          {/* Collapse Toggle Button (Desktop Only) */}
+          <button
+            type="button"
+            onClick={toggleCollapse}
+            className={cn(
+              "hidden md:flex h-8 w-8 items-center justify-center rounded-lg border border-slate-800 bg-slate-800/80 text-slate-400 hover:bg-slate-700 hover:text-white transition-all shadow-xs shrink-0",
+              isCollapsed && "mt-2"
+            )}
+            title={isCollapsed ? "Expandir Menú (Ganar Visibilidad)" : "Colapsar Menú (Ganar Espacio)"}
+          >
+            {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+          </button>
+        </div>
+
+        {/* Navigation Links */}
+        <nav className="flex-1 space-y-1.5 px-3 py-4 overflow-y-auto">
+          {navigationItems.map((item) => {
+            const isActive =
+              pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
+            const Icon = item.icon;
+
+            return (
+              <Link
+                key={item.name}
+                href={item.href}
+                title={isCollapsed ? item.name : undefined}
+                className={cn(
+                  "flex items-center gap-3 rounded-lg py-2.5 text-sm font-medium transition-colors",
+                  isCollapsed ? "justify-center px-2" : "px-3",
+                  isActive
+                    ? "bg-blue-600 text-white shadow-sm"
+                    : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                )}
+              >
+                <Icon className={cn("h-5 w-5 shrink-0", isActive ? "text-white" : "text-slate-400")} />
+                <span className={cn("truncate transition-opacity duration-200", isCollapsed && "md:hidden")}>
+                  {item.name}
+                </span>
+              </Link>
+            );
+          })}
+        </nav>
+
+        {/* Footer info & Secondary Collapse Action */}
+        <div className="border-t border-slate-800 p-4 text-xs text-slate-400">
+          {!isCollapsed ? (
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-semibold text-slate-300 truncate">Marivan Logistics SAC</p>
+                <p className="mt-0.5 text-[11px] truncate">Sistema Aduanero & Logístico</p>
+              </div>
+            </div>
+          ) : (
+            <div className="hidden md:flex justify-center text-center text-[10px] font-mono text-slate-500" title="Marivan Logistics SAC">
+              ERP
+            </div>
+          )}
+        </div>
+      </aside>
+    </>
   );
 }
-
