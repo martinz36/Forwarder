@@ -15,6 +15,7 @@ import {
   Box,
   Clock,
   CheckCircle2,
+  Edit,
 } from "lucide-react";
 import prisma from "@/lib/prisma";
 import { formatCurrency, formatDate } from "@/lib/format";
@@ -196,6 +197,13 @@ export default async function QuotationDetailPage({ params }: QuotationDetailPag
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
+          {/* Edit Quotation Button */}
+          <Link href={`/quotations/${quotation.id}/edit`}>
+            <Button variant="outline" className="border-amber-200 text-amber-800 bg-amber-50/50 hover:bg-amber-100 font-semibold shadow-sm">
+              <Edit className="mr-2 h-4 w-4 text-amber-600" /> Editar Cotización
+            </Button>
+          </Link>
+
           {/* Download PDF Button */}
           <DownloadPdfButton data={pdfData} />
 

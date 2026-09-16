@@ -7,6 +7,7 @@ import { pdf } from "@react-pdf/renderer";
 import {
   MoreHorizontal,
   Eye,
+  Edit,
   FileText,
   Download,
   Ship,
@@ -291,6 +292,13 @@ export function QuotationActionsMenu({ quotation }: QuotationActionsMenuProps) {
               <Link href={`/quotations/${quotation.id}`} className="cursor-pointer font-medium">
                 <Eye className="mr-2 h-4 w-4 text-blue-600" />
                 <span>Ver Detalles</span>
+              </Link>
+            </DropdownMenuItem>
+
+            <DropdownMenuItem asChild>
+              <Link href={`/quotations/${quotation.id}/edit`} className="cursor-pointer font-medium">
+                <Edit className="mr-2 h-4 w-4 text-amber-600" />
+                <span>Editar Cotización</span>
               </Link>
             </DropdownMenuItem>
 

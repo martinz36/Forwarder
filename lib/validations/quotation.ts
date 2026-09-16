@@ -36,6 +36,10 @@ export const quotationSchema = z.object({
   volume: z.string().optional(),
   loadType: z.string().optional(),
   containersCount: z.string().optional(),
+  polId: z.string().optional(),
+  podId: z.string().optional(),
+  shipperId: z.string().optional(),
+  carrierId: z.string().optional(),
   notes: z.string().optional(),
 
   items: z.array(quotationItemSchema).min(1, "Debe agregar al menos un ítem a la cotización."),

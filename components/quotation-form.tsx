@@ -29,7 +29,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatCurrency } from "@/lib/format";
 import { quotationSchema, QuotationFormValues } from "@/lib/validations/quotation";
-import { createQuotationAction, parseQuotationPdfAction, getClientPriceHistoryAction, PriceHistoryItem } from "@/app/quotations/actions";
+import { createQuotationAction, updateQuotationAction, parseQuotationPdfAction, getClientPriceHistoryAction, PriceHistoryItem } from "@/app/quotations/actions";
 import { ThreeColumnDatePicker } from "@/components/ui/three-column-date-picker";
 import { CreatableCombobox, ComboboxOption } from "@/components/ui/creatable-combobox";
 import { OFFICIAL_INCOTERMS } from "@/lib/constants";
@@ -67,9 +67,12 @@ interface QuotationFormProps {
   clients: ClientOption[];
   concepts: ConceptOption[];
   expedient?: { id: string; clientId: string; code: string } | null;
+  quotationId?: string;
+  quotationCode?: string;
+  initialData?: Partial<QuotationFormValues>;
 }
 
-export function QuotationForm({ clients, concepts, expedient }: QuotationFormProps) {
+export function QuotationForm({ clients, concepts, expedient, quotationId, quotationCode, initialData }: QuotationFormProps) {
   const [isPending, startTransition] = useTransition();
   const [serverError, setServerError] = useState<string | null>(null);
   const [isParsingPdf, setIsParsingPdf] = useState(false);
@@ -89,31 +92,35 @@ export function QuotationForm({ clients, concepts, expedient }: QuotationFormPro
   } = useForm<QuotationFormValues>({
     resolver: zodResolver(quotationSchema),
     defaultValues: {
-      clientId: expedient?.clientId || clients[0]?.id || "",
-      expedientId: expedient?.id || "",
-      validUntil: "",
-      modality: "IMPORTACIÓN MARÍTIMA",
-      incoterm: "",
-      origin: "",
-      destination: "",
-      shippingType: "",
-      shippingLine: "",
-      frequency: "",
-      transitTime: "",
-      etd: "",
-      eta: "",
-      blNro: "",
-      shipper: "",
-      mercaderia: "",
-      formaPago: "",
-      cargoType: "",
-      packagesCount: "",
-      grossWeight: "",
-      volume: "",
-      loadType: "",
-      containersCount: "",
-      notes: "",
-      items: [
+      clientId: initialData?.clientId || expedient?.clientId || clients[0]?.id || "",
+      expedientId: initialData?.expedientId || expedient?.id || "",
+      validUntil: initialData?.validUntil || "",
+      modality: initialData?.modality || "IMPORTACIÓN MARÍTIMA",
+      incoterm: initialData?.incoterm || "",
+      origin: initialData?.origin || "",
+      destination: initialData?.destination || "",
+      shippingType: initialData?.shippingType || "",
+      shippingLine: initialData?.shippingLine || "",
+      frequency: initialData?.frequency || "",
+      transitTime: initialData?.transitTime || "",
+      etd: initialData?.etd || "",
+      eta: initialData?.eta || "",
+      blNro: initialData?.blNro || "",
+      shipper: initialData?.shipper || "",
+      mercaderia: initialData?.mercaderia || "",
+      formaPago: initialData?.formaPago || "",
+      cargoType: initialData?.cargoType || "",
+      packagesCount: initialData?.packagesCount || "",
+      grossWeight: initialData?.grossWeight || "",
+      volume: initialData?.volume || "",
+      loadType: initialData?.loadType || "",
+      containersCount: initialData?.containersCount || "",
+      polId: initialData?.polId || "",
+      podId: initialData?.podId || "",
+      shipperId: initialData?.shipperId || "",
+      carrierId: initialData?.carrierId || "",
+      notes: initialData?.notes || "",
+      items: initialData?.items && initialData.items.length > 0 ? initialData.items : [
         {
           description: "",
           category: "GASTOS_LOCALES",
@@ -347,7 +354,11 @@ export function QuotationForm({ clients, concepts, expedient }: QuotationFormPro
     setServerError(null);
     startTransition(async () => {
       try {
-        await createQuotationAction(values);
+        if (quotationId) {
+          await updateQuotationAction(quotationId, values);
+        } else {
+          await createQuotationAction(values);
+        }
       } catch (err: any) {
         if (
           err?.message === "NEXT_REDIRECT" ||
@@ -367,12 +378,14 @@ export function QuotationForm({ clients, concepts, expedient }: QuotationFormPro
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b pb-4">
         <div>
           <div className="flex items-center gap-2">
-            <Link href="/quotations">
+            <Link href={quotationId ? `/quotations/${quotationId}` : "/quotations"}>
               <Button type="button" variant="outline" size="sm" className="h-8 w-8 p-0">
                 <ArrowLeft className="h-4 w-4" />
               </Button>
             </Link>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">Nueva Cotización Comercial</h1>
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+              {quotationId ? (quotationCode ? `Editar Cotización N° ${quotationCode}` : "Editar Cotización Comercial") : "Nueva Cotización Comercial"}
+            </h1>
           </div>
           <p className="mt-1 text-sm text-slate-500">
             Formato oficial de cotización de carga internacional con desglose de impuestos y rentabilidad.
@@ -385,7 +398,7 @@ export function QuotationForm({ clients, concepts, expedient }: QuotationFormPro
           )}
         </div>
         <div className="flex items-center gap-3">
-          <Link href="/quotations">
+          <Link href={quotationId ? `/quotations/${quotationId}` : "/quotations"}>
             <Button type="button" variant="outline" disabled={isPending}>
               Cancelar
             </Button>
@@ -395,6 +408,8 @@ export function QuotationForm({ clients, concepts, expedient }: QuotationFormPro
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Guardando...
               </>
+            ) : quotationId ? (
+              "Guardar Cambios"
             ) : (
               "Guardar Cotización"
             )}

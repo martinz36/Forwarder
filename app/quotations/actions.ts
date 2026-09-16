@@ -84,6 +84,10 @@ export async function createQuotationAction(data: QuotationFormValues) {
         volume: validated.volume || null,
         loadType: validated.loadType || null,
         containersCount: validated.containersCount || null,
+        polId: validated.polId || null,
+        podId: validated.podId || null,
+        shipperId: validated.shipperId || null,
+        carrierId: validated.carrierId || null,
         notes: validated.notes || null,
         items: {
           createMany: {
@@ -97,6 +101,115 @@ export async function createQuotationAction(data: QuotationFormValues) {
   revalidatePath("/quotations");
   revalidatePath("/");
   redirect("/quotations");
+}
+
+export async function updateQuotationAction(quotationId: string, data: QuotationFormValues) {
+  if (!quotationId) {
+    throw new Error("ID de cotización no proporcionado.");
+  }
+
+  const existing = await prisma.quotation.findUnique({
+    where: { id: quotationId },
+  });
+
+  if (!existing) {
+    throw new Error("La cotización no existe.");
+  }
+
+  const validated = quotationSchema.parse(data);
+
+  // Process items and calculate totals and profits by currency
+  let totalUsd = 0;
+  let totalPen = 0;
+  let profitUsd = 0;
+  let profitPen = 0;
+
+  const itemsWithTotal = validated.items.map((item) => {
+    const saleTotal = Number((item.unitPrice * item.quantity).toFixed(2));
+    const costTotal = Number((item.unitCost * item.quantity).toFixed(2));
+    const itemProfit = Number((saleTotal - costTotal).toFixed(2));
+
+    if (item.currency === "USD") {
+      totalUsd += saleTotal;
+      profitUsd += itemProfit;
+    } else {
+      totalPen += saleTotal;
+      profitPen += itemProfit;
+    }
+
+    return {
+      description: item.description.trim(),
+      category: item.category || "GASTOS_LOCALES",
+      currency: item.currency,
+      unitCost: item.unitCost,
+      unitPrice: item.unitPrice,
+      quantity: item.quantity,
+      total: saleTotal,
+      isTaxable: item.isTaxable ?? (item.category === "GASTOS_LOCALES"),
+    };
+  });
+
+  totalUsd = Number(totalUsd.toFixed(2));
+  totalPen = Number(totalPen.toFixed(2));
+  profitUsd = Number(profitUsd.toFixed(2));
+  profitPen = Number(profitPen.toFixed(2));
+
+  // Atomic Prisma Transaction
+  await prisma.$transaction(async (tx) => {
+    // Delete existing items
+    await tx.quotationItem.deleteMany({
+      where: { quotationId },
+    });
+
+    // Update quotation and recreate items
+    await tx.quotation.update({
+      where: { id: quotationId },
+      data: {
+        clientId: validated.clientId,
+        expedientId: validated.expedientId || null,
+        validUntil: validated.validUntil ? new Date(validated.validUntil) : null,
+        totalUsd,
+        totalPen,
+        profitUsd,
+        profitPen,
+        modality: validated.modality || "IMPORTACIÓN MARÍTIMA",
+        incoterm: validated.incoterm || null,
+        origin: validated.origin || null,
+        destination: validated.destination || null,
+        shippingType: validated.shippingType || null,
+        shippingLine: validated.shippingLine || null,
+        frequency: validated.frequency || null,
+        transitTime: validated.transitTime || null,
+        etd: validated.etd || null,
+        eta: validated.eta || null,
+        blNro: validated.blNro || null,
+        shipper: validated.shipper || null,
+        mercaderia: validated.mercaderia || null,
+        formaPago: validated.formaPago || null,
+        cargoType: validated.cargoType || null,
+        packagesCount: validated.packagesCount || null,
+        grossWeight: validated.grossWeight || null,
+        volume: validated.volume || null,
+        loadType: validated.loadType || null,
+        containersCount: validated.containersCount || null,
+        polId: validated.polId || null,
+        podId: validated.podId || null,
+        shipperId: validated.shipperId || null,
+        carrierId: validated.carrierId || null,
+        notes: validated.notes || null,
+        items: {
+          createMany: {
+            data: itemsWithTotal,
+          },
+        },
+      },
+    });
+  });
+
+  revalidatePath(`/quotations/${quotationId}`);
+  revalidatePath("/quotations");
+  revalidatePath("/");
+  redirect(`/quotations/${quotationId}`);
 }
 
 export async function parseQuotationPdfAction(formData: FormData) {
