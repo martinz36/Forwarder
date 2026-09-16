@@ -230,9 +230,9 @@ export function ArrivalNoticePDF({ data }: { data: ArrivalNoticePdfData }) {
         {/* Header */}
         <View style={styles.headerContainer}>
           <View>
-            <Text style={styles.companyName}>AGENCIA DE ADUANAS & LOGÍSTICA S.A.C.</Text>
-            <Text style={styles.subCompany}>RUC: 20601234567 • Callao, Perú</Text>
-            <Text style={styles.subCompany}>Operaciones de Comercio Exterior</Text>
+            <Text style={styles.companyName}>MARIVAN LOGISTICS SAC</Text>
+            <Text style={styles.subCompany}>Calle Españoletto 115, Dpto. 101, San Borja • Tel: 969 3010 95</Text>
+            <Text style={styles.subCompany}>Agenciamiento Aduanero & Logística Internacional</Text>
           </View>
           <View style={styles.documentTitleBox}>
             <Text style={styles.documentTitle}>AVISO DE LLEGADA</Text>

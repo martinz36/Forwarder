@@ -347,3 +347,16 @@ model InvoiceItem {
   createdAt           DateTime          @default(now())
   updatedAt           DateTime          @updatedAt
 }
+
+model CompanyProfile {
+  id        String   @id @default("default")
+  legalName String   @default("Marivan Logistics SAC")
+  tradeName String   @default("Marivan Logistics")
+  ruc       String   @default("")
+  address   String   @default("Calle Españoletto 115, departamento 101, San Borja")
+  phone     String   @default("969 3010 95")
+  email     String   @default("")
+  website   String   @default("")
+  updatedAt DateTime @updatedAt
+}
+

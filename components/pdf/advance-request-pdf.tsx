@@ -268,9 +268,9 @@ export function AdvanceRequestPDF({ data }: { data: AdvanceRequestPdfData }) {
         {/* Header */}
         <View style={styles.header}>
           <View>
-            <Text style={styles.companyName}>AGENCIA DE ADUANAS & LOGÍSTICA S.A.C.</Text>
-            <Text style={styles.companySub}>Agenciamiento Aduanero y Logística Internacional</Text>
-            <Text style={styles.companySub}>Callao, Perú • RUC: 20601234567</Text>
+            <Text style={styles.companyName}>MARIVAN LOGISTICS SAC</Text>
+            <Text style={styles.companySub}>Agenciamiento Aduanero & Logística Internacional</Text>
+            <Text style={styles.companySub}>Calle Españoletto 115, Dpto. 101, San Borja • Tel: 969 3010 95</Text>
           </View>
           <View style={styles.docBox}>
             <Text style={styles.docTitle}>SOLICITUD DE ANTICIPO DE FONDOS</Text>

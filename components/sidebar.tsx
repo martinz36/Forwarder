@@ -9,7 +9,8 @@ import {
   Ship, 
   Anchor,
   Folder,
-  Tag
+  Tag,
+  Settings
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -20,6 +21,7 @@ const navigationItems = [
   { name: "Productos / Servicios", href: "/services", icon: Tag },
   { name: "Cotizaciones", href: "/quotations", icon: FileText },
   { name: "Operaciones", href: "/operations", icon: Ship },
+  { name: "Configuración", href: "/settings", icon: Settings },
 ];
 
 export function Sidebar() {
@@ -33,8 +35,8 @@ export function Sidebar() {
           <Anchor className="h-5 w-5" />
         </div>
         <div>
-          <h1 className="font-bold text-base leading-tight tracking-wide text-white">Forwarder ERP</h1>
-          <p className="text-xs text-slate-400">Agencia de Aduanas Perú</p>
+          <h1 className="font-bold text-base leading-tight tracking-wide text-white">Marivan Logistics</h1>
+          <p className="text-xs text-slate-400">Operador Logístico Perú</p>
         </div>
       </div>
 
@@ -63,9 +65,10 @@ export function Sidebar() {
 
       {/* Footer info */}
       <div className="border-t border-slate-800 p-4 text-xs text-slate-400">
-        <p className="font-semibold text-slate-300">Sistema Aduanero & Logistics</p>
-        <p className="mt-0.5">v1.0.0 • Production</p>
+        <p className="font-semibold text-slate-300">Marivan Logistics SAC</p>
+        <p className="mt-0.5">Sistema Aduanero & Logístico</p>
       </div>
     </aside>
   );
 }
+

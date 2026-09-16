@@ -2,15 +2,23 @@
 
 import { revalidatePath } from "next/cache";
 import prisma from "@/lib/prisma";
-import { clientSchema, ClientFormValues } from "@/lib/validations/client";
+import { clientSchema, ClientFormValues, cleanRucDigits, formatPeruvianPhone } from "@/lib/validations/client";
 
 export async function createClientAction(data: ClientFormValues) {
   try {
-    const validated = clientSchema.parse(data);
+    // Sanitize documentNumber and phone before validation
+    const rawDoc = data.documentType === "RUC" ? cleanRucDigits(data.documentNumber) : data.documentNumber.trim();
+    const formattedPhone = formatPeruvianPhone(data.phone);
+
+    const validated = clientSchema.parse({
+      ...data,
+      documentNumber: rawDoc,
+      phone: formattedPhone,
+    });
 
     // Check if documentNumber already exists
     const existing = await prisma.client.findUnique({
-      where: { documentNumber: validated.documentNumber.trim() },
+      where: { documentNumber: validated.documentNumber },
     });
 
     if (existing) {
@@ -23,11 +31,11 @@ export async function createClientAction(data: ClientFormValues) {
     const newClient = await prisma.client.create({
       data: {
         documentType: validated.documentType,
-        documentNumber: validated.documentNumber.trim(),
+        documentNumber: validated.documentNumber,
         businessName: validated.businessName.trim(),
         contactName: validated.contactName ? validated.contactName.trim() : null,
         email: validated.email ? validated.email.trim() : null,
-        phone: validated.phone ? validated.phone.trim() : null,
+        phone: validated.phone ? validated.phone : null,
         address: validated.address ? validated.address.trim() : null,
         status: "ACTIVE",
       },
@@ -63,12 +71,19 @@ export async function updateClientAction(clientId: string, data: ClientFormValue
     throw new Error("ID de cliente no proporcionado.");
   }
 
-  const validated = clientSchema.parse(data);
+  const rawDoc = data.documentType === "RUC" ? cleanRucDigits(data.documentNumber) : data.documentNumber.trim();
+  const formattedPhone = formatPeruvianPhone(data.phone);
+
+  const validated = clientSchema.parse({
+    ...data,
+    documentNumber: rawDoc,
+    phone: formattedPhone,
+  });
 
   // Check if documentNumber exists on another client
   const existing = await prisma.client.findFirst({
     where: {
-      documentNumber: validated.documentNumber.trim(),
+      documentNumber: validated.documentNumber,
       NOT: { id: clientId },
     },
   });
@@ -81,11 +96,11 @@ export async function updateClientAction(clientId: string, data: ClientFormValue
     where: { id: clientId },
     data: {
       documentType: validated.documentType,
-      documentNumber: validated.documentNumber.trim(),
+      documentNumber: validated.documentNumber,
       businessName: validated.businessName.trim(),
       contactName: validated.contactName ? validated.contactName.trim() : null,
       email: validated.email ? validated.email.trim() : null,
-      phone: validated.phone ? validated.phone.trim() : null,
+      phone: validated.phone ? validated.phone : null,
       address: validated.address ? validated.address.trim() : null,
     },
   });

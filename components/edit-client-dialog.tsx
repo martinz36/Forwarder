@@ -16,7 +16,7 @@ import {
   DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { clientSchema, ClientFormValues } from "@/lib/validations/client";
+import { clientSchema, ClientFormValues, cleanRucDigits, formatPeruvianPhone } from "@/lib/validations/client";
 import { updateClientAction } from "@/app/clients/actions";
 
 interface EditClientDialogProps {
@@ -41,6 +41,7 @@ export function EditClientDialog({ client }: EditClientDialogProps) {
     register,
     handleSubmit,
     watch,
+    setValue,
     formState: { errors },
   } = useForm<ClientFormValues>({
     resolver: zodResolver(clientSchema),
@@ -122,7 +123,14 @@ export function EditClientDialog({ client }: EditClientDialogProps) {
                 id="documentNumber"
                 placeholder={selectedDocType === "RUC" ? "Ej: 20601234567" : "Ej: 71234567"}
                 maxLength={selectedDocType === "RUC" ? 11 : 12}
-                {...register("documentNumber")}
+                {...register("documentNumber", {
+                  onChange: (e) => {
+                    if (selectedDocType === "RUC") {
+                      const cleaned = cleanRucDigits(e.target.value);
+                      setValue("documentNumber", cleaned);
+                    }
+                  },
+                })}
                 className="font-mono font-bold"
               />
               {errors.documentNumber && (
@@ -177,12 +185,17 @@ export function EditClientDialog({ client }: EditClientDialogProps) {
 
             <div className="space-y-1.5">
               <Label htmlFor="phone" className="text-xs font-semibold text-slate-700">
-                Teléfono de Contacto
+                Teléfono / Celular
               </Label>
               <Input
                 id="phone"
-                placeholder="Ej: +51 987654321"
-                {...register("phone")}
+                placeholder="Ej: 969 301 095"
+                {...register("phone", {
+                  onBlur: (e) => {
+                    const formatted = formatPeruvianPhone(e.target.value);
+                    setValue("phone", formatted);
+                  },
+                })}
               />
               {errors.phone && (
                 <p className="text-xs font-medium text-red-500">{errors.phone.message}</p>

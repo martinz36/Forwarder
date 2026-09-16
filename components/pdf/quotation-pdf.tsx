@@ -311,9 +311,9 @@ export function QuotationPDF({ data }: { data: QuotationPdfData }) {
         {/* Header */}
         <View style={styles.header}>
           <View>
-            <Text style={styles.companyName}>FORWARDER ERP - AGENCIA DE ADUANAS</Text>
-            <Text style={styles.companySub}>Agenciamiento Aduanero y Logística Internacional</Text>
-            <Text style={styles.companySub}>Callao, Perú • RUC: 20601335209</Text>
+            <Text style={styles.companyName}>MARIVAN LOGISTICS SAC</Text>
+            <Text style={styles.companySub}>Agenciamiento Aduanero & Logística Internacional</Text>
+            <Text style={styles.companySub}>Calle Españoletto 115, Dpto. 101, San Borja • Tel: 969 3010 95</Text>
           </View>
           <View style={styles.docBox}>
             <Text style={styles.docTitle}>

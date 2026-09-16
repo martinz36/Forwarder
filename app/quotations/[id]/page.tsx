@@ -211,10 +211,10 @@ export default async function QuotationDetailPage({ params }: QuotationDetailPag
           <div className="space-y-1.5">
             <div className="flex items-center gap-2 text-blue-700 font-black text-xl">
               <Building2 className="h-6 w-6 text-blue-600" />
-              <span>FORWARDER ERP - AGENCIA DE ADUANAS</span>
+              <span>MARIVAN LOGISTICS SAC</span>
             </div>
-            <p className="text-xs text-slate-500 font-medium">Agenciamiento Aduanero y Logística Internacional</p>
-            <p className="text-xs text-slate-400">RUC: 20601335209 • Callao, Perú</p>
+            <p className="text-xs text-slate-500 font-medium">Agenciamiento Aduanero & Logística Internacional</p>
+            <p className="text-xs text-slate-400">Calle Españoletto 115, departamento 101, San Borja • Teléf: 969 3010 95</p>
           </div>
 
           <div className="sm:text-right space-y-1">
