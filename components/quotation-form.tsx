@@ -82,51 +82,33 @@ export function QuotationForm({ clients, concepts, expedient }: QuotationFormPro
       expedientId: expedient?.id || "",
       validUntil: "",
       modality: "IMPORTACIÓN MARÍTIMA",
-      incoterm: "EXW",
-      origin: "SHANGHAI",
-      destination: "CALLAO - PERU",
-      shippingType: "Directo",
-      shippingLine: "MAERSK SALTORO Vº.631E",
-      frequency: "SEMANAL",
-      transitTime: "35 DÍAS APROX.",
-      etd: "13/08/2026",
-      eta: "07/09/2026",
-      blNro: "SHCLL26258216Q",
-      shipper: "Jiaxing Whatz Games Co.,Ltd",
-      mercaderia: "CARGA GENERAL",
-      formaPago: "CONTADO",
-      cargoType: "CARGA GENERAL",
-      packagesCount: "3 PALETA",
-      grossWeight: "0.96 Ton",
-      volume: "2.200 CBM",
-      loadType: "LCL / LCL",
-      containersCount: "0 X LCL",
-      notes: "- TARIFA HASTA 5 CBM, EN CASO DE SUPERAR SE VOLVERÁ A COTIZAR.\n- VERIFICAR LA TARIFA VIGENTE SEGÚN FECHA DE ZARPE.",
+      incoterm: "",
+      origin: "",
+      destination: "",
+      shippingType: "",
+      shippingLine: "",
+      frequency: "",
+      transitTime: "",
+      etd: "",
+      eta: "",
+      blNro: "",
+      shipper: "",
+      mercaderia: "",
+      formaPago: "",
+      cargoType: "",
+      packagesCount: "",
+      grossWeight: "",
+      volume: "",
+      loadType: "",
+      containersCount: "",
+      notes: "",
       items: [
         {
-          description: "EXW CHARGES (Gastos de Origen)",
-          category: "GASTOS_ORIGEN",
-          currency: "USD",
-          unitCost: 120,
-          unitPrice: 200,
-          quantity: 1,
-          isTaxable: false,
-        },
-        {
-          description: "OCEAN FREIGHT TON/M3 (Flete Marítimo)",
-          category: "FLETE_INTERNACIONAL",
-          currency: "USD",
-          unitCost: 180,
-          unitPrice: 264,
-          quantity: 1,
-          isTaxable: false,
-        },
-        {
-          description: "Despacho Aduanero (Comisión Agente)",
+          description: "",
           category: "GASTOS_LOCALES",
           currency: "USD",
-          unitCost: 120,
-          unitPrice: 200,
+          unitCost: 0,
+          unitPrice: 0,
           quantity: 1,
           isTaxable: true,
         },
@@ -460,13 +442,23 @@ export function QuotationForm({ clients, concepts, expedient }: QuotationFormPro
 
         <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
           <div className="space-y-1.5">
-            <Label className="text-xs font-bold text-slate-900">NAVE</Label>
+            <Label className="text-xs font-bold text-slate-900">NAVE / LÍNEA</Label>
             <Input placeholder="Ej: MAERSK SALTORO Vº.631E" {...register("shippingLine")} className="h-9 text-xs font-medium" />
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-xs font-bold text-slate-900">LUG. EMBARQUE</Label>
-            <Input placeholder="Ej: SHANGHAI" {...register("origin")} className="h-9 text-xs font-medium" />
+            <Label className="text-xs font-bold text-slate-900">POL (Puerto Carga / Origen)</Label>
+            <Input placeholder="Ej: SHANGHAI, NINGBO" {...register("origin")} className="h-9 text-xs font-medium" />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs font-bold text-slate-900">POD (Puerto Descarga / Destino)</Label>
+            <Input placeholder="Ej: CALLAO - PERU" {...register("destination")} className="h-9 text-xs font-medium" />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs font-bold text-slate-900">INCOTERM</Label>
+            <Input placeholder="Ej: EXW, FOB, CIF" {...register("incoterm")} className="h-9 text-xs font-medium uppercase" />
           </div>
 
           <div className="space-y-1.5">
@@ -488,28 +480,33 @@ export function QuotationForm({ clients, concepts, expedient }: QuotationFormPro
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-xs font-bold text-slate-900">BL/Nro</Label>
+            <Label className="text-xs font-bold text-slate-900">BL / NRO</Label>
             <Input placeholder="Ej: SHCLL26258216Q" {...register("blNro")} className="h-9 text-xs font-medium" />
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-xs font-bold text-slate-900">BULTOS / PALETA</Label>
-            <Input placeholder="Ej: 3 PALETA" {...register("packagesCount")} className="h-9 text-xs font-medium" />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label className="text-xs font-bold text-slate-900">PESO & VOL.</Label>
-            <Input placeholder="Ej: 0.96 Ton" {...register("grossWeight")} className="h-9 text-xs font-medium" />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label className="text-xs font-bold text-slate-900">SHIPPER</Label>
+            <Label className="text-xs font-bold text-slate-900">SHIPPER / PROVEEDOR</Label>
             <Input placeholder="Ej: Jiaxing Whatz Games Co.,Ltd" {...register("shipper")} className="h-9 text-xs font-medium" />
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-xs font-bold text-slate-900">MERCADERIA</Label>
-            <Input placeholder="Ej: JUEGOS DE MESA" {...register("mercaderia")} className="h-9 text-xs font-medium" />
+            <Label className="text-xs font-bold text-slate-900">BULTOS / PALETA</Label>
+            <Input placeholder="Ej: 3 PALETAS" {...register("packagesCount")} className="h-9 text-xs font-medium" />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs font-bold text-slate-900">PESO BRUTO (Kgs / Ton)</Label>
+            <Input placeholder="Ej: 960 Kgs / 0.96 Ton" {...register("grossWeight")} className="h-9 text-xs font-medium" />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs font-bold text-slate-900">VOLUMEN (CBM / m³)</Label>
+            <Input placeholder="Ej: 2.20 CBM" {...register("volume")} className="h-9 text-xs font-medium" />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs font-bold text-slate-900">MERCADERÍA</Label>
+            <Input placeholder="Ej: CARGA GENERAL" {...register("mercaderia")} className="h-9 text-xs font-medium" />
           </div>
 
           <div className="space-y-1.5">
@@ -518,7 +515,7 @@ export function QuotationForm({ clients, concepts, expedient }: QuotationFormPro
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-xs font-semibold text-slate-700">Modalidad *</Label>
+            <Label className="text-xs font-bold text-slate-900">MODALIDAD *</Label>
             <select
               {...register("modality")}
               className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-xs shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring font-medium"
@@ -531,19 +528,9 @@ export function QuotationForm({ clients, concepts, expedient }: QuotationFormPro
             </select>
           </div>
 
-          <div className="space-y-1.5">
-            <Label className="text-xs font-semibold text-slate-700">Incoterm</Label>
-            <Input placeholder="Ej: EXW, FOB, CIF" {...register("incoterm")} className="h-9 text-xs" />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label className="text-xs font-semibold text-slate-700">Puerto / Destino</Label>
-            <Input placeholder="Ej: CALLAO - PERU" {...register("destination")} className="h-9 text-xs" />
-          </div>
-
-          <div className="space-y-1.5 sm:col-span-3">
-            <Label className="text-xs font-semibold text-slate-700">Contenedor(es) / Tipo Flete</Label>
-            <Input placeholder="Ej: 1 X 40'HQ o 0 X LCL" {...register("containersCount")} className="h-9 text-xs" />
+          <div className="space-y-1.5 sm:col-span-2">
+            <Label className="text-xs font-bold text-slate-900">CONTENEDOR(ES) / TIPO FLETE</Label>
+            <Input placeholder="Ej: 1 X 40'HQ o 0 X LCL" {...register("containersCount")} className="h-9 text-xs font-medium" />
           </div>
         </div>
       </div>

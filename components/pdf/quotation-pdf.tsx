@@ -346,12 +346,22 @@ export function QuotationPDF({ data }: { data: QuotationPdfData }) {
           <Text style={styles.shipmentTitle}>Datos del Embarque (Pre-Alerta Logística)</Text>
           <View style={styles.gridRow}>
             <View style={styles.gridCell}>
-              <Text style={styles.gridLabel}>NAVE:</Text>
+              <Text style={styles.gridLabel}>NAVE / LÍNEA:</Text>
               <Text style={styles.gridVal}>{data.shippingLine || "-"}</Text>
             </View>
             <View style={styles.gridCell}>
-              <Text style={styles.gridLabel}>LUG. EMBARQUE:</Text>
+              <Text style={styles.gridLabel}>INCOTERM:</Text>
+              <Text style={styles.gridVal}>{data.incoterm || "-"}</Text>
+            </View>
+          </View>
+          <View style={styles.gridRow}>
+            <View style={styles.gridCell}>
+              <Text style={styles.gridLabel}>POL (ORIGEN):</Text>
               <Text style={styles.gridVal}>{data.origin || "-"}</Text>
+            </View>
+            <View style={styles.gridCell}>
+              <Text style={styles.gridLabel}>POD (DESTINO):</Text>
+              <Text style={styles.gridVal}>{data.destination || "-"}</Text>
             </View>
           </View>
           <View style={styles.gridRow}>
@@ -366,18 +376,8 @@ export function QuotationPDF({ data }: { data: QuotationPdfData }) {
           </View>
           <View style={styles.gridRow}>
             <View style={styles.gridCell}>
-              <Text style={styles.gridLabel}>BL/NRO:</Text>
+              <Text style={styles.gridLabel}>BL / NRO:</Text>
               <Text style={styles.gridVal}>{data.blNro || "-"}</Text>
-            </View>
-            <View style={styles.gridCell}>
-              <Text style={styles.gridLabel}>BULTOS / PALETA:</Text>
-              <Text style={styles.gridVal}>{data.packagesCount || "-"}</Text>
-            </View>
-          </View>
-          <View style={styles.gridRow}>
-            <View style={styles.gridCell}>
-              <Text style={styles.gridLabel}>PESO & VOL.:</Text>
-              <Text style={styles.gridVal}>{data.grossWeight || "-"}</Text>
             </View>
             <View style={styles.gridCell}>
               <Text style={styles.gridLabel}>SHIPPER:</Text>
@@ -386,12 +386,32 @@ export function QuotationPDF({ data }: { data: QuotationPdfData }) {
           </View>
           <View style={styles.gridRow}>
             <View style={styles.gridCell}>
+              <Text style={styles.gridLabel}>BULTOS / PALETA:</Text>
+              <Text style={styles.gridVal}>{data.packagesCount || "-"}</Text>
+            </View>
+            <View style={styles.gridCell}>
+              <Text style={styles.gridLabel}>PESO BRUTO:</Text>
+              <Text style={styles.gridVal}>{data.grossWeight || "-"}</Text>
+            </View>
+          </View>
+          <View style={styles.gridRow}>
+            <View style={styles.gridCell}>
+              <Text style={styles.gridLabel}>VOLUMEN (CBM):</Text>
+              <Text style={styles.gridVal}>{data.volume || "-"}</Text>
+            </View>
+            <View style={styles.gridCell}>
               <Text style={styles.gridLabel}>MERCADERIA:</Text>
               <Text style={styles.gridVal}>{data.mercaderia || data.cargoType || "-"}</Text>
             </View>
+          </View>
+          <View style={styles.gridRow}>
             <View style={styles.gridCell}>
               <Text style={styles.gridLabel}>FORMA DE PAGO:</Text>
               <Text style={styles.gridVal}>{data.formaPago || "-"}</Text>
+            </View>
+            <View style={styles.gridCell}>
+              <Text style={styles.gridLabel}>CONTENEDORES:</Text>
+              <Text style={styles.gridVal}>{data.containersCount || "-"}</Text>
             </View>
           </View>
           <View style={styles.gridRow}>
