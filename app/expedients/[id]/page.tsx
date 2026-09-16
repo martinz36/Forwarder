@@ -89,7 +89,7 @@ export default async function ExpedientDetailPage({ params }: ExpedientDetailPag
       </div>
 
       {/* Main Info Cards */}
-      <div className="grid gap-6 md:grid-cols-3">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Client & Expedient Summary Card */}
         <div className="md:col-span-1 rounded-2xl border bg-white p-5 shadow-sm space-y-4 h-fit">
           <div className="border-b pb-3">

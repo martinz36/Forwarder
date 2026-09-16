@@ -259,7 +259,7 @@ export function CreateExpedientDialog({ clients: initialClients }: CreateExpedie
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <div className="space-y-1">
                     <Label className="text-[11px] font-semibold text-slate-700">Email (Opcional)</Label>
                     <Input
@@ -330,7 +330,7 @@ export function CreateExpedientDialog({ clients: initialClients }: CreateExpedie
             <Label className="text-sm font-semibold text-slate-700">
               2. Modalidad / Tipo de Carga *
             </Label>
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               <button
                 type="button"
                 onClick={() => setLoadType("FCL")}

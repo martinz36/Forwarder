@@ -287,7 +287,7 @@ export default async function OperationDetailPage({ params }: OperationDetailPag
           </div>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* USD Real Summary */}
           <div className="rounded-xl bg-slate-900 p-5 border border-slate-800 space-y-3">
             <div className="flex items-center justify-between border-b border-slate-800 pb-2">

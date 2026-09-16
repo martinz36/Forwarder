@@ -70,7 +70,7 @@ export function QuotationDetailDialog({
 
         <div className="space-y-6 py-2">
           {/* Header Metadata Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs bg-slate-50 p-4 rounded-xl border">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs bg-slate-50 p-4 rounded-xl border">
             <div>
               <span className="text-slate-400 font-bold block uppercase tracking-wider text-[10px]">Cliente:</span>
               <span className="font-bold text-slate-900 truncate block">{pdfData.client.name}</span>

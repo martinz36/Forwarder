@@ -167,7 +167,7 @@ export default async function ClientDetailPage({ params }: ClientDetailPageProps
       </div>
 
       {/* Row 1.5: Corporate Meta Header Card */}
-      <div className="rounded-xl border bg-white p-5 shadow-sm grid gap-4 sm:grid-cols-3 text-sm">
+      <div className="rounded-xl border bg-white p-5 shadow-sm grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
         <div className="space-y-1">
           <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Persona de Contacto</span>
           <p className="font-semibold text-slate-800 flex items-center gap-1.5">

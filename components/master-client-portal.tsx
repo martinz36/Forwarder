@@ -229,7 +229,7 @@ export function MasterClientPortal({
           </div>
 
           {/* KPI Bento Cards Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             <div className="rounded-xl border border-slate-800 bg-slate-800/50 p-4 space-y-1 backdrop-blur-sm">
               <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
                 Operaciones Activas
@@ -250,7 +250,7 @@ export function MasterClientPortal({
               </div>
             </div>
 
-            <div className="rounded-xl border border-slate-800 bg-slate-800/50 p-4 space-y-1 backdrop-blur-sm col-span-2 md:col-span-2">
+            <div className="rounded-xl border border-slate-800 bg-slate-800/50 p-4 space-y-1 backdrop-blur-sm col-span-1 sm:col-span-2 lg:col-span-2">
               <span className="text-[11px] font-semibold text-amber-400 uppercase tracking-wider block">
                 Saldo Pendiente de Cobro / Anticipo
               </span>
@@ -294,7 +294,7 @@ export function MasterClientPortal({
               <p className="text-xs text-slate-400">Todas tus cargas registradas se encuentran liquidadas o no coinciden con la búsqueda.</p>
             </div>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {filteredActiveOps.map((op) => (
                 <div
                   key={op.id}
@@ -345,7 +345,7 @@ export function MasterClientPortal({
                     </div>
 
                     {/* BL & Route Metadata */}
-                    <div className="grid grid-cols-2 gap-3 text-xs bg-slate-50/70 p-3 rounded-xl border border-slate-100">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs bg-slate-50/70 p-3 rounded-xl border border-slate-100">
                       <div>
                         <span className="text-slate-400 font-medium block">N° de BL / HBL:</span>
                         <span className="font-mono font-bold text-slate-800">

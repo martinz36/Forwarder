@@ -87,7 +87,7 @@ export function AddExtraChargeDialog({ operationId }: AddExtraChargeDialogProps)
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label htmlFor="currency">Moneda</Label>
               <select
@@ -106,7 +106,7 @@ export function AddExtraChargeDialog({ operationId }: AddExtraChargeDialogProps)
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label htmlFor="unitCost">Costo Unit. (Lo que se paga) *</Label>
               <Input

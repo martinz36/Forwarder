@@ -177,7 +177,7 @@ export function ClientDocumentPortal({
             </div>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-3 text-sm">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
             <div className="bg-slate-50 p-3 rounded-lg border">
               <span className="text-xs text-slate-500 font-medium block">BL / Guía de Carga</span>
               <span className="font-mono font-bold text-slate-800 text-sm">
@@ -242,7 +242,7 @@ export function ClientDocumentPortal({
               Aún no hay documentos definitivos publicados por tu agente de aduanas.
             </div>
           ) : (
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {brokerDocs.map((doc) => (
                 <div key={doc.id} className="rounded-xl border bg-white p-4 shadow-sm flex items-center justify-between">
                   <div className="space-y-1 min-w-0 pr-2">
@@ -286,7 +286,7 @@ export function ClientDocumentPortal({
           </h3>
 
           {/* Metadata Inputs */}
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold text-slate-700">1. Nombre del Archivo *</Label>
               <Input
@@ -399,7 +399,7 @@ export function ClientDocumentPortal({
             <h3 className="font-bold text-slate-900 text-base flex items-center gap-2">
               <UserCheck className="h-4 w-4 text-purple-600" /> Documentos Enviados por Ti ({clientDocs.length})
             </h3>
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {clientDocs.map((doc) => (
                 <div key={doc.id} className="rounded-xl border bg-white p-4 shadow-sm flex items-center justify-between">
                   <div className="space-y-1 min-w-0 pr-2">

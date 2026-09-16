@@ -57,7 +57,7 @@ export function SettingsForm({ initialProfile }: SettingsFormProps) {
         </div>
       )}
 
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Nombre Comercial */}
         <div className="space-y-1.5">
           <Label htmlFor="tradeName" className="text-xs font-bold text-slate-700">

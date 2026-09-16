@@ -154,7 +154,7 @@ export default async function LiquidationDetailPage({ params }: LiquidationPageP
         </div>
 
         {/* Client & Operations Meta Grid */}
-        <div className="grid gap-4 sm:grid-cols-2 bg-slate-50 p-4 rounded-xl border text-sm">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border text-sm">
           <div className="space-y-1">
             <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Facturar A (Cliente)</span>
             <div className="flex items-center gap-2">
@@ -373,7 +373,7 @@ export default async function LiquidationDetailPage({ params }: LiquidationPageP
             </Badge>
           </div>
 
-          <div className="grid gap-6 md:grid-cols-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* USD Grand Total & Balance */}
             <div className="rounded-xl bg-slate-900 p-5 border border-slate-800 space-y-2.5">
               <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">

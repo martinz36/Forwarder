@@ -154,7 +154,7 @@ export function BrokerDocumentSection({
         </h3>
 
         {/* Step 1: Input Metadata */}
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1.5">
             <Label className="text-xs font-semibold text-slate-700">1. Nombre del Documento *</Label>
             <Input
@@ -297,7 +297,7 @@ export function BrokerDocumentSection({
             No se han subido documentos aún. Escribe el nombre del documento y usa el seleccionador de arriba.
           </div>
         ) : (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {documents.map((doc) => (
               <div key={doc.id} className="rounded-xl border bg-white p-4 shadow-sm space-y-3 flex flex-col justify-between">
                 <div className="space-y-2">

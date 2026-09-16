@@ -99,7 +99,7 @@ export function OperationMilestones({
       </div>
 
       {/* Checkbox Items Grid */}
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         {MILESTONE_ITEMS.map((item) => {
           const isDone = milestones[item.key];
           const isCurrentUpdating = updatingKey === item.key;

@@ -471,7 +471,7 @@ export function QuotationForm({ clients, concepts, expedient, quotationId, quota
       )}
 
       {/* Client & Basic Information */}
-      <div className="grid gap-6 md:grid-cols-2 rounded-xl border bg-white p-6 shadow-sm">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 rounded-xl border bg-white p-6 shadow-sm">
         <div className="space-y-2">
           <Label htmlFor="clientId" className="font-semibold text-slate-800">
             Cliente / Razón Social *
@@ -525,7 +525,7 @@ export function QuotationForm({ clients, concepts, expedient, quotationId, quota
           </span>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="space-y-1.5">
             <Label className="text-xs font-bold text-slate-900">NAVE / LÍNEA</Label>
             <CreatableCombobox
@@ -936,7 +936,7 @@ export function QuotationForm({ clients, concepts, expedient, quotationId, quota
           </div>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* USD Client Summary */}
           <div className="rounded-xl bg-blue-50/50 p-5 border border-blue-100 space-y-3">
             <span className="font-bold text-sm text-blue-900 flex items-center gap-1.5 border-b border-blue-200 pb-2">
@@ -1003,7 +1003,7 @@ export function QuotationForm({ clients, concepts, expedient, quotationId, quota
           </div>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* USD Breakdown Card */}
           <div className="rounded-xl bg-slate-900 p-5 border border-slate-800 space-y-3">
             <div className="flex items-center justify-between border-b border-slate-800 pb-2">

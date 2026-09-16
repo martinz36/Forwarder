@@ -255,7 +255,7 @@ export default async function QuotationDetailPage({ params }: QuotationDetailPag
             <Ship className="h-4 w-4 text-blue-600" /> Datos del Embarque (Pre-Alerta Logística)
           </h3>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 text-xs">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4 text-xs">
             <div>
               <span className="text-slate-400 font-bold block uppercase tracking-wider text-[10px]">NAVE</span>
               <p className="font-bold text-slate-800">{quotation.shippingLine || "-"}</p>
@@ -412,7 +412,7 @@ export default async function QuotationDetailPage({ params }: QuotationDetailPag
         )}
 
         {/* Observations & Client Financial Breakdown Summary */}
-        <div className="grid gap-6 md:grid-cols-2 pt-4 border-t">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t">
           {/* Observations Box */}
           <div className="rounded-xl border bg-slate-50 p-5 space-y-2 text-xs">
             <h4 className="font-bold text-slate-900 uppercase tracking-wider text-xs">Observaciones y Condiciones:</h4>

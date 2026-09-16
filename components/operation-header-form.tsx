@@ -75,7 +75,7 @@ export function OperationHeaderForm({ operationId, initialData }: OperationHeade
         )}
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         {/* Incoterm */}
         <div className="space-y-1.5">
           <Label htmlFor="incoterm" className="text-xs font-semibold text-slate-700">Incoterm</Label>

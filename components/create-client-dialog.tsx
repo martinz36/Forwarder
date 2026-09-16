@@ -89,7 +89,7 @@ export function CreateClientDialog() {
           )}
 
           {/* 2-Column Responsive Grid */}
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Fila 1: Tipo de Documento + Número de Documento */}
             <div className="space-y-1.5">
               <Label htmlFor="documentType" className="text-xs font-semibold text-slate-700">

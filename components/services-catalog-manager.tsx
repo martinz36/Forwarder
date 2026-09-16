@@ -199,7 +199,7 @@ export function ServicesCatalogManager({ initialServices }: ServicesCatalogManag
   return (
     <div className="space-y-6">
       {/* Metrics Row */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="rounded-xl border bg-white p-4 shadow-sm space-y-1">
           <div className="flex items-center justify-between text-slate-500">
             <span className="text-xs font-semibold uppercase tracking-wider">Total Conceptos</span>
@@ -401,7 +401,7 @@ export function ServicesCatalogManager({ initialServices }: ServicesCatalogManag
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label className="text-xs font-semibold text-slate-700">Categoría *</Label>
                 <select
@@ -430,7 +430,7 @@ export function ServicesCatalogManager({ initialServices }: ServicesCatalogManag
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label className="text-xs font-semibold text-slate-700">Costo Sugerido</Label>
                 <Input

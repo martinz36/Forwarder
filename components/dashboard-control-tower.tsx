@@ -135,7 +135,7 @@ export function DashboardControlTower({
       </div>
 
       {/* SECTION 2: FINANCIAL & OPERATIONAL KPIS (GRID 4 CARDS) */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Card 1: Profit del Mes */}
         <div className="rounded-2xl border bg-white p-5 shadow-sm space-y-3">
           <div className="flex items-center justify-between">
