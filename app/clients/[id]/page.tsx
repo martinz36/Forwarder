@@ -129,37 +129,38 @@ export default async function ClientDetailPage({ params }: ClientDetailPageProps
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-12">
       {/* Row 1: Header Nav & Actions */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b pb-4">
-        <div className="flex items-center gap-3">
-          <Link href="/clients">
-            <Button variant="outline" size="sm" className="h-9 w-9 p-0">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between border-b pb-4">
+        <div className="flex items-center gap-3 min-w-0">
+          <Link href="/clients" className="shrink-0">
+            <Button variant="outline" size="sm" className="h-9 w-9 p-0 border-slate-200 text-slate-600 hover:bg-slate-100 shadow-sm">
               <ArrowLeft className="h-4 w-4" />
             </Button>
           </Link>
-          <div>
+          <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+              <h1 className="text-2xl font-bold tracking-tight text-slate-900 truncate">
                 {client.businessName}
               </h1>
-              <Badge variant="outline" className="border-blue-200 text-blue-800 bg-blue-50 font-mono font-bold text-xs">
+              <Badge variant="outline" className="border-blue-200 text-blue-800 bg-blue-50 font-mono font-bold text-xs shrink-0">
                 {client.documentType}: {client.documentNumber}
               </Badge>
-              <Badge variant={client.status === "ACTIVE" ? "success" : "secondary"}>
+              <Badge variant={client.status === "ACTIVE" ? "success" : "secondary"} className="shrink-0">
                 {client.status === "ACTIVE" ? "Activo" : client.status}
               </Badge>
             </div>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <p className="text-xs text-slate-500 mt-0.5 truncate">
               Dashboard Bento 360° • Agenciamiento Aduanero y Logística Internacional
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap shrink-0">
           <CopyMasterPortalButton portalToken={portalToken} clientName={client.businessName} />
           <EditClientDialog client={client} />
-          <Link href={`/quotations/new?clientId=${client.id}`}>
-            <Button className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs h-9 flex items-center gap-1.5 shadow-sm">
-              <Plus className="h-4 w-4" /> Nueva Cotización
+          <Link href={`/quotations/new?clientId=${client.id}`} className="shrink-0">
+            <Button className="bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs h-9 px-3 flex items-center gap-1.5 shadow-sm rounded-md transition-colors shrink-0">
+              <Plus className="h-4 w-4 shrink-0" />
+              <span>Nueva Cotización</span>
             </Button>
           </Link>
         </div>

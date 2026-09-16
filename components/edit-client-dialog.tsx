@@ -73,8 +73,12 @@ export function EditClientDialog({ client }: EditClientDialogProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" className="border-blue-200 text-blue-700 bg-blue-50/50 hover:bg-blue-100 font-semibold shadow-sm">
-          <Edit className="mr-2 h-4 w-4" /> Editar Cliente
+        <Button
+          variant="outline"
+          className="border-slate-200 text-slate-700 bg-white hover:bg-slate-50 font-medium text-xs h-9 px-3 flex items-center gap-1.5 shadow-sm shrink-0"
+        >
+          <Edit className="h-4 w-4 text-slate-500 shrink-0" />
+          <span>Editar Cliente</span>
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[620px]">
