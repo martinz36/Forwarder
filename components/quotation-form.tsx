@@ -349,6 +349,13 @@ export function QuotationForm({ clients, concepts, expedient }: QuotationFormPro
       try {
         await createQuotationAction(values);
       } catch (err: any) {
+        if (
+          err?.message === "NEXT_REDIRECT" ||
+          (typeof err?.message === "string" && err.message.includes("NEXT_REDIRECT")) ||
+          (typeof err?.digest === "string" && err.digest.includes("NEXT_REDIRECT"))
+        ) {
+          return;
+        }
         setServerError(err.message || "Ocurrió un error al guardar la cotización.");
       }
     });

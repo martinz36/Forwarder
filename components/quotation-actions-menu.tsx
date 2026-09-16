@@ -219,6 +219,13 @@ export function QuotationActionsMenu({ quotation }: QuotationActionsMenuProps) {
       try {
         await createOperationFromQuotationAction(quotation.id);
       } catch (err: any) {
+        if (
+          err?.message === "NEXT_REDIRECT" ||
+          (typeof err?.message === "string" && err.message.includes("NEXT_REDIRECT")) ||
+          (typeof err?.digest === "string" && err.digest.includes("NEXT_REDIRECT"))
+        ) {
+          return;
+        }
         alert(err.message || "Error al crear la operación.");
       }
     });
