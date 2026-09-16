@@ -33,6 +33,8 @@ import { Button } from "@/components/ui/button";
 import { EditClientDialog } from "@/components/edit-client-dialog";
 import { ClientNotesSection } from "@/components/client-notes-section";
 import { ClientDocumentsRepository } from "@/components/client-documents-repository";
+import { CopyMasterPortalButton } from "@/components/copy-master-portal-button";
+import { getOrGenerateClientPortalToken } from "@/lib/client-portal";
 
 export const dynamic = "force-dynamic";
 
@@ -68,6 +70,8 @@ export default async function ClientDetailPage({ params }: ClientDetailPageProps
   if (!client) {
     notFound();
   }
+
+  const portalToken = await getOrGenerateClientPortalToken(client.id, client.portalToken);
 
   // Extract Operations and Liquidations from Quotations
   const operations = client.quotations
@@ -151,6 +155,7 @@ export default async function ClientDetailPage({ params }: ClientDetailPageProps
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
+          <CopyMasterPortalButton portalToken={portalToken} clientName={client.businessName} />
           <EditClientDialog client={client} />
           <Link href={`/quotations/new?clientId=${client.id}`}>
             <Button className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs h-9 flex items-center gap-1.5 shadow-sm">

@@ -56,6 +56,7 @@ enum LiquidationStatus {
 
 model Client {
   id             String       @id @default(cuid())
+  portalToken    String?      @unique @default(uuid())
   documentType   String       @default("RUC")
   documentNumber String       @unique
   businessName   String
