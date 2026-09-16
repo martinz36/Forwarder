@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { pdf } from "@react-pdf/renderer";
 import {
   MoreHorizontal,
   Eye,
@@ -11,6 +12,7 @@ import {
   Check,
   ExternalLink,
   Loader2,
+  FileText,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -21,12 +23,43 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { generateLiquidationAction } from "@/app/liquidations/actions";
+import { ArrivalNoticePDF, ArrivalNoticePdfData } from "@/components/pdf/arrival-notice-pdf";
 
 interface OperationActionsMenuProps {
   operation: {
     id: string;
     status: string;
+    blNumber?: string | null;
+    etd?: Date | string | null;
+    eta?: Date | string | null;
+    customsChannel?: "VERDE" | "NARANJA" | "ROJO" | null;
     sharedToken: string;
+    createdAt?: Date | string;
+    quotation?: {
+      id?: string;
+      code?: string;
+      origin?: string | null;
+      destination?: string | null;
+      shippingLine?: string | null;
+      client?: {
+        id?: string;
+        businessName?: string;
+        documentType?: string | null;
+        documentNumber?: string | null;
+        address?: string | null;
+      };
+    };
+    charges?: Array<{
+      id?: string;
+      currency?: string;
+      totalPrice?: number;
+      unitPrice?: number | null;
+      quantity?: number | null;
+      description?: string | null;
+      category?: string | null;
+      isTaxable?: boolean | null;
+      isExtraCharge?: boolean;
+    }>;
     liquidation?: {
       id: string;
       status: string;
@@ -38,6 +71,7 @@ export function OperationActionsMenu({ operation }: OperationActionsMenuProps) {
   const router = useRouter();
   const [copied, setCopied] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isGeneratingArrivalNotice, setIsGeneratingArrivalNotice] = useState(false);
 
   const sharedLink =
     typeof window !== "undefined"
@@ -57,6 +91,94 @@ export function OperationActionsMenu({ operation }: OperationActionsMenuProps) {
     } catch (err: any) {
       alert(err?.message || "Error al generar la liquidación");
       setIsGenerating(false);
+    }
+  };
+
+  const handleDownloadArrivalNotice = async () => {
+    try {
+      setIsGeneratingArrivalNotice(true);
+
+      let taxableUsd = 0;
+      let nonTaxableUsd = 0;
+      let taxablePen = 0;
+      let nonTaxablePen = 0;
+
+      (operation.charges || []).forEach((charge) => {
+        const sale = charge.totalPrice || 0;
+        if (charge.currency === "PEN") {
+          if (charge.isTaxable) taxablePen += sale;
+          else nonTaxablePen += sale;
+        } else {
+          if (charge.isTaxable) taxableUsd += sale;
+          else nonTaxableUsd += sale;
+        }
+      });
+
+      taxableUsd = Number(taxableUsd.toFixed(2));
+      const igvUsd = Number((taxableUsd * 0.18).toFixed(2));
+      const totalTaxableUsd = Number((taxableUsd + igvUsd).toFixed(2));
+      nonTaxableUsd = Number(nonTaxableUsd.toFixed(2));
+      const grandTotalUsd = Number((totalTaxableUsd + nonTaxableUsd).toFixed(2));
+
+      taxablePen = Number(taxablePen.toFixed(2));
+      const igvPen = Number((taxablePen * 0.18).toFixed(2));
+      const totalTaxablePen = Number((taxablePen + igvPen).toFixed(2));
+      nonTaxablePen = Number(nonTaxablePen.toFixed(2));
+      const grandTotalPen = Number((totalTaxablePen + nonTaxablePen).toFixed(2));
+
+      const opDisplayCode = operation.id.startsWith("OP-")
+        ? operation.id
+        : `OP-${operation.quotation?.code?.replace(/^COT-/, "") || ""}`;
+
+      const arrivalNoticePdfData: ArrivalNoticePdfData = {
+        operationCode: opDisplayCode,
+        blNumber: operation.blNumber,
+        etd: operation.etd,
+        eta: operation.eta,
+        origin: operation.quotation?.origin,
+        destination: operation.quotation?.destination,
+        shippingLine: operation.quotation?.shippingLine,
+        customsChannel: operation.customsChannel,
+        createdAt: operation.createdAt ? new Date(operation.createdAt) : new Date(),
+        client: {
+          name: operation.quotation?.client?.businessName || "",
+          documentType: operation.quotation?.client?.documentType,
+          documentNumber: operation.quotation?.client?.documentNumber,
+          address: operation.quotation?.client?.address,
+        },
+        charges: (operation.charges || []).map((c) => ({
+          description: c.description || "Servicio",
+          category: c.category || "",
+          currency: c.currency || "USD",
+          unitPrice: c.unitPrice ?? c.totalPrice ?? 0,
+          quantity: c.quantity ?? 1,
+          totalPrice: c.totalPrice || 0,
+          isTaxable: c.isTaxable ?? false,
+          isExtraCharge: c.isExtraCharge ?? false,
+        })),
+        subtotalTaxableUsd: taxableUsd,
+        igvUsd,
+        totalTaxableUsd,
+        totalNonTaxableUsd: nonTaxableUsd,
+        grandTotalUsd,
+        subtotalTaxablePen: taxablePen,
+        igvPen,
+        totalTaxablePen,
+        totalNonTaxablePen: nonTaxablePen,
+        grandTotalPen,
+      };
+
+      const blob = await pdf(<ArrivalNoticePDF data={arrivalNoticePdfData} />).toBlob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Aviso_Llegada_${opDisplayCode.replace(/[^a-zA-Z0-9-]/g, "_")}.pdf`;
+      a.click();
+    } catch (err: any) {
+      console.error("Error al generar el Aviso de Llegada:", err);
+      alert("Error al generar el Aviso de Llegada en PDF.");
+    } finally {
+      setIsGeneratingArrivalNotice(false);
     }
   };
 
@@ -87,7 +209,7 @@ export function OperationActionsMenu({ operation }: OperationActionsMenuProps) {
             <span className="sr-only">Abrir menú</span>
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-52">
+        <DropdownMenuContent align="end" className="w-56">
           {/* Ver / Gestionar Operación */}
           <DropdownMenuItem asChild>
             <Link
@@ -113,6 +235,25 @@ export function OperationActionsMenu({ operation }: OperationActionsMenuProps) {
               <>
                 <Share2 className="h-4 w-4 text-purple-600" />
                 <span>Portal del Cliente</span>
+              </>
+            )}
+          </DropdownMenuItem>
+
+          {/* Generar Aviso de Llegada */}
+          <DropdownMenuItem
+            onClick={handleDownloadArrivalNotice}
+            disabled={isGeneratingArrivalNotice}
+            className="flex items-center gap-2 cursor-pointer text-slate-700"
+          >
+            {isGeneratingArrivalNotice ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin text-amber-600" />
+                <span>Generando Aviso...</span>
+              </>
+            ) : (
+              <>
+                <FileText className="h-4 w-4 text-amber-600" />
+                <span>Generar Aviso de Llegada</span>
               </>
             )}
           </DropdownMenuItem>

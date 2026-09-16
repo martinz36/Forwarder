@@ -30,24 +30,34 @@ export interface OperationChargeItem {
   currency: string;
   totalPrice: number;
   isExtraCharge: boolean;
+  description?: string | null;
+  category?: string | null;
+  unitPrice?: number | null;
+  quantity?: number | null;
+  isTaxable?: boolean | null;
 }
 
 export interface OperationWithDetails {
   id: string;
   status: string;
-  blNumber: string | null;
-  etd: Date | string | null;
-  eta: Date | string | null;
-  customsChannel: "VERDE" | "NARANJA" | "ROJO" | null;
+  blNumber?: string | null;
+  etd?: Date | string | null;
+  eta?: Date | string | null;
+  customsChannel?: "VERDE" | "NARANJA" | "ROJO" | null;
   sharedToken: string;
-  createdAt: Date | string;
+  createdAt?: Date | string;
   quotation: {
     id: string;
     code: string;
+    origin?: string | null;
+    destination?: string | null;
+    shippingLine?: string | null;
     client: {
       id: string;
       businessName: string;
+      documentType?: string | null;
       documentNumber?: string | null;
+      address?: string | null;
     };
   };
   charges: OperationChargeItem[];
