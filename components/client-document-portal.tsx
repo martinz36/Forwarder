@@ -10,6 +10,10 @@ import { useUploadThing } from "@/lib/uploadthing";
 import { createDocumentAction } from "@/app/operations/documents-actions";
 import { formatDate } from "@/lib/format";
 
+import { QuotationDetailDialog } from "@/components/quotation-detail-dialog";
+import { QuotationPdfData } from "@/components/pdf/quotation-pdf";
+import { formatCurrency } from "@/lib/format";
+
 interface DocumentItem {
   id: string;
   name: string;
@@ -30,6 +34,9 @@ interface ClientDocumentPortalProps {
   status: string;
   customsChannel?: string | null;
   documents: DocumentItem[];
+  quotationPdfData?: QuotationPdfData;
+  quotationTotalUsd?: number;
+  quotationTotalPen?: number;
 }
 
 const statusLabelMap: Record<string, string> = {
@@ -56,6 +63,9 @@ export function ClientDocumentPortal({
   status,
   customsChannel,
   documents,
+  quotationPdfData,
+  quotationTotalUsd,
+  quotationTotalPen,
 }: ClientDocumentPortalProps) {
   const [docName, setDocName] = useState("");
   const [docType, setDocType] = useState<"FACTURA_COMERCIAL" | "PACKING_LIST" | "BL" | "OTRO">("FACTURA_COMERCIAL");
@@ -188,6 +198,38 @@ export function ClientDocumentPortal({
             </div>
           </div>
         </div>
+
+        {/* Quotation & Approved Commercial Proposal Banner */}
+        {quotationPdfData && (
+          <div className="rounded-2xl border border-blue-200 bg-gradient-to-r from-blue-50/80 via-indigo-50/40 to-slate-50 p-5 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                <FileText className="h-5 w-5" />
+              </div>
+              <div>
+                <span className="text-[11px] font-bold text-blue-900 uppercase tracking-wider block">
+                  Cotización Comercial Aprobada
+                </span>
+                <h3 className="font-bold text-slate-900 text-base">
+                  Cotización N° {operationCode}
+                </h3>
+                <p className="text-xs text-slate-600 font-mono">
+                  Monto Aprobado: <strong>{formatCurrency(quotationTotalUsd, "USD")}</strong>
+                  {quotationTotalPen && quotationTotalPen > 0 ? ` • ${formatCurrency(quotationTotalPen, "PEN")}` : ""}
+                </p>
+              </div>
+            </div>
+
+            <QuotationDetailDialog
+              pdfData={quotationPdfData}
+              totalUsd={quotationTotalUsd || 0}
+              totalPen={quotationTotalPen || 0}
+              buttonText="Ver Cotización Completa / PDF"
+              buttonVariant="default"
+              className="bg-blue-600 hover:bg-blue-500 text-white font-bold shadow px-4 py-2"
+            />
+          </div>
+        )}
 
         {/* Broker Final Documents Download Section */}
         <div className="space-y-3">

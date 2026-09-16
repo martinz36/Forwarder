@@ -19,15 +19,22 @@ import {
   PackageCheck,
   Copy,
   Check,
+  Eye,
+  Download,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatCurrency, formatDate } from "@/lib/format";
+import { QuotationDetailDialog } from "@/components/quotation-detail-dialog";
+import { QuotationPdfData } from "@/components/pdf/quotation-pdf";
 
 export interface MasterPortalOperation {
   id: string;
   quotationCode: string;
+  quotationTotalUsd: number;
+  quotationTotalPen: number;
+  quotationPdfData: QuotationPdfData;
   blNumber?: string | null;
   status: string;
   incoterm?: string | null;
@@ -55,6 +62,19 @@ export interface MasterPortalOperation {
   liquidationGrandTotalPen?: number | null;
 }
 
+export interface MasterPortalQuotation {
+  id: string;
+  code: string;
+  status: string;
+  createdAt: Date | string;
+  totalUsd: number;
+  totalPen: number;
+  pdfData: QuotationPdfData;
+  operationId?: string;
+  operationStatus?: string;
+  sharedToken?: string;
+}
+
 interface MasterClientPortalProps {
   clientName: string;
   documentType?: string | null;
@@ -63,6 +83,7 @@ interface MasterClientPortalProps {
   email?: string | null;
   phone?: string | null;
   operations: MasterPortalOperation[];
+  quotations: MasterPortalQuotation[];
   companyName?: string;
 }
 
@@ -96,6 +117,7 @@ export function MasterClientPortal({
   email,
   phone,
   operations,
+  quotations,
   companyName = "Marivan Logistics",
 }: MasterClientPortalProps) {
   const [searchQuery, setSearchQuery] = useState("");
@@ -124,6 +146,11 @@ export function MasterClientPortal({
       (op.origin && op.origin.toLowerCase().includes(q)) ||
       (op.destination && op.destination.toLowerCase().includes(q))
     );
+  });
+
+  const filteredQuotations = quotations.filter((qItem) => {
+    const q = searchQuery.toLowerCase();
+    return qItem.code.toLowerCase().includes(q);
   });
 
   // Calculate global balance
@@ -184,7 +211,7 @@ export function MasterClientPortal({
                 Bienvenido, {clientName}
               </h2>
               <p className="text-xs sm:text-sm text-slate-300 mt-1">
-                Monitorea en tiempo real todas tus operaciones de comercio exterior, consulta el estado de tus contenedores y descarga la documentación oficial.
+                Monitorea en tiempo real todas tus operaciones de comercio exterior, consulta tus cotizaciones aprobadas y descarga la documentación oficial.
               </p>
             </div>
 
@@ -215,11 +242,11 @@ export function MasterClientPortal({
 
             <div className="rounded-xl border border-slate-800 bg-slate-800/50 p-4 space-y-1 backdrop-blur-sm">
               <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
-                Despachos Completados
+                Cotizaciones Registradas
               </span>
               <div className="flex items-center justify-between">
-                <span className="text-2xl font-black text-emerald-400">{completedOps.length}</span>
-                <PackageCheck className="h-5 w-5 text-emerald-400" />
+                <span className="text-2xl font-black text-indigo-400">{quotations.length}</span>
+                <FileText className="h-5 w-5 text-indigo-400" />
               </div>
             </div>
 
@@ -228,10 +255,10 @@ export function MasterClientPortal({
                 Saldo Pendiente de Cobro / Anticipo
               </span>
               <div className="flex items-center justify-between flex-wrap gap-2">
-                <div className="flex items-center gap-4 font-mono font-bold text-base text-white">
-                  <span>USD {formatCurrency(totalPendingUsd, "USD")}</span>
+                <div className="flex items-center gap-3 font-mono font-bold text-base text-white">
+                  <span>{formatCurrency(totalPendingUsd, "USD")}</span>
                   <span className="text-slate-500">•</span>
-                  <span>S/ {formatCurrency(totalPendingPen, "PEN")}</span>
+                  <span>{formatCurrency(totalPendingPen, "PEN")}</span>
                 </div>
                 {totalPendingUsd > 0 || totalPendingPen > 0 ? (
                   <Badge variant="outline" className="border-amber-400/50 text-amber-300 bg-amber-400/10 text-[10px]">
@@ -348,6 +375,26 @@ export function MasterClientPortal({
                       </div>
                     </div>
 
+                    {/* Quotation Total & PDF Inspection */}
+                    <div className="flex items-center justify-between bg-blue-50/60 p-3 rounded-xl border border-blue-100 text-xs">
+                      <div>
+                        <span className="text-blue-900 font-bold block text-[11px] uppercase tracking-wider">Monto Cotizado Aprobado:</span>
+                        <span className="font-mono font-black text-blue-950 text-sm">
+                          {formatCurrency(op.quotationTotalUsd, "USD")}
+                          {op.quotationTotalPen > 0 && ` • ${formatCurrency(op.quotationTotalPen, "PEN")}`}
+                        </span>
+                      </div>
+
+                      <QuotationDetailDialog
+                        pdfData={op.quotationPdfData}
+                        totalUsd={op.quotationTotalUsd}
+                        totalPen={op.quotationTotalPen}
+                        buttonText="Ver / PDF"
+                        buttonVariant="outline"
+                        className="border-blue-300 text-blue-800 bg-white hover:bg-blue-100"
+                      />
+                    </div>
+
                     {/* Dates ETD / ETA */}
                     <div className="flex items-center justify-between text-xs px-1 text-slate-600">
                       <div className="flex items-center gap-1">
@@ -380,7 +427,75 @@ export function MasterClientPortal({
           )}
         </section>
 
-        {/* SECTION 2: Historial y Despachos Liquidados */}
+        {/* SECTION 2: Cotizaciones Aprobadas & Propuestas Comerciales */}
+        <section className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+              <FileText className="h-5 w-5 text-indigo-600" /> Cotizaciones Aprobadas & Propuestas Comerciales
+            </h3>
+            <Badge variant="outline" className="font-semibold text-xs">
+              {filteredQuotations.length} Registradas
+            </Badge>
+          </div>
+
+          {filteredQuotations.length === 0 ? (
+            <div className="rounded-2xl border bg-white p-6 text-center text-xs text-slate-400 shadow-xs">
+              No hay cotizaciones registradas para este cliente.
+            </div>
+          ) : (
+            <div className="rounded-2xl border bg-white shadow-xs overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider">
+                      <th className="p-3.5">Código Cotización</th>
+                      <th className="p-3.5">Fecha Emisión</th>
+                      <th className="p-3.5">Estado</th>
+                      <th className="p-3.5 text-right">Venta USD ($)</th>
+                      <th className="p-3.5 text-right">Venta PEN (S/)</th>
+                      <th className="p-3.5 text-center">Documento PDF</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
+                    {filteredQuotations.map((q) => (
+                      <tr key={q.id} className="hover:bg-slate-50/80 transition-colors">
+                        <td className="p-3.5 font-mono font-bold text-slate-900">
+                          {q.code}
+                        </td>
+                        <td className="p-3.5 text-slate-600">
+                          {formatDate(q.createdAt)}
+                        </td>
+                        <td className="p-3.5">
+                          <Badge variant="secondary" className="font-semibold text-xs">
+                            {q.status === "ACCEPTED" ? "Aceptada / Operación" : q.status}
+                          </Badge>
+                        </td>
+                        <td className="p-3.5 text-right font-mono font-bold text-slate-900">
+                          {formatCurrency(q.totalUsd, "USD")}
+                        </td>
+                        <td className="p-3.5 text-right font-mono text-slate-700">
+                          {formatCurrency(q.totalPen, "PEN")}
+                        </td>
+                        <td className="p-3.5 text-center">
+                          <QuotationDetailDialog
+                            pdfData={q.pdfData}
+                            totalUsd={q.totalUsd}
+                            totalPen={q.totalPen}
+                            buttonText="Ver / Descargar PDF"
+                            buttonVariant="outline"
+                            className="border-indigo-200 text-indigo-700 bg-indigo-50/50 hover:bg-indigo-100"
+                          />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </section>
+
+        {/* SECTION 3: Historial y Despachos Liquidados */}
         <section className="space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
@@ -425,7 +540,7 @@ export function MasterClientPortal({
                           {formatDate(op.createdAt)}
                         </td>
                         <td className="p-3.5 text-right font-mono font-bold text-slate-900">
-                          USD {formatCurrency(op.totalChargesUsd, "USD")}
+                          {formatCurrency(op.totalChargesUsd, "USD")}
                         </td>
                         <td className="p-3.5 text-center">
                           <Link href={`/shared/${op.sharedToken}`} target="_blank">
@@ -443,7 +558,7 @@ export function MasterClientPortal({
           )}
         </section>
 
-        {/* SECTION 3: Estado de Cuenta & Saldos */}
+        {/* SECTION 4: Estado de Cuenta & Saldos */}
         {(totalPendingUsd > 0 || totalPendingPen > 0) && (
           <section className="rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50/80 to-orange-50/50 p-6 shadow-sm space-y-4">
             <div className="flex items-start gap-3">
@@ -465,9 +580,9 @@ export function MasterClientPortal({
               </div>
 
               <div className="text-right font-mono font-black text-lg text-amber-950 flex items-center gap-4">
-                <span>USD {formatCurrency(totalPendingUsd, "USD")}</span>
+                <span>{formatCurrency(totalPendingUsd, "USD")}</span>
                 <span className="text-amber-300">|</span>
-                <span>S/ {formatCurrency(totalPendingPen, "PEN")}</span>
+                <span>{formatCurrency(totalPendingPen, "PEN")}</span>
               </div>
             </div>
           </section>
