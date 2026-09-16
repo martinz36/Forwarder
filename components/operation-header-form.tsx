@@ -9,7 +9,7 @@ import { updateOperationHeaderAction } from "@/app/operations/actions";
 
 import { ThreeColumnDatePicker } from "@/components/ui/three-column-date-picker";
 
-import { OFFICIAL_INCOTERMS } from "@/app/catalog/port-partner-actions";
+import { OFFICIAL_INCOTERMS } from "@/lib/constants";
 
 interface OperationHeaderFormProps {
   operationId: string;

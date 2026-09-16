@@ -32,8 +32,8 @@ import { quotationSchema, QuotationFormValues } from "@/lib/validations/quotatio
 import { createQuotationAction, parseQuotationPdfAction, getClientPriceHistoryAction, PriceHistoryItem } from "@/app/quotations/actions";
 import { ThreeColumnDatePicker } from "@/components/ui/three-column-date-picker";
 import { CreatableCombobox, ComboboxOption } from "@/components/ui/creatable-combobox";
+import { OFFICIAL_INCOTERMS } from "@/lib/constants";
 import {
-  OFFICIAL_INCOTERMS,
   getPortsAction,
   createPortAction,
   getPartnersAction,
