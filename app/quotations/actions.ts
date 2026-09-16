@@ -326,3 +326,63 @@ export async function deleteQuotationAction(quotationId: string) {
     revalidatePath(`/clients/${quotation.clientId}`);
   }
 }
+
+export interface PriceHistoryItem {
+  description: string;
+  unitPrice: number;
+  currency: string;
+  createdAt: string;
+  formattedTimeAgo: string;
+}
+
+export async function getClientPriceHistoryAction(clientId: string): Promise<PriceHistoryItem[]> {
+  if (!clientId) return [];
+
+  const items = await prisma.quotationItem.findMany({
+    where: {
+      quotation: {
+        clientId,
+      },
+    },
+    select: {
+      description: true,
+      unitPrice: true,
+      currency: true,
+      createdAt: true,
+    },
+    orderBy: { createdAt: "desc" },
+    take: 150,
+  });
+
+  const now = Date.now();
+
+  return items.map((item) => {
+    const diffMs = now - new Date(item.createdAt).getTime();
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    let formattedTimeAgo = "";
+    if (diffDays <= 0) {
+      formattedTimeAgo = "hoy";
+    } else if (diffDays === 1) {
+      formattedTimeAgo = "ayer";
+    } else if (diffDays < 30) {
+      formattedTimeAgo = `hace ${diffDays} días`;
+    } else if (diffDays < 60) {
+      formattedTimeAgo = "hace 1 mes";
+    } else if (diffDays < 365) {
+      const months = Math.floor(diffDays / 30);
+      formattedTimeAgo = `hace ${months} meses`;
+    } else {
+      const years = Math.floor(diffDays / 365);
+      formattedTimeAgo = `hace ${years} año${years > 1 ? "s" : ""}`;
+    }
+
+    return {
+      description: item.description.trim(),
+      unitPrice: item.unitPrice,
+      currency: item.currency,
+      createdAt: item.createdAt.toISOString(),
+      formattedTimeAgo,
+    };
+  });
+}

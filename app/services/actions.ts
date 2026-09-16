@@ -41,7 +41,7 @@ export async function createServiceAction(data: ServiceFormValues) {
         category: validated.category,
         defaultCurrency: validated.defaultCurrency,
         defaultCost: validated.defaultCost ?? 0,
-        defaultPrice: validated.defaultPrice ?? null,
+        defaultPrice: validated.defaultPrice ?? 0,
         isTaxable: validated.isTaxable,
       },
     });
@@ -91,7 +91,7 @@ export async function updateServiceAction(id: string, data: ServiceFormValues) {
         category: validated.category,
         defaultCurrency: validated.defaultCurrency,
         defaultCost: validated.defaultCost ?? 0,
-        defaultPrice: validated.defaultPrice ?? null,
+        defaultPrice: validated.defaultPrice ?? 0,
         isTaxable: validated.isTaxable,
       },
     });

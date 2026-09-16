@@ -161,8 +161,8 @@ model ConceptCatalog {
   name            String   @unique
   category        String   @default("GASTOS_LOCALES")
   defaultCurrency String   @default("USD")
-  defaultCost     Float?   @default(0)
-  defaultPrice    Float?
+  defaultCost     Float    @default(0)
+  defaultPrice    Float    @default(0)
   isTaxable       Boolean  @default(true)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt

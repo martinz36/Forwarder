@@ -5,7 +5,7 @@ export const serviceSchema = z.object({
   category: z.string().default("GASTOS_LOCALES"),
   defaultCurrency: z.enum(["USD", "PEN"]).default("USD"),
   defaultCost: z.number().min(0).optional().default(0),
-  defaultPrice: z.number().min(0).optional().nullable(),
+  defaultPrice: z.number().min(0).optional().default(0),
   isTaxable: z.boolean().default(true),
 });
 

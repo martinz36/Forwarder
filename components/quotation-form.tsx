@@ -29,7 +29,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatCurrency } from "@/lib/format";
 import { quotationSchema, QuotationFormValues } from "@/lib/validations/quotation";
-import { createQuotationAction, parseQuotationPdfAction } from "@/app/quotations/actions";
+import { createQuotationAction, parseQuotationPdfAction, getClientPriceHistoryAction, PriceHistoryItem } from "@/app/quotations/actions";
 import { ThreeColumnDatePicker } from "@/components/ui/three-column-date-picker";
 
 export const CATEGORY_OPTIONS = [
@@ -66,6 +66,7 @@ export function QuotationForm({ clients, concepts, expedient }: QuotationFormPro
   const [serverError, setServerError] = useState<string | null>(null);
   const [isParsingPdf, setIsParsingPdf] = useState(false);
   const [pdfSuccessMessage, setPdfSuccessMessage] = useState<string | null>(null);
+  const [priceHistory, setPriceHistory] = useState<PriceHistoryItem[]>([]);
 
   const {
     register,
@@ -139,6 +140,7 @@ export function QuotationForm({ clients, concepts, expedient }: QuotationFormPro
   });
 
   const watchedItems = watch("items") || [];
+  const selectedClientId = watch("clientId");
 
   useEffect(() => {
     if (!watch("validUntil")) {
@@ -146,6 +148,14 @@ export function QuotationForm({ clients, concepts, expedient }: QuotationFormPro
       setValue("validUntil", defaultDate);
     }
   }, [setValue, watch]);
+
+  useEffect(() => {
+    if (selectedClientId) {
+      getClientPriceHistoryAction(selectedClientId).then((history) => {
+        setPriceHistory(history || []);
+      });
+    }
+  }, [selectedClientId]);
 
   // Live calculations for Summary
   let liveCostUsd = 0;
@@ -630,6 +640,14 @@ export function QuotationForm({ clients, concepts, expedient }: QuotationFormPro
                 const lineSale = itemPrice * itemQty;
                 const curr = currentItem.currency || "USD";
 
+                const desc = (currentItem.description || "").trim().toLowerCase();
+                const matchedHistory = desc
+                  ? priceHistory.find((h) => {
+                      const hDesc = h.description.toLowerCase();
+                      return hDesc === desc || hDesc.includes(desc) || desc.includes(hDesc);
+                    })
+                  : null;
+
                 return (
                   <tr key={field.id} className="hover:bg-slate-50/80 transition-colors">
                     {/* # */}
@@ -656,9 +674,19 @@ export function QuotationForm({ clients, concepts, expedient }: QuotationFormPro
                     <td className="py-2 px-2">
                       <Input
                         placeholder="Ej: Flete Internacional, Handling..."
+                        list={`concept-list-${index}`}
                         {...register(`items.${index}.description` as const)}
+                        onChange={(e) => {
+                          register(`items.${index}.description` as const).onChange(e);
+                          handleSelectConcept(index, e.target.value);
+                        }}
                         className="h-8 text-xs font-medium"
                       />
+                      <datalist id={`concept-list-${index}`}>
+                        {concepts.map((c) => (
+                          <option key={c.id} value={c.name} />
+                        ))}
+                      </datalist>
                       {errors.items?.[index]?.description && (
                         <p className="text-[10px] text-red-500 mt-0.5">
                           {errors.items[index]?.description?.message}
@@ -697,6 +725,19 @@ export function QuotationForm({ clients, concepts, expedient }: QuotationFormPro
                         className="text-right font-bold text-blue-900 border-blue-300 h-8 text-xs px-1.5"
                         {...register(`items.${index}.unitPrice` as const, { valueAsNumber: true })}
                       />
+                      {matchedHistory && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setValue(`items.${index}.unitPrice`, matchedHistory.unitPrice);
+                            setValue(`items.${index}.currency`, matchedHistory.currency as "USD" | "PEN");
+                          }}
+                          className="mt-1 text-[10px] text-blue-600 hover:text-blue-800 font-semibold underline flex items-center justify-end gap-0.5 cursor-pointer text-right w-full block"
+                          title="Haz clic para aplicar este precio histórico a la cotización"
+                        >
+                          Histórico: {matchedHistory.currency === "PEN" ? "S/" : "$"} {matchedHistory.unitPrice.toFixed(2)} ({matchedHistory.formattedTimeAgo})
+                        </button>
+                      )}
                     </td>
 
                     {/* Cant. */}
