@@ -87,6 +87,7 @@ const styles = StyleSheet.create({
   },
   metaGrid: {
     flexDirection: "row",
+    justifyContent: "space-between",
     backgroundColor: "#f8fafc",
     borderRadius: 6,
     padding: 10,
@@ -94,20 +95,29 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#e2e8f0",
   },
-  metaCol: {
-    flex: 1,
+  metaCol1: {
+    width: "40%",
+    paddingRight: 10,
+  },
+  metaCol2: {
+    width: "35%",
+    paddingRight: 8,
+  },
+  metaCol3: {
+    width: "25%",
   },
   metaLabel: {
     fontSize: 7,
     fontFamily: "Helvetica-Bold",
     color: "#64748b",
     textTransform: "uppercase",
+    marginBottom: 2,
   },
   metaValue: {
-    fontSize: 9,
+    fontSize: 8.5,
     fontFamily: "Helvetica-Bold",
     color: "#0f172a",
-    marginTop: 2,
+    lineHeight: 1.25,
   },
   sectionTitle: {
     fontSize: 10,
@@ -238,33 +248,33 @@ export function ArrivalNoticePDF({ data }: { data: ArrivalNoticePdfData }) {
 
         {/* Client & Metadata Grid */}
         <View style={styles.metaGrid}>
-          <View style={styles.metaCol}>
+          <View style={styles.metaCol1}>
             <Text style={styles.metaLabel}>Cliente Importador</Text>
             <Text style={styles.metaValue}>{data.client.name}</Text>
-            <Text style={{ fontSize: 8, color: "#64748b", marginTop: 2 }}>
-              {data.client.documentType}: {data.client.documentNumber}
+            <Text style={{ fontSize: 7.5, color: "#64748b", marginTop: 2 }}>
+              {data.client.documentType || "RUC"}: {data.client.documentNumber || "-"}
             </Text>
           </View>
-          <View style={styles.metaCol}>
+          <View style={styles.metaCol2}>
             <Text style={styles.metaLabel}>Documento de Embarque</Text>
             <Text style={styles.metaValue}>BL: {data.blNumber || "Pendiente"}</Text>
-            <Text style={{ fontSize: 8, color: "#64748b", marginTop: 2 }}>
+            <Text style={{ fontSize: 7.5, color: "#64748b", marginTop: 2 }}>
               Llegada ETA: {formatDate(data.eta)}
             </Text>
           </View>
-          <View style={styles.metaCol}>
+          <View style={styles.metaCol3}>
             <Text style={styles.metaLabel}>Detalles de Carga</Text>
             <Text style={styles.metaValue}>{data.shippingLine || "N/A"}</Text>
-            <Text style={{ fontSize: 8, color: "#64748b", marginTop: 2 }}>
+            <Text style={{ fontSize: 7.5, color: "#64748b", marginTop: 2 }}>
               Canal: {data.customsChannel || "VERDE"}
             </Text>
           </View>
         </View>
 
-        {/* Table 1: Servicios Afectos a IGV (18%) */}
+        {/* Table 1: Servicios Afectos a IGV */}
         {taxableCharges.length > 0 && (
           <View>
-            <Text style={styles.sectionTitle}>1. Servicios Facturables del Broker (Afectos a IGV 18%)</Text>
+            <Text style={styles.sectionTitle}>1. Servicios Afectos a IGV</Text>
             <View style={styles.table}>
               <View style={styles.tableHeader}>
                 <Text style={[styles.colDesc, styles.thText]}>Concepto</Text>
@@ -292,10 +302,10 @@ export function ArrivalNoticePDF({ data }: { data: ArrivalNoticePdfData }) {
           </View>
         )}
 
-        {/* Table 2: Reembolsos Inafectos */}
+        {/* Table 2: Servicios No Afectos a IGV */}
         {nonTaxableCharges.length > 0 && (
           <View>
-            <Text style={styles.sectionTitle}>2. Pagos por Cuenta de Terceros (Reembolsos Inafectos)</Text>
+            <Text style={styles.sectionTitle}>2. Servicios No Afectos a IGV</Text>
             <View style={styles.table}>
               <View style={styles.tableHeader}>
                 <Text style={[styles.colDesc, styles.thText]}>Reembolso / Pago Terceros</Text>

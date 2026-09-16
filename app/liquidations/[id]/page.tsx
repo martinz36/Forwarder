@@ -178,11 +178,11 @@ export default async function LiquidationDetailPage({ params }: LiquidationPageP
           </div>
         </div>
 
-        {/* Table 1: Conceptos Facturables (Afectos a IGV 18%) */}
+        {/* Table 1: Servicios Afectos a IGV */}
         <div className="space-y-3">
           <div className="flex items-center justify-between border-b pb-2">
             <h3 className="font-bold text-slate-900 text-base flex items-center gap-2">
-              <FileText className="h-5 w-5 text-blue-600" /> 1. Servicios Facturables del Broker (Afectos a IGV 18%)
+              <FileText className="h-5 w-5 text-blue-600" /> 1. Servicios Afectos a IGV
             </h3>
             <Badge className="bg-blue-100 text-blue-800 text-xs font-semibold">
               Sujeto a IGV (18%)
@@ -247,11 +247,11 @@ export default async function LiquidationDetailPage({ params }: LiquidationPageP
           </div>
         </div>
 
-        {/* Table 2: Pagos por Cuenta de Terceros (Inafectos / Reembolsos) */}
+        {/* Table 2: Servicios No Afectos a IGV */}
         <div className="space-y-3 pt-4">
           <div className="flex items-center justify-between border-b pb-2">
             <h3 className="font-bold text-slate-900 text-base flex items-center gap-2">
-              <Receipt className="h-5 w-5 text-amber-600" /> 2. Pagos por Cuenta de Terceros (Reembolsos Inafectos)
+              <Receipt className="h-5 w-5 text-amber-600" /> 2. Servicios No Afectos a IGV
             </h3>
             <Badge className="bg-amber-100 text-amber-800 text-xs font-semibold">
               Sin IGV (Reembolso exacto)
