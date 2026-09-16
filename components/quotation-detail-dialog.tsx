@@ -122,7 +122,10 @@ export function QuotationDetailDialog({
                 <tbody className="divide-y text-slate-800 font-medium">
                   {pdfData.items.map((item, idx) => (
                     <tr key={idx} className="hover:bg-slate-50/80">
-                      <td className="p-2.5 font-semibold text-slate-900">{item.description}</td>
+                      <td className="p-2.5 font-semibold text-slate-900">
+                        {item.description}
+                        {item.isTaxable && <span className="ml-1 text-[10px] font-normal text-blue-600 bg-blue-50 border border-blue-200 px-1 rounded">+IGV</span>}
+                      </td>
                       <td className="p-2.5 text-center font-mono">{item.currency}</td>
                       <td className="p-2.5 text-right font-mono">{formatCurrency(item.unitPrice, item.currency as any)}</td>
                       <td className="p-2.5 text-center">{item.quantity}</td>
@@ -132,6 +135,30 @@ export function QuotationDetailDialog({
                     </tr>
                   ))}
                 </tbody>
+                <tfoot className="bg-slate-50 border-t border-slate-200 text-slate-700 font-semibold">
+                  {pdfData.subtotalTaxableUsd > 0 && (
+                    <>
+                      <tr>
+                        <td colSpan={4} className="p-2 text-right text-[11px] text-slate-500">Subtotal Servicios Locales (Afectos):</td>
+                        <td className="p-2 text-right font-mono text-xs text-slate-900">{formatCurrency(pdfData.subtotalTaxableUsd, "USD")}</td>
+                      </tr>
+                      <tr>
+                        <td colSpan={4} className="p-2 text-right text-[11px] text-blue-700">I.G.V. (18%):</td>
+                        <td className="p-2 text-right font-mono text-xs text-blue-700 font-bold">{formatCurrency(pdfData.igvUsd, "USD")}</td>
+                      </tr>
+                    </>
+                  )}
+                  {pdfData.totalNonTaxableUsd > 0 && (
+                    <tr>
+                      <td colSpan={4} className="p-2 text-right text-[11px] text-slate-500">Gastos Inafectos (Origen / Flete):</td>
+                      <td className="p-2 text-right font-mono text-xs text-slate-900">{formatCurrency(pdfData.totalNonTaxableUsd, "USD")}</td>
+                    </tr>
+                  )}
+                  <tr className="border-t-2 border-slate-300 bg-slate-100 font-bold">
+                    <td colSpan={4} className="p-2.5 text-right text-xs text-slate-900">TOTAL FINAL APROBADO (USD):</td>
+                    <td className="p-2.5 text-right font-mono text-sm text-emerald-700 font-black">{formatCurrency(pdfData.grandTotalUsd, "USD")}</td>
+                  </tr>
+                </tfoot>
               </table>
             </div>
           </div>

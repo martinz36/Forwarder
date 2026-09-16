@@ -104,8 +104,8 @@ export default async function MasterPortalPage({ params }: PortalPageProps) {
       code: q.code,
       status: q.status,
       createdAt: q.createdAt,
-      totalUsd: q.totalUsd,
-      totalPen: q.totalPen,
+      totalUsd: pdfData.grandTotalUsd,
+      totalPen: pdfData.grandTotalPen,
       pdfData,
       operationId: q.operation?.id,
       operationStatus: q.operation?.status,
@@ -163,17 +163,27 @@ export default async function MasterPortalPage({ params }: PortalPageProps) {
         })),
       });
 
-      // Calculate total charges by currency
-      let totalChargesUsd = 0;
-      let totalChargesPen = 0;
+      // Calculate total charges by currency including 18% IGV on taxable charges
+      let subtotalTaxableUsd = 0;
+      let totalNonTaxableUsd = 0;
+      let subtotalTaxablePen = 0;
+      let totalNonTaxablePen = 0;
 
       op.charges.forEach((c) => {
         if (c.currency === "PEN") {
-          totalChargesPen += c.totalPrice;
+          if (c.isTaxable) subtotalTaxablePen += c.totalPrice;
+          else totalNonTaxablePen += c.totalPrice;
         } else {
-          totalChargesUsd += c.totalPrice;
+          if (c.isTaxable) subtotalTaxableUsd += c.totalPrice;
+          else totalNonTaxableUsd += c.totalPrice;
         }
       });
+
+      const igvUsd = Number((subtotalTaxableUsd * 0.18).toFixed(2));
+      const totalChargesUsd = Number((subtotalTaxableUsd + igvUsd + totalNonTaxableUsd).toFixed(2));
+
+      const igvPen = Number((subtotalTaxablePen * 0.18).toFixed(2));
+      const totalChargesPen = Number((subtotalTaxablePen + igvPen + totalNonTaxablePen).toFixed(2));
 
       // Calculate total payments received by currency
       let totalPaidUsd = 0;
@@ -190,8 +200,8 @@ export default async function MasterPortalPage({ params }: PortalPageProps) {
       return {
         id: op.id,
         quotationCode: q.code,
-        quotationTotalUsd: q.totalUsd,
-        quotationTotalPen: q.totalPen,
+        quotationTotalUsd: pdfData.grandTotalUsd,
+        quotationTotalPen: pdfData.grandTotalPen,
         quotationPdfData: pdfData,
         blNumber: op.blNumber,
         status: op.status,

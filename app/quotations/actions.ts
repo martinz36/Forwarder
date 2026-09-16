@@ -15,9 +15,11 @@ export async function createQuotationAction(data: QuotationFormValues) {
   const sequence = String(count + 1).padStart(4, "0");
   const code = `COT-${year}-${sequence}`;
 
-  // Process items and calculate totals and profits by currency
-  let totalUsd = 0;
-  let totalPen = 0;
+  // Process items and calculate totals (incl. IGV) and profits by currency
+  let subtotalTaxableUsd = 0;
+  let totalNonTaxableUsd = 0;
+  let subtotalTaxablePen = 0;
+  let totalNonTaxablePen = 0;
   let profitUsd = 0;
   let profitPen = 0;
 
@@ -25,13 +27,16 @@ export async function createQuotationAction(data: QuotationFormValues) {
     const saleTotal = Number((item.unitPrice * item.quantity).toFixed(2));
     const costTotal = Number((item.unitCost * item.quantity).toFixed(2));
     const itemProfit = Number((saleTotal - costTotal).toFixed(2));
+    const isTaxable = item.isTaxable ?? (item.category === "GASTOS_LOCALES");
 
     if (item.currency === "USD") {
-      totalUsd += saleTotal;
       profitUsd += itemProfit;
+      if (isTaxable) subtotalTaxableUsd += saleTotal;
+      else totalNonTaxableUsd += saleTotal;
     } else {
-      totalPen += saleTotal;
       profitPen += itemProfit;
+      if (isTaxable) subtotalTaxablePen += saleTotal;
+      else totalNonTaxablePen += saleTotal;
     }
 
     return {
@@ -42,12 +47,16 @@ export async function createQuotationAction(data: QuotationFormValues) {
       unitPrice: item.unitPrice,
       quantity: item.quantity,
       total: saleTotal,
-      isTaxable: item.isTaxable ?? (item.category === "GASTOS_LOCALES"),
+      isTaxable,
     };
   });
 
-  totalUsd = Number(totalUsd.toFixed(2));
-  totalPen = Number(totalPen.toFixed(2));
+  const igvUsd = Number((subtotalTaxableUsd * 0.18).toFixed(2));
+  const totalUsd = Number((subtotalTaxableUsd + igvUsd + totalNonTaxableUsd).toFixed(2));
+
+  const igvPen = Number((subtotalTaxablePen * 0.18).toFixed(2));
+  const totalPen = Number((subtotalTaxablePen + igvPen + totalNonTaxablePen).toFixed(2));
+
   profitUsd = Number(profitUsd.toFixed(2));
   profitPen = Number(profitPen.toFixed(2));
 
@@ -118,9 +127,11 @@ export async function updateQuotationAction(quotationId: string, data: Quotation
 
   const validated = quotationSchema.parse(data);
 
-  // Process items and calculate totals and profits by currency
-  let totalUsd = 0;
-  let totalPen = 0;
+  // Process items and calculate totals (incl. IGV) and profits by currency
+  let subtotalTaxableUsd = 0;
+  let totalNonTaxableUsd = 0;
+  let subtotalTaxablePen = 0;
+  let totalNonTaxablePen = 0;
   let profitUsd = 0;
   let profitPen = 0;
 
@@ -128,13 +139,16 @@ export async function updateQuotationAction(quotationId: string, data: Quotation
     const saleTotal = Number((item.unitPrice * item.quantity).toFixed(2));
     const costTotal = Number((item.unitCost * item.quantity).toFixed(2));
     const itemProfit = Number((saleTotal - costTotal).toFixed(2));
+    const isTaxable = item.isTaxable ?? (item.category === "GASTOS_LOCALES");
 
     if (item.currency === "USD") {
-      totalUsd += saleTotal;
       profitUsd += itemProfit;
+      if (isTaxable) subtotalTaxableUsd += saleTotal;
+      else totalNonTaxableUsd += saleTotal;
     } else {
-      totalPen += saleTotal;
       profitPen += itemProfit;
+      if (isTaxable) subtotalTaxablePen += saleTotal;
+      else totalNonTaxablePen += saleTotal;
     }
 
     return {
@@ -145,12 +159,16 @@ export async function updateQuotationAction(quotationId: string, data: Quotation
       unitPrice: item.unitPrice,
       quantity: item.quantity,
       total: saleTotal,
-      isTaxable: item.isTaxable ?? (item.category === "GASTOS_LOCALES"),
+      isTaxable,
     };
   });
 
-  totalUsd = Number(totalUsd.toFixed(2));
-  totalPen = Number(totalPen.toFixed(2));
+  const igvUsd = Number((subtotalTaxableUsd * 0.18).toFixed(2));
+  const totalUsd = Number((subtotalTaxableUsd + igvUsd + totalNonTaxableUsd).toFixed(2));
+
+  const igvPen = Number((subtotalTaxablePen * 0.18).toFixed(2));
+  const totalPen = Number((subtotalTaxablePen + igvPen + totalNonTaxablePen).toFixed(2));
+
   profitUsd = Number(profitUsd.toFixed(2));
   profitPen = Number(profitPen.toFixed(2));
 
