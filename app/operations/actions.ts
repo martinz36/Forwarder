@@ -70,6 +70,7 @@ export async function createOperationFromQuotationAction(quotationId: string) {
           totalPrice,
           isExtraCharge: false,
           isTaxable: item.isTaxable,
+          isAdvance: item.isAdvance,
         };
       });
 

@@ -1,14 +1,17 @@
 "use client";
 
 import { useTransition } from "react";
-import { Receipt, Loader2, ArrowRight, FileCheck, ShieldAlert, CheckSquare, Square } from "lucide-react";
+import { Receipt, Loader2, ArrowRight, FileCheck, CheckSquare, Square, DollarSign } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/format";
 import { toggleChargeTaxableAction, generateLiquidationAction } from "@/app/liquidations/actions";
+import { toggleChargeAdvanceAction } from "@/app/operations/payment-actions";
+import { DownloadAdvanceRequestButton } from "@/components/pdf/download-advance-request-button";
+import { AdvanceRequestPdfData } from "@/components/pdf/advance-request-pdf";
 
-interface ChargeItem {
+export interface ChargeItem {
   id: string;
   description: string;
   currency: string;
@@ -19,27 +22,69 @@ interface ChargeItem {
   totalPrice: number;
   isExtraCharge: boolean;
   isTaxable: boolean;
+  isAdvance?: boolean;
 }
 
 interface OperationChargesManagerProps {
   operationId: string;
   charges: ChargeItem[];
   existingLiquidationId?: string | null;
+  operationCode: string;
+  externalCode?: string | null;
+  blNumber?: string | null;
+  incoterm?: string | null;
+  client: {
+    name: string;
+    documentType?: string | null;
+    documentNumber?: string | null;
+    address?: string | null;
+  };
 }
 
 export function OperationChargesManager({
   operationId,
   charges,
   existingLiquidationId,
+  operationCode,
+  externalCode,
+  blNumber,
+  incoterm,
+  client,
 }: OperationChargesManagerProps) {
   const [isPending, startTransition] = useTransition();
 
   const baseCharges = charges.filter((c) => !c.isExtraCharge);
   const extraCharges = charges.filter((c) => c.isExtraCharge);
 
+  // Filter charges selected for advance PDF
+  const advanceCharges = charges.filter((c) => c.isAdvance);
+
+  const pdfData: AdvanceRequestPdfData = {
+    operationCode,
+    externalCode,
+    createdAt: new Date(),
+    client,
+    blNumber,
+    incoterm,
+    items: advanceCharges.map((c) => ({
+      description: c.description,
+      currency: c.currency,
+      unitPrice: c.unitPrice,
+      quantity: c.quantity,
+      totalPrice: c.totalPrice,
+      isTaxable: c.isTaxable,
+    })),
+  };
+
   function handleToggleTaxable(chargeId: string, currentIsTaxable: boolean) {
     startTransition(async () => {
       await toggleChargeTaxableAction(chargeId, !currentIsTaxable, operationId);
+    });
+  }
+
+  function handleToggleAdvance(chargeId: string, currentIsAdvance: boolean) {
+    startTransition(async () => {
+      await toggleChargeAdvanceAction(chargeId, operationId, currentIsAdvance);
     });
   }
 
@@ -51,24 +96,27 @@ export function OperationChargesManager({
 
   return (
     <div className="space-y-6">
-      {/* Top Banner Action to Generate Liquidation */}
+      {/* Top Banner Action to Generate Liquidation & Advance PDF */}
       <div className="rounded-xl border border-indigo-200 bg-gradient-to-r from-indigo-900 to-slate-900 text-white p-5 shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="rounded-lg bg-indigo-600 p-2.5 text-white shadow">
             <Receipt className="h-6 w-6" />
           </div>
           <div>
-            <h3 className="font-bold text-lg leading-tight">Liquidación Final & División de IGV (18%)</h3>
+            <h3 className="font-bold text-lg leading-tight">Liquidación Final & Cobros Anticipados</h3>
             <p className="text-xs text-slate-300">
-              Clasifica los cargos afectos al IGV (Servicios Broker) vs inafectos (Reembolso Terceros) antes de liquidar.
+              Marca los conceptos que requieren cobro o depósito anticipado y genera la solicitud en PDF.
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2.5">
+          {/* Download Advance Request PDF */}
+          <DownloadAdvanceRequestButton data={pdfData} />
+
           {existingLiquidationId && (
             <Link href={`/liquidations/${existingLiquidationId}`}>
-              <Button variant="outline" className="border-indigo-400 text-indigo-100 hover:bg-indigo-800 text-xs font-bold">
+              <Button variant="outline" className="border-indigo-400 text-indigo-100 hover:bg-indigo-800 text-xs font-bold h-8">
                 Ver Liquidación Existente
               </Button>
             </Link>
@@ -78,29 +126,36 @@ export function OperationChargesManager({
             type="button"
             onClick={handleGenerateLiquidation}
             disabled={isPending || charges.length === 0}
-            className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md"
+            className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md h-8"
           >
             {isPending ? (
               <>
-                <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> Procesando IGV...
+                <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> Procesando...
               </>
             ) : (
               <>
-                <FileCheck className="mr-1.5 h-4 w-4" /> Generar Liquidación Final <ArrowRight className="ml-1 h-3.5 w-3.5" />
+                <FileCheck className="mr-1.5 h-3.5 w-3.5" /> Generar Liquidación Final <ArrowRight className="ml-1 h-3.5 w-3.5" />
               </>
             )}
           </Button>
         </div>
       </div>
 
-      {/* Base Charges Table with Taxable Toggle */}
+      {/* Base Charges Table with Taxable & Advance Toggle */}
       <div className="space-y-3">
-        <h3 className="font-bold text-slate-900 text-base">Cargos Base Cotizados</h3>
+        <div className="flex items-center justify-between">
+          <h3 className="font-bold text-slate-900 text-base">Cargos Base Cotizados</h3>
+          {advanceCharges.length > 0 && (
+            <Badge variant="outline" className="bg-sky-50 text-sky-700 border-sky-300 font-semibold text-xs">
+              {advanceCharges.length} concepto(s) como Anticipo
+            </Badge>
+          )}
+        </div>
 
         {/* Mobile View */}
         <div className="grid gap-3 md:hidden">
           {baseCharges.map((charge) => (
-            <div key={charge.id} className="rounded-xl border bg-white p-3.5 shadow-sm space-y-2">
+            <div key={charge.id} className="rounded-xl border bg-white p-3.5 shadow-sm space-y-3">
               <div className="flex justify-between items-start">
                 <span className="font-semibold text-slate-900 text-sm">{charge.description}</span>
                 <Badge variant="outline" className="text-xs">
@@ -108,19 +163,35 @@ export function OperationChargesManager({
                 </Badge>
               </div>
 
-              <div className="flex items-center justify-between border-t pt-2 text-xs">
+              <div className="flex items-center justify-between border-t border-b py-2 text-xs">
                 <span className="font-bold text-slate-900">{formatCurrency(charge.totalPrice, charge.currency as any)}</span>
+              </div>
+
+              <div className="flex flex-wrap gap-2 pt-1">
                 <button
                   type="button"
                   onClick={() => handleToggleTaxable(charge.id, charge.isTaxable)}
                   className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold border ${
                     charge.isTaxable
                       ? "bg-blue-50 text-blue-700 border-blue-200"
-                      : "bg-slate-100 text-slate-600 border-slate-300"
+                      : "bg-amber-50 text-amber-800 border-amber-200"
                   }`}
                 >
-                  {charge.isTaxable ? <CheckSquare className="h-3.5 w-3.5 text-blue-600" /> : <Square className="h-3.5 w-3.5 text-slate-400" />}
+                  {charge.isTaxable ? <CheckSquare className="h-3.5 w-3.5 text-blue-600" /> : <Square className="h-3.5 w-3.5 text-amber-600" />}
                   {charge.isTaxable ? "Afecto IGV (18%)" : "Inafecto / Reembolso"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleToggleAdvance(charge.id, !!charge.isAdvance)}
+                  className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold border ${
+                    charge.isAdvance
+                      ? "bg-sky-100 text-sky-800 border-sky-300 font-bold"
+                      : "bg-slate-50 text-slate-600 border-slate-200"
+                  }`}
+                >
+                  {charge.isAdvance ? <CheckSquare className="h-3.5 w-3.5 text-sky-600" /> : <Square className="h-3.5 w-3.5 text-slate-400" />}
+                  {charge.isAdvance ? "Cobro Anticipado" : "Anticipo: NO"}
                 </button>
               </div>
             </div>
@@ -137,6 +208,7 @@ export function OperationChargesManager({
                 <th className="p-3 text-center">Cant.</th>
                 <th className="p-3 text-right">Costo Total</th>
                 <th className="p-3 text-right">Venta Total</th>
+                <th className="p-3 text-center">Anticipo</th>
                 <th className="p-3 text-center">Afectación Fiscal (IGV)</th>
               </tr>
             </thead>
@@ -151,6 +223,20 @@ export function OperationChargesManager({
                   </td>
                   <td className="p-3 text-right font-bold text-slate-900">
                     {formatCurrency(charge.totalPrice, charge.currency as any)}
+                  </td>
+                  <td className="p-3 text-center">
+                    <button
+                      type="button"
+                      onClick={() => handleToggleAdvance(charge.id, !!charge.isAdvance)}
+                      className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-bold border transition-colors ${
+                        charge.isAdvance
+                          ? "bg-sky-100 text-sky-800 border-sky-300 hover:bg-sky-200"
+                          : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"
+                      }`}
+                    >
+                      {charge.isAdvance ? <CheckSquare className="h-3.5 w-3.5 text-sky-600" /> : <Square className="h-3.5 w-3.5 text-slate-400" />}
+                      {charge.isAdvance ? "Cobro Anticipado" : "No"}
+                    </button>
                   </td>
                   <td className="p-3 text-center">
                     <button
@@ -173,7 +259,7 @@ export function OperationChargesManager({
         </div>
       </div>
 
-      {/* Extra Charges Table with Taxable Toggle */}
+      {/* Extra Charges Table with Taxable & Advance Toggle */}
       {extraCharges.length > 0 && (
         <div className="space-y-3">
           <h3 className="font-bold text-amber-900 text-base">Cargos Adicionales / Sobrecostos</h3>
@@ -188,6 +274,7 @@ export function OperationChargesManager({
                   <th className="p-3 text-center">Cant.</th>
                   <th className="p-3 text-right">Costo Total</th>
                   <th className="p-3 text-right">Venta Total</th>
+                  <th className="p-3 text-center">Anticipo</th>
                   <th className="p-3 text-center">Afectación Fiscal (IGV)</th>
                 </tr>
               </thead>
@@ -202,6 +289,20 @@ export function OperationChargesManager({
                     </td>
                     <td className="p-3 text-right font-bold text-amber-950">
                       {formatCurrency(charge.totalPrice, charge.currency as any)}
+                    </td>
+                    <td className="p-3 text-center">
+                      <button
+                        type="button"
+                        onClick={() => handleToggleAdvance(charge.id, !!charge.isAdvance)}
+                        className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-bold border transition-colors ${
+                          charge.isAdvance
+                            ? "bg-sky-100 text-sky-800 border-sky-300 hover:bg-sky-200"
+                            : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"
+                        }`}
+                      >
+                        {charge.isAdvance ? <CheckSquare className="h-3.5 w-3.5 text-sky-600" /> : <Square className="h-3.5 w-3.5 text-slate-400" />}
+                        {charge.isAdvance ? "Cobro Anticipado" : "No"}
+                      </button>
                     </td>
                     <td className="p-3 text-center">
                       <button

@@ -35,6 +35,9 @@ export default async function LiquidationDetailPage({ params }: LiquidationPageP
           charges: {
             orderBy: { createdAt: "asc" },
           },
+          paymentRecords: {
+            orderBy: { createdAt: "asc" },
+          },
         },
       },
     },
@@ -50,6 +53,17 @@ export default async function LiquidationDetailPage({ params }: LiquidationPageP
 
   const taxableCharges = operation.charges.filter((c) => c.isTaxable);
   const nonTaxableCharges = operation.charges.filter((c) => !c.isTaxable);
+
+  const totalPaymentsUsd = operation.paymentRecords
+    .filter((p) => p.currency === "USD")
+    .reduce((sum, p) => sum + p.amount, 0);
+
+  const totalPaymentsPen = operation.paymentRecords
+    .filter((p) => p.currency === "PEN")
+    .reduce((sum, p) => sum + p.amount, 0);
+
+  const balanceDueUsd = liquidation.grandTotalUsd - totalPaymentsUsd;
+  const balanceDuePen = liquidation.grandTotalPen - totalPaymentsPen;
 
   // Data for internal receipt PDF
   const receiptPdfData = liquidation.receiptNumber
@@ -289,27 +303,81 @@ export default async function LiquidationDetailPage({ params }: LiquidationPageP
           </div>
         </div>
 
-        {/* Grand Total Summary Box (Total a Pagar por el Cliente) */}
+        {/* Table 3: Anticipos y Pagos Recibidos (Abonos Previos) */}
+        {operation.paymentRecords.length > 0 && (
+          <div className="space-y-3 pt-4 border-t">
+            <div className="flex items-center justify-between border-b pb-2">
+              <h3 className="font-bold text-slate-900 text-base flex items-center gap-2">
+                <Receipt className="h-5 w-5 text-emerald-600" /> 3. Anticipos y Pagos Recibidos (Abonados a Cuenta)
+              </h3>
+              <Badge className="bg-emerald-100 text-emerald-800 text-xs font-semibold">
+                Descuento a la Liquidación
+              </Badge>
+            </div>
+
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader className="bg-emerald-50/50">
+                  <TableRow>
+                    <TableHead className="font-semibold text-emerald-900 text-left">Fecha</TableHead>
+                    <TableHead className="font-semibold text-emerald-900 text-left">Concepto / Abono</TableHead>
+                    <TableHead className="font-semibold text-emerald-900 text-center">Banco / N° Operación</TableHead>
+                    <TableHead className="font-semibold text-emerald-900 text-center">Moneda</TableHead>
+                    <TableHead className="font-semibold text-emerald-900 text-right">Monto Recibido</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {operation.paymentRecords.map((pay) => (
+                    <TableRow key={pay.id}>
+                      <TableCell className="text-slate-600 text-left">
+                        {new Date(pay.paymentDate).toLocaleDateString("es-PE")}
+                      </TableCell>
+                      <TableCell className="font-semibold text-slate-900 text-left">{pay.concept}</TableCell>
+                      <TableCell className="text-center text-xs">
+                        {pay.bank ? `${pay.bank} ` : ""}{pay.operationNumber ? `(Op. ${pay.operationNumber})` : "-"}
+                      </TableCell>
+                      <TableCell className="text-center font-bold text-xs">{pay.currency}</TableCell>
+                      <TableCell className="text-right font-mono font-bold text-emerald-700">
+                        {formatCurrency(pay.amount, pay.currency as any)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+
+            <div className="bg-emerald-50/50 p-4 rounded-xl border border-emerald-100 space-y-2 text-sm max-w-md ml-auto">
+              <div className="flex justify-between items-center text-emerald-900 font-bold">
+                <span>Total Anticipos / Pagos Recibidos:</span>
+                <span className="text-right">
+                  {formatCurrency(totalPaymentsUsd, "USD")} / {formatCurrency(totalPaymentsPen, "PEN")}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Grand Total Summary Box (Total a Pagar por el Cliente & Saldo Final) */}
         <div className="rounded-2xl border bg-slate-950 text-white p-6 shadow-xl space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
             <div>
               <h3 className="font-bold text-xl leading-tight text-white">
-                Resumen Final - Total a Pagar por el Cliente
+                Resumen Final - Balance y Saldo a Pagar
               </h3>
               <p className="text-xs text-slate-400">
-                Suma consolidada de Servicios Facturables (con IGV 18%) + Reembolsos Inafectos
+                (Facturable + Reembolsos) - (Anticipos / Abonos Recibidos)
               </p>
             </div>
             <Badge className="bg-emerald-500 text-slate-950 text-xs font-extrabold px-3 py-1 self-start sm:self-auto">
-              MONTO FINAL LIQUIDADO
+              SALDO PENDIENTE LIQUIDADO
             </Badge>
           </div>
 
           <div className="grid gap-6 md:grid-cols-2">
-            {/* USD Grand Total */}
+            {/* USD Grand Total & Balance */}
             <div className="rounded-xl bg-slate-900 p-5 border border-slate-800 space-y-2.5">
               <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">
-                Total a Pagar en Dólares (USD $)
+                Liquidación Dólares (USD $)
               </span>
               <div className="space-y-1.5 text-xs text-slate-300">
                 <div className="flex justify-between">
@@ -320,19 +388,29 @@ export default async function LiquidationDetailPage({ params }: LiquidationPageP
                   <span>Reembolso Inafecto:</span>
                   <span className="font-medium text-slate-200">{formatCurrency(liquidation.totalNonTaxableUsd, "USD")}</span>
                 </div>
+                <div className="flex justify-between font-semibold border-t border-slate-800/80 pt-1 text-slate-200">
+                  <span>Total Bruto Operación:</span>
+                  <span>{formatCurrency(liquidation.grandTotalUsd, "USD")}</span>
+                </div>
+                {totalPaymentsUsd > 0 && (
+                  <div className="flex justify-between font-semibold text-emerald-400">
+                    <span>(-) Anticipos Recibidos:</span>
+                    <span>- {formatCurrency(totalPaymentsUsd, "USD")}</span>
+                  </div>
+                )}
               </div>
               <div className="pt-2 border-t border-slate-800 flex justify-between items-baseline">
-                <span className="font-bold text-white text-sm">TOTAL USD:</span>
+                <span className="font-bold text-white text-sm">SALDO A PAGAR USD:</span>
                 <span className="font-black text-emerald-400 text-2xl text-right">
-                  {formatCurrency(liquidation.grandTotalUsd, "USD")}
+                  {formatCurrency(balanceDueUsd, "USD")}
                 </span>
               </div>
             </div>
 
-            {/* PEN Grand Total */}
+            {/* PEN Grand Total & Balance */}
             <div className="rounded-xl bg-slate-900 p-5 border border-slate-800 space-y-2.5">
               <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">
-                Total a Pagar en Soles (PEN S/)
+                Liquidación Soles (PEN S/)
               </span>
               <div className="space-y-1.5 text-xs text-slate-300">
                 <div className="flex justify-between">
@@ -343,11 +421,21 @@ export default async function LiquidationDetailPage({ params }: LiquidationPageP
                   <span>Reembolso Inafecto:</span>
                   <span className="font-medium text-slate-200">{formatCurrency(liquidation.totalNonTaxablePen, "PEN")}</span>
                 </div>
+                <div className="flex justify-between font-semibold border-t border-slate-800/80 pt-1 text-slate-200">
+                  <span>Total Bruto Operación:</span>
+                  <span>{formatCurrency(liquidation.grandTotalPen, "PEN")}</span>
+                </div>
+                {totalPaymentsPen > 0 && (
+                  <div className="flex justify-between font-semibold text-emerald-400">
+                    <span>(-) Anticipos Recibidos:</span>
+                    <span>- {formatCurrency(totalPaymentsPen, "PEN")}</span>
+                  </div>
+                )}
               </div>
               <div className="pt-2 border-t border-slate-800 flex justify-between items-baseline">
-                <span className="font-bold text-white text-sm">TOTAL PEN:</span>
+                <span className="font-bold text-white text-sm">SALDO A PAGAR PEN:</span>
                 <span className="font-black text-emerald-400 text-2xl text-right">
-                  {formatCurrency(liquidation.grandTotalPen, "PEN")}
+                  {formatCurrency(balanceDuePen, "PEN")}
                 </span>
               </div>
             </div>

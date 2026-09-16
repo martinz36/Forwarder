@@ -151,6 +151,7 @@ model QuotationItem {
   quantity    Int
   total       Float
   isTaxable   Boolean   @default(true)
+  isAdvance   Boolean   @default(false)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 }
@@ -191,6 +192,7 @@ model Operation {
   charges           OperationCharge[]
   documents         Document[]
   checklistItems    ChecklistItem[]
+  paymentRecords    PaymentRecord[]
   liquidation       Liquidation?
   commercialInvoice CommercialInvoice?
   createdAt         DateTime           @default(now())
@@ -225,8 +227,23 @@ model OperationCharge {
   totalPrice    Float
   isExtraCharge Boolean   @default(false)
   isTaxable     Boolean   @default(true)
+  isAdvance     Boolean   @default(false)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+}
+
+model PaymentRecord {
+  id              String    @id @default(cuid())
+  operationId     String
+  operation       Operation @relation(fields: [operationId], references: [id], onDelete: Cascade)
+  concept         String
+  amount          Float
+  currency        String    @default("USD")
+  bank            String?
+  operationNumber String?
+  paymentDate     DateTime  @default(now())
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 }
 
 model Document {

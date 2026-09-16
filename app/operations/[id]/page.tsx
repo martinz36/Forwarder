@@ -7,6 +7,7 @@ import { OperationHeaderForm } from "@/components/operation-header-form";
 import { SmartDocumentsTab } from "@/components/smart-documents-tab";
 import { AddExtraChargeDialog } from "@/components/add-extra-charge-dialog";
 import { OperationChargesManager } from "@/components/operation-charges-manager";
+import { PaymentRecordsManager } from "@/components/payment-records-manager";
 import { LandedCostCalculator } from "@/components/landed-cost-calculator";
 import { DownloadArrivalNoticeButton } from "@/components/pdf/download-arrival-notice-button";
 import { ArrivalNoticePdfData } from "@/components/pdf/arrival-notice-pdf";
@@ -27,8 +28,9 @@ export default async function OperationDetailPage({ params }: OperationDetailPag
   const operation = await prisma.operation.findUnique({
     where: { id },
     include: {
+      expedient: true,
       quotation: {
-        include: { client: true },
+        include: { client: true, expedient: true },
       },
       charges: {
         orderBy: { createdAt: "asc" },
@@ -38,6 +40,9 @@ export default async function OperationDetailPage({ params }: OperationDetailPag
       },
       checklistItems: {
         orderBy: { order: "asc" },
+      },
+      paymentRecords: {
+        orderBy: { createdAt: "asc" },
       },
       liquidation: true,
       commercialInvoice: {
@@ -233,11 +238,29 @@ export default async function OperationDetailPage({ params }: OperationDetailPag
           operationId={operation.id}
           charges={operation.charges}
           existingLiquidationId={operation.liquidation?.id}
+          operationCode={opDisplayCode}
+          externalCode={operation.expedient?.externalCode || operation.quotation.expedient?.externalCode}
+          blNumber={operation.blNumber}
+          incoterm={currentIncoterm}
+          client={{
+            name: operation.quotation.client.businessName,
+            documentType: operation.quotation.client.documentType,
+            documentNumber: operation.quotation.client.documentNumber,
+            address: operation.quotation.client.address,
+          }}
         />
 
         <div className="flex justify-end">
           <AddExtraChargeDialog operationId={operation.id} />
         </div>
+      </div>
+
+      {/* Treasury: Payment Records & Advance Deposits Manager */}
+      <div className="pt-2">
+        <PaymentRecordsManager
+          operationId={operation.id}
+          paymentRecords={operation.paymentRecords}
+        />
       </div>
 
       {/* Landed Cost Import Calculator Component */}
