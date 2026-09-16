@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { FolderPlus, Loader2, Ship, Package, Plane, Truck, UserPlus, X, Check } from "lucide-react";
 import {
   Dialog,
@@ -27,6 +28,7 @@ interface CreateExpedientDialogProps {
 }
 
 export function CreateExpedientDialog({ clients: initialClients }: CreateExpedientDialogProps) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [clientList, setClientList] = useState<ClientOption[]>(initialClients);
   const [selectedClientId, setSelectedClientId] = useState("");
@@ -53,7 +55,7 @@ export function CreateExpedientDialog({ clients: initialClients }: CreateExpedie
   const selectedClient = clientList.find((c) => c.id === selectedClientId);
 
   // Generate live code preview
-  let codePreview = "EXP-2026-CLIENTE-FCL-0001";
+  let codePreview = "EXP-2026-CLIENTE-FCL-AUTO";
   if (customCode.trim()) {
     codePreview = customCode.trim();
   } else if (selectedClient) {
@@ -67,7 +69,7 @@ export function CreateExpedientDialog({ clients: initialClients }: CreateExpedie
     const words = cleanName.split(/\s+/).filter(Boolean);
     const slug = (words.slice(0, 2).join("-") || "CLIENTE").slice(0, 18);
     const year = new Date().getFullYear();
-    codePreview = `EXP-${year}-${slug}-${loadType}-0001`;
+    codePreview = `EXP-${year}-${slug}-${loadType}-AUTO`;
   }
 
   const handleCreateClient = async (e: React.FormEvent) => {
@@ -127,16 +129,25 @@ export function CreateExpedientDialog({ clients: initialClients }: CreateExpedie
       setLoading(true);
       setError(null);
       const transportMode = loadType === "AÉREO" ? "AIR" : loadType === "LCL" ? "LCL" : "FCL";
-      await createExpedientAction({
+      const res = await createExpedientAction({
         clientId: selectedClientId,
         loadType,
         transportMode,
         customCode,
         notes,
       });
+
+      if (!res.success || !res.expedientId) {
+        setError(res.error || "Error al crear el expediente.");
+        setLoading(false);
+        return;
+      }
+
+      setOpen(false);
+      router.push(`/expedients/${res.expedientId}`);
     } catch (err: any) {
       console.error(err);
-      setError(err?.message || "Error al crear el expediente.");
+      setError(err?.message || "Error inesperado al crear el expediente.");
       setLoading(false);
     }
   };

@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import prisma from "@/lib/prisma";
 
 export interface CreateExpedientInput {
@@ -28,148 +27,208 @@ function slugifyBusinessName(name: string): string {
   return slugWords.slice(0, 18);
 }
 
-export async function createExpedientAction(input: CreateExpedientInput) {
-  if (!input.clientId) {
-    throw new Error("Debes seleccionar un cliente para abrir un expediente.");
-  }
-
-  const client = await prisma.client.findUnique({
-    where: { id: input.clientId },
-    select: { businessName: true },
-  });
-
-  if (!client) {
-    throw new Error("El cliente seleccionado no existe.");
-  }
-
-  const loadType = input.loadType || "FCL";
-  const rawTransport = (input.transportMode || loadType).toUpperCase();
-  
-  let transportMode = "FCL";
-  let prefix = "M";
-
-  if (rawTransport.includes("AIR") || rawTransport.includes("AÉREO")) {
-    transportMode = "AIR";
-    prefix = "A";
-  } else if (rawTransport.includes("LCL")) {
-    transportMode = "LCL";
-    prefix = "L";
-  } else if (rawTransport.includes("TERRESTRE")) {
-    transportMode = "TERRESTRE";
-    prefix = "T";
-  }
-
-  const currentYear = new Date().getFullYear();
-  const yearStart = new Date(currentYear, 0, 1);
-  const yearEnd = new Date(currentYear + 1, 0, 1);
-
-  const countThisYear = await prisma.expedient.count({
+// Collision-free external code generator (e.g. M-2026-0004, L-2026-0004, A-2026-0004)
+async function generateNextExternalCode(prefix: string, year: number): Promise<string> {
+  const allYearExpedients = await prisma.expedient.findMany({
     where: {
-      createdAt: {
-        gte: yearStart,
-        lt: yearEnd,
+      externalCode: {
+        not: null,
       },
     },
+    select: { externalCode: true },
   });
 
-  const sequence = String(countThisYear + 1).padStart(4, "0");
-  const externalCode = `${prefix}-${currentYear}-${sequence}`;
-
-  let code = input.customCode?.trim();
-  if (!code) {
-    const totalCount = await prisma.expedient.count();
-    const sequenceTotal = String(totalCount + 1).padStart(4, "0");
-    const clientSlug = slugifyBusinessName(client.businessName);
-    code = `EXP-${currentYear}-${clientSlug}-${loadType}-${sequenceTotal}`;
+  let maxSeq = 0;
+  for (const exp of allYearExpedients) {
+    if (exp.externalCode) {
+      const parts = exp.externalCode.split("-");
+      const lastPart = parts[parts.length - 1];
+      const seqNum = parseInt(lastPart, 10);
+      if (!isNaN(seqNum) && seqNum > maxSeq) {
+        maxSeq = seqNum;
+      }
+    }
   }
 
-  const expedient = await prisma.expedient.create({
-    data: {
-      code,
-      externalCode,
-      transportMode,
-      clientId: input.clientId,
-      loadType,
-      notes: input.notes?.trim() || null,
-      status: "OPEN",
-    },
+  let nextSeq = maxSeq + 1;
+  let candidate = `${prefix}-${year}-${String(nextSeq).padStart(4, "0")}`;
+
+  while (await prisma.expedient.findUnique({ where: { externalCode: candidate } })) {
+    nextSeq++;
+    candidate = `${prefix}-${year}-${String(nextSeq).padStart(4, "0")}`;
+  }
+
+  return candidate;
+}
+
+// Collision-free internal code generator (e.g. EXP-2026-CLIENTE-FCL-0004)
+async function generateNextInternalCode(clientSlug: string, loadType: string, year: number): Promise<string> {
+  const allExpedients = await prisma.expedient.findMany({
+    select: { code: true },
   });
 
-  revalidatePath("/expedients");
-  revalidatePath(`/clients/${input.clientId}`);
-  redirect(`/expedients/${expedient.id}`);
+  let maxSeq = 0;
+  for (const exp of allExpedients) {
+    const parts = exp.code.split("-");
+    const lastPart = parts[parts.length - 1];
+    const seqNum = parseInt(lastPart, 10);
+    if (!isNaN(seqNum) && seqNum > maxSeq) {
+      maxSeq = seqNum;
+    }
+  }
+
+  let nextSeq = maxSeq + 1;
+  let candidate = `EXP-${year}-${clientSlug}-${loadType}-${String(nextSeq).padStart(4, "0")}`;
+
+  while (await prisma.expedient.findUnique({ where: { code: candidate } })) {
+    nextSeq++;
+    candidate = `EXP-${year}-${clientSlug}-${loadType}-${String(nextSeq).padStart(4, "0")}`;
+  }
+
+  return candidate;
+}
+
+export async function createExpedientAction(input: CreateExpedientInput) {
+  try {
+    if (!input.clientId) {
+      return { success: false, error: "Debes seleccionar un cliente para abrir un expediente." };
+    }
+
+    const client = await prisma.client.findUnique({
+      where: { id: input.clientId },
+      select: { businessName: true },
+    });
+
+    if (!client) {
+      return { success: false, error: "El cliente seleccionado no existe." };
+    }
+
+    const loadType = input.loadType || "FCL";
+    const rawTransport = (input.transportMode || loadType).toUpperCase();
+
+    let transportMode = "FCL";
+    let prefix = "M";
+
+    if (rawTransport.includes("AIR") || rawTransport.includes("AÉREO")) {
+      transportMode = "AIR";
+      prefix = "A";
+    } else if (rawTransport.includes("LCL")) {
+      transportMode = "LCL";
+      prefix = "L";
+    } else if (rawTransport.includes("TERRESTRE")) {
+      transportMode = "TERRESTRE";
+      prefix = "T";
+    }
+
+    const currentYear = new Date().getFullYear();
+    const externalCode = await generateNextExternalCode(prefix, currentYear);
+
+    let code = input.customCode?.trim();
+    if (!code) {
+      const clientSlug = slugifyBusinessName(client.businessName);
+      code = await generateNextInternalCode(clientSlug, loadType, currentYear);
+    }
+
+    const expedient = await prisma.expedient.create({
+      data: {
+        code,
+        externalCode,
+        transportMode,
+        clientId: input.clientId,
+        loadType,
+        notes: input.notes?.trim() || null,
+        status: "OPEN",
+      },
+    });
+
+    revalidatePath("/expedients");
+    revalidatePath(`/clients/${input.clientId}`);
+
+    return { success: true, expedientId: expedient.id };
+  } catch (err: any) {
+    console.error("Error in createExpedientAction:", err);
+    return {
+      success: false,
+      error: typeof err?.message === "string" ? err.message : "Error inesperado al registrar el expediente.",
+    };
+  }
 }
 
 export async function deleteExpedientAction(expedientId: string) {
-  if (!expedientId) {
-    throw new Error("ID de expediente no proporcionado.");
+  try {
+    if (!expedientId) {
+      return { success: false, error: "ID de expediente no proporcionado." };
+    }
+
+    const expedient = await prisma.expedient.findUnique({
+      where: { id: expedientId },
+      include: {
+        operations: true,
+      },
+    });
+
+    if (!expedient) {
+      return { success: false, error: "El expediente especificado no existe." };
+    }
+
+    if (expedient.operations.length > 0) {
+      return { success: false, error: "No se puede eliminar un expediente que cuenta con operaciones activas en curso." };
+    }
+
+    await prisma.expedient.delete({
+      where: { id: expedientId },
+    });
+
+    revalidatePath("/expedients");
+    revalidatePath(`/clients/${expedient.clientId}`);
+    return { success: true };
+  } catch (err: any) {
+    console.error("Error in deleteExpedientAction:", err);
+    return {
+      success: false,
+      error: typeof err?.message === "string" ? err.message : "Error al eliminar el expediente.",
+    };
   }
-
-  const expedient = await prisma.expedient.findUnique({
-    where: { id: expedientId },
-    include: {
-      operations: true,
-    },
-  });
-
-  if (!expedient) {
-    throw new Error("El expediente especificado no existe.");
-  }
-
-  if (expedient.operations.length > 0) {
-    throw new Error("No se puede eliminar un expediente que cuenta con operaciones en curso.");
-  }
-
-  await prisma.expedient.delete({
-    where: { id: expedientId },
-  });
-
-  revalidatePath("/expedients");
-  revalidatePath(`/clients/${expedient.clientId}`);
-  return { success: true };
 }
 
 export async function ensureExpedientExternalCodesAction() {
-  const missingExpedients = await prisma.expedient.findMany({
-    where: { externalCode: null },
-    orderBy: { createdAt: "asc" },
-  });
+  try {
+    const missingExpedients = await prisma.expedient.findMany({
+      where: { externalCode: null },
+      orderBy: { createdAt: "asc" },
+    });
 
-  if (missingExpedients.length === 0) return;
+    if (missingExpedients.length === 0) return { success: true };
 
-  for (const exp of missingExpedients) {
-    const year = new Date(exp.createdAt).getFullYear();
-    const loadUpper = (exp.loadType || "FCL").toUpperCase();
-    let prefix = "M";
-    let mode = "FCL";
+    for (const exp of missingExpedients) {
+      const year = new Date(exp.createdAt).getFullYear();
+      const loadUpper = (exp.loadType || "FCL").toUpperCase();
+      let prefix = "M";
+      let mode = "FCL";
 
-    if (loadUpper.includes("AIR") || loadUpper.includes("AÉREO")) {
-      prefix = "A";
-      mode = "AIR";
-    } else if (loadUpper.includes("LCL")) {
-      prefix = "L";
-      mode = "LCL";
+      if (loadUpper.includes("AIR") || loadUpper.includes("AÉREO")) {
+        prefix = "A";
+        mode = "AIR";
+      } else if (loadUpper.includes("LCL")) {
+        prefix = "L";
+        mode = "LCL";
+      }
+
+      const extCode = await generateNextExternalCode(prefix, year);
+
+      await prisma.expedient.update({
+        where: { id: exp.id },
+        data: {
+          externalCode: extCode,
+          transportMode: mode,
+        },
+      });
     }
 
-    const yearCount = await prisma.expedient.count({
-      where: {
-        createdAt: {
-          gte: new Date(year, 0, 1),
-          lt: new Date(year + 1, 0, 1),
-        },
-        externalCode: { not: null },
-      },
-    });
-
-    const seq = String(yearCount + 1).padStart(4, "0");
-    const extCode = `${prefix}-${year}-${seq}`;
-
-    await prisma.expedient.update({
-      where: { id: exp.id },
-      data: {
-        externalCode: extCode,
-        transportMode: mode,
-      },
-    });
+    revalidatePath("/expedients");
+    return { success: true };
+  } catch (err) {
+    console.error("Error in ensureExpedientExternalCodesAction:", err);
+    return { success: false };
   }
 }
