@@ -327,7 +327,7 @@ export default async function QuotationDetailPage({ params }: QuotationDetailPag
                   <TableRow>
                     <TableHead className="font-bold text-slate-700 text-left">CONCEPTO / SERVICIO</TableHead>
                     <TableHead className="font-bold text-slate-700 text-center">MONEDA</TableHead>
-                    <TableHead className="font-bold text-slate-700 text-right">PRECIO UNIT.</TableHead>
+                    <TableHead className="font-bold text-slate-700 text-right">VALOR UNIT.</TableHead>
                     <TableHead className="font-bold text-blue-900 text-right bg-blue-50/50">MONTO USD ($)</TableHead>
                     <TableHead className="font-bold text-purple-900 text-right bg-purple-50/50">MONTO SOLES (S/)</TableHead>
                   </TableRow>
@@ -375,7 +375,7 @@ export default async function QuotationDetailPage({ params }: QuotationDetailPag
                   <TableRow>
                     <TableHead className="font-bold text-slate-700 text-left">CONCEPTO / SERVICIO</TableHead>
                     <TableHead className="font-bold text-slate-700 text-center">MONEDA</TableHead>
-                    <TableHead className="font-bold text-slate-700 text-right">PRECIO UNIT.</TableHead>
+                    <TableHead className="font-bold text-slate-700 text-right">VALOR UNIT.</TableHead>
                     <TableHead className="font-bold text-blue-900 text-right bg-blue-50/50">MONTO USD ($)</TableHead>
                     <TableHead className="font-bold text-purple-900 text-right bg-purple-50/50">MONTO SOLES (S/)</TableHead>
                   </TableRow>

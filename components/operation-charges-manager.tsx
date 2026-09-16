@@ -207,7 +207,7 @@ export function OperationChargesManager({
                 <th className="p-3 text-center">Moneda</th>
                 <th className="p-3 text-center">Cant.</th>
                 <th className="p-3 text-right">Costo Total</th>
-                <th className="p-3 text-right">Venta Total</th>
+                <th className="p-3 text-right">Valor Venta Total</th>
                 <th className="p-3 text-center">Anticipo</th>
                 <th className="p-3 text-center">Afectación Fiscal (IGV)</th>
               </tr>
@@ -273,7 +273,7 @@ export function OperationChargesManager({
                   <th className="p-3 text-center">Moneda</th>
                   <th className="p-3 text-center">Cant.</th>
                   <th className="p-3 text-right">Costo Total</th>
-                  <th className="p-3 text-right">Venta Total</th>
+                  <th className="p-3 text-right">Valor Venta Total</th>
                   <th className="p-3 text-center">Anticipo</th>
                   <th className="p-3 text-center">Afectación Fiscal (IGV)</th>
                 </tr>

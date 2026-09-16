@@ -121,7 +121,7 @@ export function AddExtraChargeDialog({ operationId }: AddExtraChargeDialogProps)
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="unitPrice">Precio Venta Unit. (Cobro cliente) *</Label>
+              <Label htmlFor="unitPrice">Valor Venta Unit. (Cobro cliente) *</Label>
               <Input
                 id="unitPrice"
                 name="unitPrice"

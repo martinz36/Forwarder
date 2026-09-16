@@ -201,7 +201,7 @@ export default async function LiquidationDetailPage({ params }: LiquidationPageP
                     <TableHead className="font-semibold text-slate-700 text-left">Concepto Facturable</TableHead>
                     <TableHead className="font-semibold text-slate-700 text-center">Moneda</TableHead>
                     <TableHead className="font-semibold text-slate-700 text-center">Cant.</TableHead>
-                    <TableHead className="font-semibold text-slate-700 text-right">Precio Unit.</TableHead>
+                    <TableHead className="font-semibold text-slate-700 text-right">Valor Unit.</TableHead>
                     <TableHead className="font-semibold text-slate-700 text-right">Subtotal Venta</TableHead>
                   </TableRow>
                 </TableHeader>

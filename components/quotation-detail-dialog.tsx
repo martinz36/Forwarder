@@ -114,7 +114,7 @@ export function QuotationDetailDialog({
                   <tr className="bg-slate-100 border-b text-slate-600 font-bold uppercase tracking-wider">
                     <th className="p-2.5">Concepto / Servicio</th>
                     <th className="p-2.5 text-center">Moneda</th>
-                    <th className="p-2.5 text-right">Precio Unit.</th>
+                    <th className="p-2.5 text-right">Valor Unit.</th>
                     <th className="p-2.5 text-center">Cant.</th>
                     <th className="p-2.5 text-right">Total</th>
                   </tr>

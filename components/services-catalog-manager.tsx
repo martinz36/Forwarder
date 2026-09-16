@@ -287,7 +287,7 @@ export function ServicesCatalogManager({ initialServices }: ServicesCatalogManag
                 <th className="py-3 px-4">Categoría</th>
                 <th className="py-3 px-4">Moneda</th>
                 <th className="py-3 px-4 text-right">Costo Sugerido</th>
-                <th className="py-3 px-4 text-right">Precio Venta</th>
+                <th className="py-3 px-4 text-right">Valor Venta</th>
                 <th className="py-3 px-4 text-center">IGV (18%)</th>
                 <th className="py-3 px-4 text-center w-28">Acciones</th>
               </tr>
@@ -445,7 +445,7 @@ export function ServicesCatalogManager({ initialServices }: ServicesCatalogManag
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-xs font-semibold text-blue-700">Precio Venta Sugerido</Label>
+                <Label className="text-xs font-semibold text-blue-700">Valor Venta Sugerido</Label>
                 <Input
                   type="number"
                   step="0.01"

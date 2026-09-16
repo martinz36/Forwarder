@@ -268,7 +268,7 @@ export function ReceiptPDF({ data }: { data: ReceiptPdfData }) {
         <View style={styles.tableHeader}>
           <Text style={styles.thDesc}>Reembolso / Concepto Terceros</Text>
           <Text style={styles.thCurr}>Moneda</Text>
-          <Text style={styles.thPrice}>Precio Unit.</Text>
+          <Text style={styles.thPrice}>Valor Unit.</Text>
           <Text style={styles.thTotal}>Total Reembolso</Text>
         </View>
 

@@ -270,8 +270,8 @@ export function ArrivalNoticePDF({ data }: { data: ArrivalNoticePdfData }) {
                 <Text style={[styles.colDesc, styles.thText]}>Concepto</Text>
                 <Text style={[styles.colCurr, styles.thText]}>Moneda</Text>
                 <Text style={[styles.colQty, styles.thText]}>Cant.</Text>
-                <Text style={[styles.colPrice, styles.thText]}>Precio Unit.</Text>
-                <Text style={[styles.colTotal, styles.thText]}>Total Venta</Text>
+                <Text style={[styles.colPrice, styles.thText]}>Valor Unit.</Text>
+                <Text style={[styles.colTotal, styles.thText]}>Valor Total</Text>
               </View>
               {taxableCharges.map((item, idx) => (
                 <View style={styles.tableRow} key={idx}>

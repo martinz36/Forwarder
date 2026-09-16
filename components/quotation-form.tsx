@@ -735,7 +735,7 @@ export function QuotationForm({ clients, concepts, expedient, quotationId, quota
                 <th className="py-2.5 px-3 min-w-[220px]">Concepto / Servicio *</th>
                 <th className="py-2.5 px-2 w-20 text-center">Moneda</th>
                 <th className="py-2.5 px-2 w-24 text-right">Costo U.</th>
-                <th className="py-2.5 px-2 w-24 text-right text-blue-700">Precio V. *</th>
+                <th className="py-2.5 px-2 w-24 text-right text-blue-700">Valor V. *</th>
                 <th className="py-2.5 px-2 w-16 text-center">Cant.</th>
                 <th className="py-2.5 px-2 w-24 text-center">IGV</th>
                 <th className="py-2.5 px-3 w-28 text-right">Subtotal Venta</th>
@@ -1021,7 +1021,7 @@ export function QuotationForm({ clients, concepts, expedient, quotationId, quota
                 <span className="font-semibold text-slate-300 text-right">{formatCurrency(liveCostUsd, "USD")}</span>
               </div>
               <div className="flex justify-between items-center text-slate-300 font-medium">
-                <span>Total Venta Cliente:</span>
+                <span>Valor Total Venta:</span>
                 <span className="font-bold text-white text-right">{formatCurrency(liveSaleUsd, "USD")}</span>
               </div>
               <div className="flex justify-between items-center pt-2 border-t border-slate-800">
@@ -1048,7 +1048,7 @@ export function QuotationForm({ clients, concepts, expedient, quotationId, quota
                 <span className="font-semibold text-slate-300 text-right">{formatCurrency(liveCostPen, "PEN")}</span>
               </div>
               <div className="flex justify-between items-center text-slate-300 font-medium">
-                <span>Total Venta Cliente:</span>
+                <span>Valor Total Venta:</span>
                 <span className="font-bold text-white text-right">{formatCurrency(liveSalePen, "PEN")}</span>
               </div>
               <div className="flex justify-between items-center pt-2 border-t border-slate-800">

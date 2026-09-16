@@ -98,11 +98,11 @@ export default async function QuotationsPage() {
 
                 <div className="pt-2 border-t bg-slate-50 -mx-4 -mb-4 p-3 rounded-b-xl space-y-2">
                   <div className="flex justify-between items-center text-xs">
-                    <span className="text-slate-500">Venta Total USD:</span>
+                    <span className="text-slate-500">Valor Total USD:</span>
                     <span className="font-bold text-slate-900">{formatCurrency(item.totalUsd, "USD")}</span>
                   </div>
                   <div className="flex justify-between items-center text-xs">
-                    <span className="text-slate-500">Venta Total PEN:</span>
+                    <span className="text-slate-500">Valor Total PEN:</span>
                     <span className="font-bold text-slate-900">{formatCurrency(item.totalPen, "PEN")}</span>
                   </div>
                   <div className="flex justify-between items-center text-xs pt-1 border-t border-slate-200">

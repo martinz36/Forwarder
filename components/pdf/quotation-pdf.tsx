@@ -68,40 +68,6 @@ const styles = StyleSheet.create({
     color: "#0f172a",
     backgroundColor: "#ffffff",
   },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    borderBottomWidth: 1.5,
-    borderBottomColor: "#1e3a8a",
-    paddingBottom: 10,
-    marginBottom: 12,
-  },
-  companyName: {
-    fontSize: 14,
-    fontFamily: "Helvetica-Bold",
-    color: "#1e3a8a",
-    marginBottom: 2,
-  },
-  companySub: {
-    fontSize: 8,
-    color: "#475569",
-  },
-  docBox: {
-    alignItems: "flex-end",
-  },
-  docTitle: {
-    fontSize: 11,
-    fontFamily: "Helvetica-Bold",
-    color: "#0f172a",
-    textTransform: "uppercase",
-  },
-  docCode: {
-    fontSize: 10,
-    fontFamily: "Helvetica-Bold",
-    color: "#2563eb",
-    marginTop: 2,
-  },
 
   salutationBox: {
     marginBottom: 10,
@@ -160,12 +126,12 @@ const styles = StyleSheet.create({
     color: "#ffffff",
     fontSize: 8,
     fontFamily: "Helvetica-Bold",
-    paddingVertical: 4,
+    paddingVertical: 3,
     paddingHorizontal: 6,
     textTransform: "uppercase",
-    marginTop: 6,
+    borderRadius: 2,
+    marginBottom: 2,
   },
-
   tableHeader: {
     flexDirection: "row",
     backgroundColor: "#e2e8f0",
@@ -207,35 +173,15 @@ const styles = StyleSheet.create({
 
   summaryContainer: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 12,
-  },
-  obsBox: {
-    width: "55%",
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
-    borderRadius: 3,
-    padding: 8,
-    backgroundColor: "#fafafa",
-  },
-  obsTitle: {
-    fontSize: 7.5,
-    fontFamily: "Helvetica-Bold",
-    color: "#1e293b",
-    marginBottom: 4,
-    textTransform: "uppercase",
-  },
-  obsText: {
-    fontSize: 7,
-    color: "#475569",
-    lineHeight: 1.3,
+    justifyContent: "flex-end",
+    marginTop: 14,
   },
 
   totalsBox: {
-    width: "42%",
+    width: "48%",
     borderWidth: 1,
     borderColor: "#1e3a8a",
-    borderRadius: 3,
+    borderRadius: 4,
     padding: 8,
     backgroundColor: "#1e293b",
     color: "#ffffff",
@@ -267,6 +213,37 @@ const styles = StyleSheet.create({
   },
   grandTotalLbl: { fontSize: 8, fontFamily: "Helvetica-Bold", color: "#ffffff" },
   grandTotalVal: { fontSize: 9, fontFamily: "Helvetica-Bold", color: "#34d399" },
+
+  annexTitle: {
+    fontSize: 11,
+    fontFamily: "Helvetica-Bold",
+    color: "#1e3a8a",
+    borderBottomWidth: 1.5,
+    borderBottomColor: "#1e3a8a",
+    paddingBottom: 4,
+    marginBottom: 12,
+    textTransform: "uppercase",
+  },
+  annexSection: {
+    marginBottom: 12,
+    padding: 10,
+    backgroundColor: "#f8fafc",
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+  },
+  annexSubtitle: {
+    fontSize: 9.5,
+    fontFamily: "Helvetica-Bold",
+    color: "#0f172a",
+    marginBottom: 6,
+  },
+  annexText: {
+    fontSize: 8.5,
+    color: "#334155",
+    lineHeight: 1.45,
+    marginBottom: 4,
+  },
 
   footer: {
     position: "absolute",
@@ -308,6 +285,7 @@ export function QuotationPDF({ data }: { data: QuotationPdfData }) {
 
   return (
     <Document>
+      {/* PAGE 1: RESUMEN Y DETALLE DE COTIZACIÓN */}
       <Page size="A4" style={styles.page}>
         {/* Header with Unified Marivan Logo */}
         <PdfHeader
@@ -319,99 +297,65 @@ export function QuotationPDF({ data }: { data: QuotationPdfData }) {
         {/* Salutation & Client */}
         <View style={styles.salutationBox}>
           <Text style={styles.salutationText}>
-            Señores: <Text style={styles.clientNameBold}>{data.client.name}</Text>
+            Estimados Sres. <Text style={styles.clientNameBold}>{data.client.name.toUpperCase()}</Text>
+            {data.client.documentNumber ? ` (RUC/Doc: ${data.client.documentNumber})` : ""}
           </Text>
-          {data.client.documentNumber && (
-            <Text style={styles.salutationText}>
-              {data.client.documentType || "RUC"}: {data.client.documentNumber}
-            </Text>
-          )}
-          <Text style={[styles.salutationText, { marginTop: 4 }]}>
-            Por medio de la presente tenemos el agrado de saludarlos y a la vez presentarles nuestra propuesta comercial para vuestro embarque según la información proporcionada:
+          <Text style={[styles.salutationText, { marginTop: 2 }]}>
+            Presentamos nuestra propuesta comercial para el servicio de agenciamiento y transporte internacional según el detalle a continuación:
           </Text>
         </View>
 
-        {/* Shipment Info Grid matching exact Pre-Alerta headers */}
+        {/* Shipment Metadata Grid */}
         <View style={styles.shipmentGrid}>
-          <Text style={styles.shipmentTitle}>Datos del Embarque (Pre-Alerta Logística)</Text>
+          <Text style={styles.shipmentTitle}>INFORMACIÓN DEL EMBARQUE / PRE-ALERTA</Text>
+
           <View style={styles.gridRow}>
             <View style={styles.gridCell}>
-              <Text style={styles.gridLabel}>NAVE / LÍNEA:</Text>
-              <Text style={styles.gridVal}>{data.shippingLine || "-"}</Text>
+              <Text style={styles.gridLabel}>Modalidad:</Text>
+              <Text style={styles.gridVal}>{data.modality || "Importación Marítima"}</Text>
             </View>
             <View style={styles.gridCell}>
-              <Text style={styles.gridLabel}>INCOTERM:</Text>
-              <Text style={styles.gridVal}>{data.incoterm || "-"}</Text>
+              <Text style={styles.gridLabel}>Incoterm:</Text>
+              <Text style={styles.gridVal}>{data.incoterm || "FOB"}</Text>
             </View>
           </View>
+
           <View style={styles.gridRow}>
             <View style={styles.gridCell}>
-              <Text style={styles.gridLabel}>POL (ORIGEN):</Text>
+              <Text style={styles.gridLabel}>Origen (POL):</Text>
               <Text style={styles.gridVal}>{data.origin || "-"}</Text>
             </View>
             <View style={styles.gridCell}>
-              <Text style={styles.gridLabel}>POD (DESTINO):</Text>
-              <Text style={styles.gridVal}>{data.destination || "-"}</Text>
+              <Text style={styles.gridLabel}>Destino (POD):</Text>
+              <Text style={styles.gridVal}>{data.destination || "Callao, Perú"}</Text>
             </View>
           </View>
+
           <View style={styles.gridRow}>
             <View style={styles.gridCell}>
-              <Text style={styles.gridLabel}>E.T.D:</Text>
-              <Text style={styles.gridVal}>{data.etd || "-"}</Text>
+              <Text style={styles.gridLabel}>Nave / Línea:</Text>
+              <Text style={styles.gridVal}>{data.shippingLine || "-"}</Text>
             </View>
             <View style={styles.gridCell}>
-              <Text style={styles.gridLabel}>E.T.A:</Text>
-              <Text style={styles.gridVal}>{data.eta || "-"}</Text>
+              <Text style={styles.gridLabel}>Tipo Carga:</Text>
+              <Text style={styles.gridVal}>
+                {data.loadType || "LCL"} {data.cargoType ? `(${data.cargoType})` : ""}
+              </Text>
             </View>
           </View>
+
           <View style={styles.gridRow}>
             <View style={styles.gridCell}>
-              <Text style={styles.gridLabel}>BL / NRO:</Text>
-              <Text style={styles.gridVal}>{data.blNro || "-"}</Text>
+              <Text style={styles.gridLabel}>Peso / Vol.:</Text>
+              <Text style={styles.gridVal}>
+                {data.grossWeight ? `${data.grossWeight} KG` : "-"} / {data.volume ? `${data.volume} CBM` : "-"}
+              </Text>
             </View>
             <View style={styles.gridCell}>
-              <Text style={styles.gridLabel}>SHIPPER:</Text>
-              <Text style={styles.gridVal}>{data.shipper || "-"}</Text>
-            </View>
-          </View>
-          <View style={styles.gridRow}>
-            <View style={styles.gridCell}>
-              <Text style={styles.gridLabel}>BULTOS / PALETA:</Text>
-              <Text style={styles.gridVal}>{data.packagesCount || "-"}</Text>
-            </View>
-            <View style={styles.gridCell}>
-              <Text style={styles.gridLabel}>PESO BRUTO:</Text>
-              <Text style={styles.gridVal}>{data.grossWeight || "-"}</Text>
-            </View>
-          </View>
-          <View style={styles.gridRow}>
-            <View style={styles.gridCell}>
-              <Text style={styles.gridLabel}>VOLUMEN (CBM):</Text>
-              <Text style={styles.gridVal}>{data.volume || "-"}</Text>
-            </View>
-            <View style={styles.gridCell}>
-              <Text style={styles.gridLabel}>MERCADERIA:</Text>
-              <Text style={styles.gridVal}>{data.mercaderia || data.cargoType || "-"}</Text>
-            </View>
-          </View>
-          <View style={styles.gridRow}>
-            <View style={styles.gridCell}>
-              <Text style={styles.gridLabel}>FORMA DE PAGO:</Text>
-              <Text style={styles.gridVal}>{data.formaPago || "-"}</Text>
-            </View>
-            <View style={styles.gridCell}>
-              <Text style={styles.gridLabel}>CONTENEDORES:</Text>
-              <Text style={styles.gridVal}>{data.containersCount || "-"}</Text>
-            </View>
-          </View>
-          <View style={styles.gridRow}>
-            <View style={styles.gridCell}>
-              <Text style={styles.gridLabel}>Incoterm:</Text>
-              <Text style={styles.gridVal}>{data.incoterm || "EXW"}</Text>
-            </View>
-            <View style={styles.gridCell}>
-              <Text style={styles.gridLabel}>Vigencia:</Text>
-              <Text style={styles.gridVal}>{formatDate(data.validUntil)}</Text>
+              <Text style={styles.gridLabel}>Bultos / Cant.:</Text>
+              <Text style={styles.gridVal}>
+                {data.packagesCount ? `${data.packagesCount} Bultos` : "-"}
+              </Text>
             </View>
           </View>
         </View>
@@ -423,7 +367,7 @@ export function QuotationPDF({ data }: { data: QuotationPdfData }) {
             <View style={styles.tableHeader}>
               <Text style={styles.thDesc}>CONCEPTO</Text>
               <Text style={styles.thCurr}>MONEDA</Text>
-              <Text style={styles.thPrice}>PRECIO UNIT.</Text>
+              <Text style={styles.thPrice}>VALOR UNIT.</Text>
               <Text style={styles.thUsd}>USD ($)</Text>
               <Text style={styles.thPen}>SOLES (S/)</Text>
             </View>
@@ -455,7 +399,7 @@ export function QuotationPDF({ data }: { data: QuotationPdfData }) {
             <View style={styles.tableHeader}>
               <Text style={styles.thDesc}>CONCEPTO</Text>
               <Text style={styles.thCurr}>MONEDA</Text>
-              <Text style={styles.thPrice}>PRECIO UNIT.</Text>
+              <Text style={styles.thPrice}>VALOR UNIT.</Text>
               <Text style={styles.thUsd}>USD ($)</Text>
               <Text style={styles.thPen}>SOLES (S/)</Text>
             </View>
@@ -482,16 +426,8 @@ export function QuotationPDF({ data }: { data: QuotationPdfData }) {
           </View>
         )}
 
-        {/* Observations & Totals */}
+        {/* Totals Box Summary (Page 1) */}
         <View style={styles.summaryContainer}>
-          <View style={styles.obsBox}>
-            <Text style={styles.obsTitle}>Observaciones y Condiciones:</Text>
-            <Text style={styles.obsText}>
-              {data.notes ||
-                "- Tarifa sujeta a variación según volumen/peso final verificado en origen.\n- Pago de flete a la confirmación de la reserva o emisión de BL."}
-            </Text>
-          </View>
-
           <View style={styles.totalsBox}>
             <Text style={styles.totalsTitle}>RESUMEN GENERAL</Text>
             {data.grandTotalUsd > 0 && (
@@ -538,12 +474,69 @@ export function QuotationPDF({ data }: { data: QuotationPdfData }) {
           </View>
         </View>
 
-        {/* Footer */}
+        {/* Footer Page 1 */}
         <View style={styles.footer}>
           <Text style={styles.footerText}>
-            FORWARDER ERP — Documento generado para propuesta comercial de carga internacional
+            MARIVAN LOGISTICS SAC — Propuesta comercial oficial de carga internacional
           </Text>
-          <Text style={styles.footerText}>Página 1 de 1</Text>
+          <Text style={styles.footerText}>Página 1 de 2</Text>
+        </View>
+      </Page>
+
+      {/* PAGE 2: ANEXO DE CONDICIONES GENERALES Y TÉRMINOS DEL SERVICIO */}
+      <Page size="A4" style={styles.page}>
+        <PdfHeader
+          docTitle="ANEXO: CONDICIONES GENERALES"
+          docCode={`N° ${data.code}`}
+          docSubtitle="TÉRMINOS Y CONDICIONES DEL SERVICIO"
+        />
+
+        <View style={{ marginTop: 6, marginBottom: 12 }}>
+          <Text style={styles.annexTitle}>ANEXO DE CONDICIONES GENERALES Y TÉRMINOS DEL SERVICIO</Text>
+
+          <View style={styles.annexSection}>
+            <Text style={styles.annexSubtitle}>1. VALIDEZ DE OFERTA Y VARIACIÓN DE TARIFAS</Text>
+            <Text style={styles.annexText}>
+              • La presente propuesta comercial tiene una validez de 15 días calendario a partir de su fecha de emisión, o hasta la fecha límite indicada en la cabecera del documento.
+            </Text>
+            <Text style={styles.annexText}>
+              • Las tarifas operativas y fletes internacionales están sujetos a variación según peso y volumen final verificado por el depósito temporal o almacén de origen.
+            </Text>
+          </View>
+
+          <View style={styles.annexSection}>
+            <Text style={styles.annexSubtitle}>2. FACTURACIÓN Y MODALIDAD DE PAGO</Text>
+            <Text style={styles.annexText}>
+              • Los servicios locales y corretaje aduanero afectos al 18% IGV serán facturados oficialmente según normas contables de SUNAT a la emisión de la Pre-Alerta o liquidación.
+            </Text>
+            <Text style={styles.annexText}>
+              • Los conceptos inafectos (derechos DUA/DAM, flete internacional, almacenajes de línea, aforos) se gestionan bajo modalidad de reembolso de gastos contra comprobantes oficiales.
+            </Text>
+            <Text style={styles.annexText}>
+              • El cliente deberá cancelar los derechos aduaneros e impuestos previos al retiro y levante autorizado de la mercancía.
+            </Text>
+          </View>
+
+          <View style={styles.annexSection}>
+            <Text style={styles.annexSubtitle}>3. RESPONSABILIDAD DOCUMENTARIA Y OBSERVACIONES</Text>
+            <Text style={styles.annexText}>
+              • El cliente es responsable de entregar la documentación de embarque (Factura Comercial, Packing List, BL/Guía Aérea, Fichas Técnicas/Permisos VUCE) completa y correcta dentro de los plazos requeridos.
+            </Text>
+            <Text style={styles.annexText}>
+              • MARIVAN LOGISTICS SAC no asume responsabilidad por sobrestadías, almacenajes adicionales o sobrecostos derivados de inspecciones (canal rojo/naranja) no imputables a nuestra gestión.
+            </Text>
+            <Text style={styles.annexText}>
+              • Observaciones específicas del cliente/operación: {data.notes ? data.notes : "Ninguna observación adicional registrada."}
+            </Text>
+          </View>
+        </View>
+
+        {/* Footer Page 2 */}
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>
+            MARIVAN LOGISTICS SAC — Documento anexo de términos y condiciones del servicio
+          </Text>
+          <Text style={styles.footerText}>Página 2 de 2</Text>
         </View>
       </Page>
     </Document>

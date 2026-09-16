@@ -287,7 +287,7 @@ export function OperationsTableView({ operations }: OperationsTableViewProps) {
 
                     {/* Finances / Extra Charges */}
                     <div className="pt-2 border-t flex items-center justify-between">
-                      <span className="text-xs text-slate-500 font-medium">Venta Total:</span>
+                      <span className="text-xs text-slate-500 font-medium">Valor Total:</span>
                       <div className="text-right">
                         {totalUsd > 0 && (
                           <div className="font-bold text-slate-900">
