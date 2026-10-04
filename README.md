@@ -1,19 +1,27 @@
-# Forwarder
+# Forwarder v2
 
-Este proyecto está configurado y conectado a:
-- **Repositorio GitHub:** [https://github.com/martinz36/Forwarder.git](https://github.com/martinz36/Forwarder.git)
-- **Base de datos:** Neon PostgreSQL (EE.UU. East 2)
+Sistema para agencias de carga y aduanas: cotizaciones con plantillas y tarifarios, embarques con hitos, documentos con control de visibilidad, facturación y portal del cliente. Multiempresa.
 
-## Configuración del Entorno
+> Rama `v2` en construcción. El sistema anterior quedó en `legacy/` solo como referencia y sigue funcionando en `main`.
 
-Las variables de entorno se gestionan a través del archivo `.env`:
+- Modelo de datos y decisiones: [docs/modelo-de-datos.md](docs/modelo-de-datos.md)
+- Esquema: [prisma/schema.prisma](prisma/schema.prisma)
 
-```env
-DATABASE_URL="postgresql://neondb_owner:***@ep-jolly-queen-a5f5u1f6-pooler.us-east-2.aws.neon.tech/neondb?sslmode=require"
-```
+## Puesta en marcha
 
-El archivo `.env` está excluido del control de versiones (`.gitignore`) por razones de seguridad.
+1. Copiar `.env.example` a `.env` y completar las conexiones de Neon.
+2. `npm install`
+3. `npx prisma migrate deploy` — crea las tablas nuevas en el esquema `app` (no toca `public`).
+4. `npm run legacy:import -- --dry-run` — simula la importación del sistema anterior y muestra el resultado.
+5. `npm run legacy:import` — importa clientes, cotizaciones y embarques en curso.
 
-## Uso
+## Scripts
 
-Para usar la base de datos en Node.js o Python, asegúrate de cargar la variable `DATABASE_URL` desde `.env`.
+| Script | Qué hace |
+|---|---|
+| `npm run db:validate` | Valida el esquema |
+| `npm run db:migrate` | Aplica migraciones |
+| `npm run db:seed` | Crea una empresa de demostración con catálogos por defecto |
+| `npm run legacy:import` | Importa desde el sistema anterior (`--dry-run` para simular) |
+| `npm test` | Pruebas del motor de precios y del importador |
+| `npm run typecheck` | Verificación de tipos |

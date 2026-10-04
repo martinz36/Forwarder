@@ -1,363 +1,1430 @@
+// Forwarder v2 — modelo de datos multiempresa (multitenant).
+//
+// Reglas de base:
+// - Toda tabla de negocio lleva `organizationId` (la agencia dueña del dato). Las tablas
+//   principales tienen FK a Organization; las tablas de detalle (líneas) llevan la columna
+//   desnormalizada para poder aplicar Row Level Security en Postgres.
+// - Dinero en Decimal: montos (14,2), tarifas y precios unitarios (14,4), cantidades (12,3).
+// - Los correlativos (COT-2026-0001, M-2026-0001, F001-123) salen de NumberSequence,
+//   nunca de contar filas.
+// - Las tablas viven en el esquema Postgres indicado en la URL (`?schema=app`), separadas del
+//   sistema anterior (que sigue intacto en `public`).
+
 generator client {
-  provider      = "prisma-client-js"
-  binaryTargets = ["native", "rhel-openssl-1.0.x", "rhel-openssl-3.0.x", "debian-openssl-3.0.x"]
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "esm"
 }
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
-enum ExpedientStatus {
-  OPEN
-  QUOTING
-  IN_TRANSIT
-  CLOSED
+// ───────────────────────────── Enums ─────────────────────────────
+
+enum MemberRole {
+  OWNER
+  ADMIN
+  OPERATIONS
+  SALES
+  ACCOUNTING
+  VIEWER
 }
 
-enum QuotationStatus {
+enum TaxIdType {
+  RUC
+  DNI
+  CE
+  PASSPORT
+  FOREIGN_TAX_ID
+  OTHER
+}
+
+enum ClientStatus {
+  PROSPECT // cotizado, aún sin embarques
+  ACTIVE
+  INACTIVE
+}
+
+enum PartnerType {
+  CARRIER // naviera
+  AIRLINE
+  AGENT // agente en origen / destino
+  COLOADER // consolidador
+  WAREHOUSE // depósito temporal / almacén
+  TRUCKER // transporte local
+  CUSTOMS_BROKER
+  INSURER
+  SHIPPER // proveedor del cliente en origen
+  CONSIGNEE
+  OTHER
+}
+
+enum LocationType {
+  SEAPORT
+  AIRPORT
+  INLAND
+  BORDER_CROSSING
+}
+
+enum Currency {
+  USD
+  PEN
+}
+
+enum Direction {
+  IMPORT
+  EXPORT
+}
+
+enum ServiceMode {
+  SEA_FCL
+  SEA_LCL
+  AIR
+  ROAD
+}
+
+enum EquipmentType {
+  DRY_20
+  DRY_40
+  HIGH_CUBE_40
+  HIGH_CUBE_45
+  REEFER_20
+  REEFER_40
+  OPEN_TOP_20
+  OPEN_TOP_40
+  FLAT_RACK_20
+  FLAT_RACK_40
+}
+
+/// Sección de la cotización / liquidación a la que pertenece un concepto.
+enum ChargeGroup {
+  ORIGIN
+  FREIGHT
+  INSURANCE
+  DESTINATION
+  CUSTOMS
+  INLAND_TRANSPORT
+  STORAGE
+  DUTIES_TAXES
+  OTHER
+}
+
+/// Tratamiento tributario del concepto.
+enum TaxTreatment {
+  TAXED // gravado con IGV → factura
+  EXEMPT // exonerado → factura
+  UNAFFECTED // inafecto → factura
+  REIMBURSABLE // reembolso de gastos a nombre del cliente → liquidación de reembolso
+}
+
+/// Unidad de cobro: define cómo se calcula la cantidad a partir de los datos de la carga.
+enum ChargeBasis {
+  PER_SHIPMENT // monto fijo por embarque
+  PER_DOCUMENT // por BL / AWB
+  PER_CONTAINER
+  PER_WM // por W/M: mayor entre toneladas y m³ (LCL)
+  PER_CBM
+  PER_TON
+  PER_KG
+  PER_CHARGEABLE_KG // peso cobrable aéreo
+  PER_PACKAGE
+  PER_DAY
+  PERCENT_FOB
+  PERCENT_CIF
+  MANUAL // cantidad digitada a mano
+}
+
+enum RateCardStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum QuoteStatus {
   DRAFT
   SENT
   ACCEPTED
   REJECTED
+  EXPIRED
+  CANCELLED
 }
 
-enum OperationStatus {
-  COORDINANDO_ORIGEN
-  POR_RECOGER
-  EN_ALMACEN_ORIGEN
-  EN_TRANSITO
-  EN_ADUANA_DESTINO
-  EN_REPARTO
-  ENTREGADO
-  LIQUIDADO
+enum QuoteVersionStatus {
+  DRAFT
+  SENT
+  ACCEPTED
+  REJECTED
+  SUPERSEDED
+  EXPIRED
+}
+
+/// Estado general del embarque (uno solo, para filtros y reportes).
+/// El detalle fino lo dan los hitos (ShipmentMilestone).
+enum ShipmentStatus {
+  CONFIRMED // orden generada, coordinando
+  AT_ORIGIN
+  IN_TRANSIT
+  AT_DESTINATION
+  CUSTOMS_CLEARANCE
+  RELEASED // levante autorizado
+  OUT_FOR_DELIVERY
+  DELIVERED
+  CLOSED // liquidado y cerrado
+  CANCELLED
+}
+
+enum MilestoneStatus {
+  PENDING
+  DONE
+  SKIPPED
+}
+
+enum CustomsRegime {
+  IMPORT_FOR_CONSUMPTION // 10
+  TEMPORARY_ADMISSION // 20 / 21
+  EXPORT_DEFINITIVE // 40
+  TEMPORARY_EXPORT // 51 / 52
+  CUSTOMS_WAREHOUSE // 70
+  TRANSIT // 80
+  OTHER
 }
 
 enum CustomsChannel {
-  VERDE
-  NARANJA
-  ROJO
+  GREEN
+  ORANGE
+  RED
 }
 
-enum DocumentType {
-  BL
-  FACTURA_COMERCIAL
-  PACKING_LIST
-  DAM
-  LIQUIDACION
-  OTRO
+enum ChargeSource {
+  QUOTE // viene de la cotización aceptada
+  EXTRA // cargo adicional durante la operación
+  ADJUSTMENT
 }
 
-enum LiquidationStatus {
+enum ApprovalStatus {
+  NOT_REQUIRED
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum DocumentVisibility {
+  INTERNAL // solo la agencia
+  CLIENT // la agencia y el cliente
+}
+
+enum DocumentStatus {
   DRAFT
+  PENDING_CLIENT_APPROVAL // p. ej. borrador de HBL que el cliente debe aprobar
+  CHANGES_REQUESTED
   FINAL
-  BILLED
+  VOID
 }
 
+enum PartySide {
+  STAFF
+  CLIENT
+  SYSTEM
+}
+
+enum Responsible {
+  CLIENT
+  STAFF
+  THIRD_PARTY
+}
+
+enum RequirementStatus {
+  PENDING
+  RECEIVED
+  APPROVED
+  WAIVED
+}
+
+enum InvoiceType {
+  INVOICE // factura
+  RECEIPT // boleta
+  CREDIT_NOTE
+  DEBIT_NOTE
+  REIMBURSEMENT_NOTE // liquidación / recibo de reembolso de gastos
+}
+
+enum InvoiceStatus {
+  DRAFT
+  ISSUED
+  ACCEPTED // aceptado por SUNAT/OSE
+  REJECTED
+  VOIDED
+}
+
+enum PaymentMethod {
+  BANK_TRANSFER
+  DEPOSIT
+  CASH
+  CHECK
+  CARD
+  OTHER
+}
+
+enum PaymentKind {
+  ADVANCE // anticipo / provisión de fondos
+  SETTLEMENT // pago de liquidación o factura
+  REFUND // devolución al cliente
+}
+
+enum EventVisibility {
+  INTERNAL
+  CLIENT
+}
+
+enum NotificationChannel {
+  EMAIL
+  WHATSAPP
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  FAILED
+  CANCELLED
+}
+
+enum ShareLinkScope {
+  TRACKING // seguimiento de un embarque, sin datos financieros
+  QUOTE // ver y aceptar/rechazar una cotización
+}
+
+// ───────────────────────── Empresa e identidad ─────────────────────────
+
+/// La agencia de carga / aduanas que usa el sistema (el "tenant").
+model Organization {
+  id                String    @id @default(uuid(7))
+  slug              String    @unique
+  name              String // nombre comercial
+  legalName         String
+  taxIdType         TaxIdType @default(RUC)
+  taxId             String?
+  address           String?
+  city              String?
+  country           String    @default("PE")
+  phone             String?
+  email             String?
+  website           String?
+  logoUrl           String?
+  brandColor        String?
+  timezone          String    @default("America/Lima")
+  baseCurrency      Currency  @default(USD)
+  taxRate           Decimal   @default(18) @db.Decimal(5, 2) // IGV %
+  defaultMarkupPct  Decimal   @default(15) @db.Decimal(6, 2) // margen sugerido cuando solo hay costo
+  quoteValidityDays Int       @default(15)
+  quoteTerms        String?   @db.Text // condiciones generales impresas en cada cotización
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  memberships    Membership[]
+  invitations    Invitation[]
+  clients        Client[]
+  contacts       Contact[]
+  partners       Partner[]
+  locations      Location[]
+  chargeConcepts ChargeConcept[]
+  rateCards      RateCard[]
+  quoteTemplates QuoteTemplate[]
+  quotes         Quote[]
+  shipments      Shipment[]
+  milestoneDefs  MilestoneDefinition[]
+  documentTypes  DocumentType[]
+  documents      Document[]
+  invoices       Invoice[]
+  payments       Payment[]
+  exchangeRates  ExchangeRate[]
+  events         ActivityEvent[]
+  notifications  NotificationOutbox[]
+  shareLinks     ShareLink[]
+  sequences      NumberSequence[]
+}
+
+// Usuario, sesión, cuenta y verificación siguen el formato de Better Auth.
+model User {
+  id            String   @id @default(uuid(7))
+  name          String
+  email         String   @unique
+  emailVerified Boolean  @default(false)
+  image         String?
+  phone         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  sessions    Session[]
+  accounts    Account[]
+  memberships Membership[]
+  contacts    Contact[] // acceso al portal como contacto de un cliente
+}
+
+model Session {
+  id                   String   @id @default(uuid(7))
+  token                String   @unique
+  expiresAt            DateTime
+  ipAddress            String?
+  userAgent            String?
+  userId               String
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  activeOrganizationId String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model Account {
+  id                    String    @id @default(uuid(7))
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+}
+
+model Verification {
+  id         String   @id @default(uuid(7))
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+}
+
+/// Personal de la agencia y su rol.
+model Membership {
+  id             String       @id @default(uuid(7))
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role           MemberRole   @default(OPERATIONS)
+  isActive       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([organizationId, userId])
+  @@index([userId])
+}
+
+model Invitation {
+  id             String       @id @default(uuid(7))
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  email          String? // null = cualquiera con el enlace puede aceptarla
+  role           MemberRole   @default(OPERATIONS)
+  tokenHash      String       @unique
+  expiresAt      DateTime
+  acceptedAt     DateTime?
+  invitedById    String?
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId, email])
+}
+
+// ───────────────────────────── Terceros ─────────────────────────────
+
+/// Empresa cliente de la agencia (importador / exportador).
 model Client {
-  id             String       @id @default(cuid())
-  portalToken    String?      @unique @default(uuid())
-  documentType   String       @default("RUC")
-  documentNumber String       @unique
-  businessName   String
-  contactName    String?
+  id             String       @id @default(uuid(7))
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  taxIdType      TaxIdType    @default(RUC)
+  taxId          String? // opcional para prospectos
+  legalName      String // razón social
+  tradeName      String?
+  status         ClientStatus @default(ACTIVE)
   email          String?
   phone          String?
   address        String?
-  status         String       @default("ACTIVE")
+  city           String?
+  country        String       @default("PE")
+  creditDays     Int          @default(0) // 0 = contado
+  creditLimit    Decimal?     @db.Decimal(14, 2)
+  internalNotes  String?      @db.Text
+  salesRepId     String?
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
-  expedients     Expedient[]
-  quotations     Quotation[]
-  notes          ClientNote[]
+
+  contacts  Contact[]
+  partners  Partner[] // proveedores del cliente en origen
+  rateCards RateCard[] // tarifas especiales para este cliente
+  quotes    Quote[]
+  shipments Shipment[]
+  documents Document[]
+  invoices  Invoice[]
+  payments  Payment[]
+  events    ActivityEvent[]
+
+  @@unique([organizationId, taxIdType, taxId])
+  @@index([organizationId, legalName])
 }
 
-model ClientNote {
-  id        String   @id @default(cuid())
-  clientId  String
-  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  content   String   @db.Text
-  createdBy String?  @default("BROKER")
-  createdAt DateTime @default(now())
+/// Persona de contacto del cliente. Si tiene usuario, puede entrar al portal.
+model Contact {
+  id             String       @id @default(uuid(7))
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  clientId       String
+  client         Client       @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  name           String
+  jobTitle       String?
+  email          String?
+  phone          String?
+  isPrimary      Boolean      @default(false)
+  notifyEmail    Boolean      @default(true)
+  notifyWhatsapp Boolean      @default(false)
+  portalAccess   Boolean      @default(false)
+  userId         String?
+  user           User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  quotes    Quote[]
+  shipments Shipment[]
+
+  @@unique([clientId, userId])
+  @@index([organizationId, clientId])
+  @@index([userId])
 }
 
-model Expedient {
-  id            String          @id @default(cuid())
-  code          String          @unique
-  externalCode  String?         @unique
-  transportMode String?         @default("FCL")
-  clientId      String
-  client        Client          @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  status        ExpedientStatus @default(OPEN)
-  loadType      String?         @default("FCL")
-  notes         String?         @db.Text
-  quotations    Quotation[]
-  operations    Operation[]
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
-}
-
-model Quotation {
-  id              String          @id @default(cuid())
-  code            String          @unique
-  expedientId     String?
-  expedient       Expedient?      @relation(fields: [expedientId], references: [id], onDelete: SetNull)
-  clientId        String
-  client          Client          @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  status          QuotationStatus @default(DRAFT)
-  validUntil      DateTime?
-  totalUsd        Float           @default(0)
-  totalPen        Float           @default(0)
-  profitUsd       Float           @default(0)
-  profitPen       Float           @default(0)
-
-  // Pre-Alerta exact headers & Shipment metadata fields
-  modality        String?         @default("IMPORTACIÓN MARÍTIMA")
-  incoterm        String?
-  origin          String?         // LUG. EMBARQUE / POL
-  destination     String?         // PUERTO / DESTINO / POD
-  shippingType    String?         // TIPO DE ENVÍO
-  shippingLine    String?         // NAVE / LÍNEA
-  frequency       String?
-  transitTime     String?         // TIEMPO TRÁNSITO
-  etd             String?         // E.T.D
-  eta             String?         // E.T.A
-  blNro           String?         // BL/Nro
-  shipper         String?         // SHIPPER
-  mercaderia      String?         // MERCADERIA
-  formaPago       String?         // FORMA DE PAGO
-  cargoType       String?
-  packagesCount   String?         // BULTOS / PALETA
-  grossWeight     String?         // PESO
-  volume          String?         // VOLUMEN
-  loadType        String?
-  containersCount String?         // CONTENEDOR(ES)
-  notes           String?         @db.Text
-
-  polId           String?
-  polPort         Port?           @relation("PolPort", fields: [polId], references: [id], onDelete: SetNull)
-  podId           String?
-  podPort         Port?           @relation("PodPort", fields: [podId], references: [id], onDelete: SetNull)
-  shipperId       String?
-  shipperPartner  Partner?        @relation("ShipperPartner", fields: [shipperId], references: [id], onDelete: SetNull)
-  carrierId       String?
-  carrierPartner  Partner?        @relation("CarrierPartner", fields: [carrierId], references: [id], onDelete: SetNull)
-
-  items           QuotationItem[]
-  operation       Operation?
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
-}
-
-model Port {
-  id            String      @id @default(cuid())
-  code          String      @unique
-  name          String
-  country       String      @default("")
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
-  polQuotations Quotation[] @relation("PolPort")
-  podQuotations Quotation[] @relation("PodPort")
-}
-
+/// Proveedores y contrapartes: navieras, aerolíneas, agentes, depósitos, transportistas,
+/// y también los proveedores del cliente en origen (SHIPPER).
 model Partner {
-  id                String      @id @default(cuid())
-  name              String      @unique
-  type              String      @default("SHIPPER") // 'SHIPPER', 'CARRIER', 'CONSIGNEE', etc.
-  createdAt         DateTime    @default(now())
-  updatedAt         DateTime    @updatedAt
-  shipperQuotations Quotation[] @relation("ShipperPartner")
-  carrierQuotations Quotation[] @relation("CarrierPartner")
+  id             String       @id @default(uuid(7))
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  type           PartnerType
+  name           String
+  taxId          String?
+  country        String?
+  email          String?
+  phone          String?
+  contactName    String?
+  notes          String?      @db.Text
+  isActive       Boolean      @default(true)
+  clientId       String? // si es proveedor de un cliente específico
+  client         Client?      @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  rateCards            RateCard[]
+  rateLinesAsCarrier   RateCardLine[]      @relation("RateLineCarrier")
+  quoteLinesProvider   QuoteLine[]
+  versionsAsCarrier    QuoteVersion[]      @relation("QuoteCarrier")
+  versionsAsAgent      QuoteVersion[]      @relation("QuoteAgent")
+  versionsAsShipper    QuoteVersion[]      @relation("QuoteShipper")
+  shipmentsAsShipper   Shipment[]          @relation("ShipmentShipper")
+  shipmentsAsCarrier   Shipment[]          @relation("ShipmentCarrier")
+  shipmentsAsAgent     Shipment[]          @relation("ShipmentAgent")
+  shipmentsAsColoader  Shipment[]          @relation("ShipmentColoader")
+  shipmentsAsWarehouse Shipment[]          @relation("ShipmentWarehouse")
+  chargesProvider      ShipmentCharge[]
+  commercialInvoices   CommercialInvoice[]
+
+  @@unique([organizationId, type, name])
+  @@index([organizationId, clientId])
 }
 
-model QuotationItem {
-  id          String    @id @default(cuid())
-  quotationId String
-  quotation   Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
-  description String
-  category    String    @default("GASTOS_LOCALES")
-  currency    String    @default("USD")
-  unitCost    Float     @default(0)
-  unitPrice   Float
-  quantity    Int
-  total       Float
-  isTaxable   Boolean   @default(true)
-  isAdvance   Boolean   @default(false)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+/// Puertos, aeropuertos y lugares (código UN/LOCODE o IATA).
+model Location {
+  id             String       @id @default(uuid(7))
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  code           String
+  name           String
+  country        String // ISO-3166 alfa-2
+  type           LocationType @default(SEAPORT)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  rateLinesOrigin      RateCardLine[] @relation("RateLineOrigin")
+  rateLinesDestination RateCardLine[] @relation("RateLineDestination")
+  versionsOrigin       QuoteVersion[] @relation("QuoteOrigin")
+  versionsDestination  QuoteVersion[] @relation("QuoteDestination")
+  shipmentsOrigin      Shipment[]     @relation("ShipmentOrigin")
+  shipmentsDestination Shipment[]     @relation("ShipmentDestination")
+
+  @@unique([organizationId, code])
 }
 
-model ConceptCatalog {
-  id              String   @id @default(cuid())
-  name            String   @unique
-  category        String   @default("GASTOS_LOCALES")
-  defaultCurrency String   @default("USD")
-  defaultCost     Float    @default(0)
-  defaultPrice    Float    @default(0)
-  isTaxable       Boolean  @default(true)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+// ───────────────────────── Catálogo y tarifas ─────────────────────────
+
+/// Concepto de cobro (flete, visto bueno, comisión de aduana…) con sus valores por defecto.
+model ChargeConcept {
+  id              String       @id @default(uuid(7))
+  organizationId  String
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  code            String?
+  name            String
+  nameEn          String?
+  description     String?
+  group           ChargeGroup
+  taxTreatment    TaxTreatment
+  defaultBasis    ChargeBasis  @default(PER_SHIPMENT)
+  defaultCurrency Currency     @default(USD)
+  defaultCost     Decimal?     @db.Decimal(14, 4)
+  defaultPrice    Decimal?     @db.Decimal(14, 4)
+  defaultMinPrice Decimal?     @db.Decimal(14, 2)
+  isActive        Boolean      @default(true)
+  sortOrder       Int          @default(0)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  rateLines     RateCardLine[]
+  templateLines QuoteTemplateLine[]
+  quoteLines    QuoteLine[]
+  charges       ShipmentCharge[]
+
+  @@unique([organizationId, name])
+  @@unique([organizationId, code])
 }
 
-model Operation {
-  id                String             @id @default(cuid())
-  expedientId       String?
-  expedient         Expedient?         @relation(fields: [expedientId], references: [id], onDelete: SetNull)
-  quotationId       String             @unique
-  quotation         Quotation          @relation(fields: [quotationId], references: [id], onDelete: Cascade)
-  status            OperationStatus    @default(EN_TRANSITO)
-  incoterm          String?            @default("FOB")
-  blNumber          String?
-  etd               DateTime?
-  eta               DateTime?
-  customsChannel    CustomsChannel?
-  sharedToken       String             @unique @default(uuid())
+/// Tarifario. Sin cliente = tarifa general; con cliente = tarifa especial de ese cliente;
+/// con proveedor = tarifa de costo (naviera, agente, transportista).
+/// Al cotizar gana la tarifa más específica: cliente > ruta/naviera > general > concepto.
+model RateCard {
+  id             String         @id @default(uuid(7))
+  organizationId String
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  description    String?
+  clientId       String?
+  client         Client?        @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  partnerId      String?
+  partner        Partner?       @relation(fields: [partnerId], references: [id], onDelete: SetNull)
+  direction      Direction?
+  mode           ServiceMode?
+  validFrom      DateTime?
+  validTo        DateTime?
+  status         RateCardStatus @default(ACTIVE)
+  createdById    String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
 
-  // Logistics Checklist Milestones
-  hblApproved       Boolean            @default(false)
-  customsDocsSent   Boolean            @default(false)
-  taxesPaid         Boolean            @default(false)
-  transportDocsSent Boolean            @default(false)
-  cargoDelivered    Boolean            @default(false)
+  lines RateCardLine[]
 
-  charges           OperationCharge[]
-  documents         Document[]
-  checklistItems    ChecklistItem[]
-  paymentRecords    PaymentRecord[]
-  liquidation       Liquidation?
-  commercialInvoice CommercialInvoice?
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
+  @@index([organizationId, status])
+  @@index([organizationId, clientId])
 }
 
-model ChecklistItem {
-  id           String    @id @default(cuid())
-  operationId  String
-  operation    Operation @relation(fields: [operationId], references: [id], onDelete: Cascade)
-  title        String
-  description  String?
-  documentType String    @default("OTRO")
-  isCompleted  Boolean   @default(false)
-  isRequired   Boolean   @default(true)
-  order        Int       @default(0)
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+model RateCardLine {
+  id             String         @id @default(uuid(7))
+  organizationId String
+  rateCardId     String
+  rateCard       RateCard       @relation(fields: [rateCardId], references: [id], onDelete: Cascade)
+  conceptId      String
+  concept        ChargeConcept  @relation(fields: [conceptId], references: [id], onDelete: Cascade)
+  // Filtros opcionales: si están vacíos, la línea aplica a cualquier ruta / naviera / equipo.
+  originId       String?
+  origin         Location?      @relation("RateLineOrigin", fields: [originId], references: [id], onDelete: SetNull)
+  destinationId  String?
+  destination    Location?      @relation("RateLineDestination", fields: [destinationId], references: [id], onDelete: SetNull)
+  carrierId      String?
+  carrier        Partner?       @relation("RateLineCarrier", fields: [carrierId], references: [id], onDelete: SetNull)
+  equipment      EquipmentType?
+  // Tramos (p. ej. LCL 0–5 m³, aéreo +45 / +100 / +300 kg).
+  fromQuantity   Decimal?       @db.Decimal(12, 3)
+  toQuantity     Decimal?       @db.Decimal(12, 3)
+  basis          ChargeBasis
+  currency       Currency       @default(USD)
+  cost           Decimal?       @db.Decimal(14, 4)
+  price          Decimal?       @db.Decimal(14, 4)
+  minQuantity    Decimal?       @db.Decimal(12, 3) // p. ej. mínimo 1 W/M
+  minCost        Decimal?       @db.Decimal(14, 2)
+  minPrice       Decimal?       @db.Decimal(14, 2) // p. ej. 0.3% CIF, mínimo USD 150
+  notes          String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  quoteLines QuoteLine[]
+
+  @@index([rateCardId])
+  @@index([organizationId, conceptId])
 }
 
-model OperationCharge {
-  id            String    @id @default(cuid())
-  operationId   String
-  operation     Operation @relation(fields: [operationId], references: [id], onDelete: Cascade)
-  description   String
-  category      String    @default("GASTOS_LOCALES")
-  currency      String    @default("USD")
-  unitCost      Float
-  unitPrice     Float
-  quantity      Int
-  totalCost     Float
-  totalPrice    Float
-  isExtraCharge Boolean   @default(false)
-  isTaxable     Boolean   @default(true)
-  isAdvance     Boolean   @default(false)
+/// Plantilla de cotización por tipo de servicio, con los conceptos que casi siempre van.
+model QuoteTemplate {
+  id                String       @id @default(uuid(7))
+  organizationId    String
+  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name              String
+  description       String?
+  direction         Direction
+  mode              ServiceMode? // null = cualquier modo (p. ej. solo despacho)
+  includesFreight   Boolean      @default(true)
+  includesCustoms   Boolean      @default(true)
+  includesInsurance Boolean      @default(false)
+  includesInland    Boolean      @default(false)
+  incoterm          String?
+  validityDays      Int?
+  terms             String?      @db.Text // reemplaza las condiciones generales de la empresa
+  defaultNotes      String?      @db.Text
+  isActive          Boolean      @default(true)
+  sortOrder         Int          @default(0)
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  lines  QuoteTemplateLine[]
+  quotes Quote[]
+
+  @@unique([organizationId, name])
+}
+
+model QuoteTemplateLine {
+  id             String        @id @default(uuid(7))
+  organizationId String
+  templateId     String
+  template       QuoteTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  conceptId      String
+  concept        ChargeConcept @relation(fields: [conceptId], references: [id], onDelete: Cascade)
+  basis          ChargeBasis? // si es null usa el del concepto
+  quantity       Decimal?      @db.Decimal(12, 3) // cantidad fija; si es null se calcula
+  isOptional     Boolean       @default(false)
+  incoterms      String[] // la línea solo aparece con estos incoterms (vacío = siempre)
+  sortOrder      Int           @default(0)
+
+  @@index([templateId])
+}
+
+// ───────────────────────────── Cotizaciones ─────────────────────────────
+
+/// Cotización (COT-2026-0001). Su contenido vive en versiones: la enviada o aceptada
+/// no se edita, se crea una versión nueva.
+model Quote {
+  id                String         @id @default(uuid(7))
+  organizationId    String
+  organization      Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  number            String
+  clientId          String
+  client            Client         @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  contactId         String?
+  contact           Contact?       @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  templateId        String?
+  template          QuoteTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  shipmentId        String? // embarque generado (o al que se agrega esta cotización)
+  shipment          Shipment?      @relation(fields: [shipmentId], references: [id], onDelete: SetNull)
+  reference         String? // referencia del cliente o código de expediente anterior
+  status            QuoteStatus    @default(DRAFT)
+  currentVersionNo  Int            @default(1)
+  acceptedVersionId String?        @unique
+  acceptedVersion   QuoteVersion?  @relation("AcceptedVersion", fields: [acceptedVersionId], references: [id], onDelete: SetNull)
+  ownerId           String? // usuario responsable
+  lostReason        String?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  versions   QuoteVersion[]
+  documents  Document[]
+  events     ActivityEvent[]
+  shareLinks ShareLink[]
+
+  @@unique([organizationId, number])
+  @@index([organizationId, clientId])
+  @@index([organizationId, status])
+}
+
+model QuoteVersion {
+  id             String             @id @default(uuid(7))
+  organizationId String
+  quoteId        String
+  quote          Quote              @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  versionNo      Int
+  status         QuoteVersionStatus @default(DRAFT)
+
+  // Alcance del servicio
+  direction         Direction   @default(IMPORT)
+  mode              ServiceMode @default(SEA_LCL)
+  incoterm          String?
+  includesFreight   Boolean     @default(true)
+  includesCustoms   Boolean     @default(true)
+  includesInsurance Boolean     @default(false)
+  includesInland    Boolean     @default(false)
+
+  // Ruta
+  originId        String?
+  origin          Location? @relation("QuoteOrigin", fields: [originId], references: [id], onDelete: SetNull)
+  destinationId   String?
+  destination     Location? @relation("QuoteDestination", fields: [destinationId], references: [id], onDelete: SetNull)
+  originText      String? // cuando no hay puerto catalogado
+  destinationText String?
+  pickupAddress   String?
+  deliveryAddress String?
+  carrierId       String?
+  carrier         Partner?  @relation("QuoteCarrier", fields: [carrierId], references: [id], onDelete: SetNull)
+  agentId         String?
+  agent           Partner?  @relation("QuoteAgent", fields: [agentId], references: [id], onDelete: SetNull)
+  shipperId       String?
+  shipper         Partner?  @relation("QuoteShipper", fields: [shipperId], references: [id], onDelete: SetNull)
+  routing         String? // directo / transbordo
+  frequency       String?
+  transitTime     String?
+  etd             DateTime?
+  eta             DateTime?
+
+  // Carga
+  commodity          String?
+  hsCode             String?
+  packages           Int?
+  packageType        String?
+  grossWeightKg      Decimal? @db.Decimal(12, 3)
+  volumeCbm          Decimal? @db.Decimal(12, 3)
+  chargeableWeightKg Decimal? @db.Decimal(12, 3)
+  cargoValue         Decimal? @db.Decimal(14, 2)
+  cargoValueCurrency String?  @default("USD")
+  isDangerous        Boolean  @default(false)
+  isRefrigerated     Boolean  @default(false)
+
+  // Comercial
+  validUntil    DateTime?
+  paymentTerms  String?
+  exchangeRate  Decimal?  @db.Decimal(10, 4)
+  notes         String?   @db.Text // observaciones visibles al cliente
+  internalNotes String?   @db.Text
+  terms         String?   @db.Text // copia de las condiciones al momento de enviar
+  totals        Json? // resumen por moneda guardado al enviar: gravado, IGV, reembolsos, total, margen
+
+  // Ciclo de vida
+  sentAt               DateTime?
+  sentById             String?
+  viewedAt             DateTime?
+  respondedAt          DateTime?
+  respondedByContactId String?
+  responseNote         String?
+  createdById          String?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  lines      QuoteLine[]
+  equipment  QuoteEquipment[]
+  acceptedOf Quote?           @relation("AcceptedVersion")
+
+  @@unique([quoteId, versionNo])
+  @@index([organizationId, status])
+}
+
+model QuoteEquipment {
+  id             String        @id @default(uuid(7))
+  organizationId String
+  versionId      String
+  version        QuoteVersion  @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  equipment      EquipmentType
+  quantity       Int           @default(1)
+
+  @@index([versionId])
+}
+
+model QuoteLine {
+  id             String         @id @default(uuid(7))
+  organizationId String
+  versionId      String
+  version        QuoteVersion   @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  conceptId      String?
+  concept        ChargeConcept? @relation(fields: [conceptId], references: [id], onDelete: SetNull)
+  rateCardLineId String? // de qué tarifa salió el precio
+  rateCardLine   RateCardLine?  @relation(fields: [rateCardLineId], references: [id], onDelete: SetNull)
+  providerId     String? // a quién se le paga el costo
+  provider       Partner?       @relation(fields: [providerId], references: [id], onDelete: SetNull)
+  description    String
+  group          ChargeGroup
+  taxTreatment   TaxTreatment
+  basis          ChargeBasis    @default(PER_SHIPMENT)
+  quantity       Decimal        @default(1) @db.Decimal(12, 3)
+  currency       Currency       @default(USD)
+  unitCost       Decimal        @default(0) @db.Decimal(14, 4)
+  unitPrice      Decimal        @default(0) @db.Decimal(14, 4)
+  minPrice       Decimal?       @db.Decimal(14, 2)
+  totalCost      Decimal        @default(0) @db.Decimal(14, 2)
+  totalPrice     Decimal        @default(0) @db.Decimal(14, 2)
+  isOptional     Boolean        @default(false)
+  notes          String?
+  sortOrder      Int            @default(0)
+
+  charges ShipmentCharge[]
+
+  @@index([versionId])
+}
+
+// ───────────────────────────── Embarques ─────────────────────────────
+
+/// Embarque / expediente: el eje de la operación. Nace al aceptar una cotización
+/// (o directo, para clientes con tarifa fija) y concentra hitos, documentos y cobranza.
+model Shipment {
+  id              String         @id @default(uuid(7))
+  organizationId  String
+  organization    Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  number          String // L-2026-0001 (LCL), M- (FCL), A- (aéreo), T- (terrestre); un correlativo por año
+  clientId        String
+  client          Client         @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  contactId       String?
+  contact         Contact?       @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  clientReference String? // orden de compra / referencia del cliente
+  status          ShipmentStatus @default(CONFIRMED)
+  statusChangedAt DateTime       @default(now())
+  ownerId         String? // responsable operativo
+
+  direction         Direction
+  mode              ServiceMode
+  incoterm          String?
+  includesFreight   Boolean     @default(true)
+  includesCustoms   Boolean     @default(true)
+  includesInsurance Boolean     @default(false)
+  includesInland    Boolean     @default(false)
+
+  originId        String?
+  origin          Location? @relation("ShipmentOrigin", fields: [originId], references: [id], onDelete: SetNull)
+  destinationId   String?
+  destination     Location? @relation("ShipmentDestination", fields: [destinationId], references: [id], onDelete: SetNull)
+  pickupAddress   String?
+  deliveryAddress String?
+
+  shipperId   String?
+  shipper     Partner? @relation("ShipmentShipper", fields: [shipperId], references: [id], onDelete: SetNull)
+  carrierId   String?
+  carrier     Partner? @relation("ShipmentCarrier", fields: [carrierId], references: [id], onDelete: SetNull)
+  agentId     String?
+  agent       Partner? @relation("ShipmentAgent", fields: [agentId], references: [id], onDelete: SetNull)
+  coloaderId  String?
+  coloader    Partner? @relation("ShipmentColoader", fields: [coloaderId], references: [id], onDelete: SetNull)
+  warehouseId String? // depósito temporal
+  warehouse   Partner? @relation("ShipmentWarehouse", fields: [warehouseId], references: [id], onDelete: SetNull)
+
+  bookingNumber String?
+  mblNumber     String? // MBL / MAWB
+  hblNumber     String? // HBL / HAWB
+  vessel        String?
+  voyage        String?
+  flightNumber  String?
+  etd           DateTime?
+  eta           DateTime?
+  atd           DateTime?
+  ata           DateTime?
+  freeDays      Int? // días libres de sobrestadía
+
+  commodity          String?
+  hsCode             String?
+  packages           Int?
+  packageType        String?
+  grossWeightKg      Decimal? @db.Decimal(12, 3)
+  volumeCbm          Decimal? @db.Decimal(12, 3)
+  chargeableWeightKg Decimal? @db.Decimal(12, 3)
+  cargoValue         Decimal? @db.Decimal(14, 2)
+  cargoValueCurrency String?  @default("USD")
+  isDangerous        Boolean  @default(false)
+  isRefrigerated     Boolean  @default(false)
+
+  internalNotes String?   @db.Text
+  closedAt      DateTime?
+  cancelledAt   DateTime?
+  cancelReason  String?
+  createdById   String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+
+  quotes             Quote[]
+  containers         ShipmentContainer[]
+  milestones         ShipmentMilestone[]
+  customsEntries     CustomsEntry[]
+  charges            ShipmentCharge[]
+  documents          Document[]
+  requirements       DocumentRequirement[]
+  commercialInvoices CommercialInvoice[]
+  invoices           Invoice[]
+  payments           Payment[]
+  events             ActivityEvent[]
+  shareLinks         ShareLink[]
+
+  @@unique([organizationId, number])
+  @@index([organizationId, status])
+  @@index([organizationId, clientId])
 }
 
-model PaymentRecord {
-  id              String    @id @default(cuid())
-  operationId     String
-  operation       Operation @relation(fields: [operationId], references: [id], onDelete: Cascade)
-  concept         String
-  amount          Float
+model ShipmentContainer {
+  id              String        @id @default(uuid(7))
+  organizationId  String
+  shipmentId      String
+  shipment        Shipment      @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  equipment       EquipmentType
+  number          String?
+  sealNumber      String?
+  grossWeightKg   Decimal?      @db.Decimal(12, 3)
+  packages        Int?
+  emptyReturnedAt DateTime? // devolución del vacío (controla sobrestadía)
+  createdAt       DateTime      @default(now())
+
+  @@index([shipmentId])
+}
+
+/// Catálogo de hitos por empresa. Al crear un embarque se copian los que aplican
+/// a su dirección, modo y servicios.
+model MilestoneDefinition {
+  id              String          @id @default(uuid(7))
+  organizationId  String
+  organization    Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  code            String
+  name            String // nombre interno
+  clientLabel     String // lo que ve el cliente
+  directions      Direction[]
+  modes           ServiceMode[]
+  requiresFreight Boolean         @default(false)
+  requiresCustoms Boolean         @default(false)
+  requiresInland  Boolean         @default(false)
+  setsStatus      ShipmentStatus? // al completarse, mueve el estado del embarque
+  clientVisible   Boolean         @default(true)
+  notifyClient    Boolean         @default(false)
+  sortOrder       Int             @default(0)
+  isActive        Boolean         @default(true)
+
+  milestones ShipmentMilestone[]
+
+  @@unique([organizationId, code])
+}
+
+model ShipmentMilestone {
+  id             String               @id @default(uuid(7))
+  organizationId String
+  shipmentId     String
+  shipment       Shipment             @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  definitionId   String?
+  definition     MilestoneDefinition? @relation(fields: [definitionId], references: [id], onDelete: SetNull)
+  name           String
+  clientLabel    String
+  status         MilestoneStatus      @default(PENDING)
+  plannedAt      DateTime?
+  completedAt    DateTime?
+  completedById  String?
+  setsStatus     ShipmentStatus?
+  clientVisible  Boolean              @default(true)
+  notifyClient   Boolean              @default(false)
+  note           String?
+  sortOrder      Int                  @default(0)
+
+  @@index([shipmentId, sortOrder])
+}
+
+/// Declaración aduanera (DAM) del embarque.
+model CustomsEntry {
+  id                String          @id @default(uuid(7))
+  organizationId    String
+  shipmentId        String
+  shipment          Shipment        @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  regime            CustomsRegime   @default(IMPORT_FOR_CONSUMPTION)
+  regimeCode        String? // código SUNAT (10, 40…)
+  customsOffice     String? // aduana (118 Marítima del Callao, 235 Aérea…)
+  declarationNumber String? // N° de DAM
+  numberedAt        DateTime?
+  channel           CustomsChannel?
+  channelAt         DateTime?
+  inspectionAt      DateTime?
+  releasedAt        DateTime? // levante
+  customsValue      Decimal?        @db.Decimal(14, 2)
+  dutiesAdValorem   Decimal?        @db.Decimal(14, 2)
+  igv               Decimal?        @db.Decimal(14, 2)
+  ipm               Decimal?        @db.Decimal(14, 2)
+  isc               Decimal?        @db.Decimal(14, 2)
+  perception        Decimal?        @db.Decimal(14, 2)
+  otherTaxes        Decimal?        @db.Decimal(14, 2)
+  totalTaxes        Decimal?        @db.Decimal(14, 2)
+  taxesCurrency     Currency        @default(USD)
+  taxesPaidAt       DateTime?
+  notes             String?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  @@index([shipmentId])
+}
+
+/// Cargo real del embarque: lo que se cobra al cliente y lo que se paga al proveedor.
+model ShipmentCharge {
+  id                  String         @id @default(uuid(7))
+  organizationId      String
+  shipmentId          String
+  shipment            Shipment       @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  conceptId           String?
+  concept             ChargeConcept? @relation(fields: [conceptId], references: [id], onDelete: SetNull)
+  quoteLineId         String?
+  quoteLine           QuoteLine?     @relation(fields: [quoteLineId], references: [id], onDelete: SetNull)
+  providerId          String?
+  provider            Partner?       @relation(fields: [providerId], references: [id], onDelete: SetNull)
+  source              ChargeSource   @default(QUOTE)
+  description         String
+  group               ChargeGroup
+  taxTreatment        TaxTreatment
+  basis               ChargeBasis    @default(PER_SHIPMENT)
+  quantity            Decimal        @default(1) @db.Decimal(12, 3)
+  currency            Currency       @default(USD)
+  unitCost            Decimal        @default(0) @db.Decimal(14, 4)
+  unitPrice           Decimal        @default(0) @db.Decimal(14, 4)
+  totalCost           Decimal        @default(0) @db.Decimal(14, 2)
+  totalPrice          Decimal        @default(0) @db.Decimal(14, 2)
+  approvalStatus      ApprovalStatus @default(NOT_REQUIRED) // cargos extra que el cliente debe aprobar
+  approvedAt          DateTime?
+  approvedByContactId String?
+  requiresAdvance     Boolean        @default(false) // se pide como anticipo antes del levante
+  supplierInvoiceRef  String? // factura del proveedor que respalda el costo
+  costPaidAt          DateTime?
+  notes               String?
+  sortOrder           Int            @default(0)
+  createdById         String?
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+
+  invoiceLines InvoiceLine[]
+
+  @@index([shipmentId])
+}
+
+/// Factura comercial del proveedor (para aduanas y costeo de importación).
+model CommercialInvoice {
+  id              String    @id @default(uuid(7))
+  organizationId  String
+  shipmentId      String
+  shipment        Shipment  @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  supplierId      String?
+  supplier        Partner?  @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  number          String?
+  date            DateTime?
   currency        String    @default("USD")
-  bank            String?
-  operationNumber String?
-  paymentDate     DateTime  @default(now())
+  incoterm        String?
+  totalValue      Decimal   @default(0) @db.Decimal(14, 2)
+  freightAmount   Decimal?  @db.Decimal(14, 2)
+  insuranceAmount Decimal?  @db.Decimal(14, 2)
+  notes           String?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
+
+  items CommercialInvoiceItem[]
+
+  @@index([shipmentId])
 }
 
-model Document {
-  id           String       @id @default(cuid())
-  operationId  String
-  operation    Operation    @relation(fields: [operationId], references: [id], onDelete: Cascade)
-  name         String
-  fileUrl      String
-  documentType DocumentType @default(OTRO)
-  isPublic     Boolean      @default(false)
-  isDraft      Boolean      @default(true)
-  uploadedBy   String       @default("BROKER")
-  uploadedAt   DateTime     @default(now())
-}
-
-model Liquidation {
-  id                 String            @id @default(cuid())
-  operationId        String            @unique
-  operation          Operation         @relation(fields: [operationId], references: [id], onDelete: Cascade)
-  status             LiquidationStatus @default(DRAFT)
-  subtotalTaxableUsd Float             @default(0)
-  igvUsd             Float             @default(0)
-  totalTaxableUsd    Float             @default(0)
-  totalNonTaxableUsd Float             @default(0)
-  grandTotalUsd      Float             @default(0)
-
-  subtotalTaxablePen Float             @default(0)
-  igvPen             Float             @default(0)
-  totalTaxablePen    Float             @default(0)
-  totalNonTaxablePen Float             @default(0)
-  grandTotalPen      Float             @default(0)
-
-  invoiceNumber      String?
-  sunatPdfUrl        String?
-  sunatCdrStatus     String?           @default("PENDING")
-  sunatNotes         String?
-
-  receiptNumber      String?
-  receiptGeneratedAt DateTime?
-
-  createdAt          DateTime          @default(now())
-  updatedAt          DateTime          @updatedAt
-}
-
-model CommercialInvoice {
-  id            String        @id @default(cuid())
-  operationId   String        @unique
-  operation     Operation     @relation(fields: [operationId], references: [id], onDelete: Cascade)
-  invoiceNumber String?
-  fobTotal      Float         @default(0)
-  cifTotal      Float         @default(0)
-  exchangeRate  Float         @default(3.75)
-  items         InvoiceItem[]
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-}
-
-model InvoiceItem {
-  id                  String            @id @default(cuid())
+model CommercialInvoiceItem {
+  id                  String            @id @default(uuid(7))
+  organizationId      String
   commercialInvoiceId String
   commercialInvoice   CommercialInvoice @relation(fields: [commercialInvoiceId], references: [id], onDelete: Cascade)
   sku                 String?
   description         String
-  quantity            Int               @default(1)
-  unitFob             Float             @default(0)
-  totalFob            Float             @default(0)
-  allocatedExpenseUsd Float             @default(0)
-  finalUnitCostUsd    Float             @default(0)
-  allocatedExpensePen Float             @default(0)
-  finalUnitCostPen    Float             @default(0)
-  createdAt           DateTime          @default(now())
-  updatedAt           DateTime          @updatedAt
+  hsCode              String? // partida arancelaria
+  quantity            Decimal           @default(1) @db.Decimal(12, 3)
+  unit                String?
+  unitValue           Decimal           @default(0) @db.Decimal(14, 4)
+  totalValue          Decimal           @default(0) @db.Decimal(14, 2)
+  adValoremRate       Decimal?          @db.Decimal(5, 2)
+  sortOrder           Int               @default(0)
+
+  @@index([commercialInvoiceId])
 }
 
-model CompanyProfile {
-  id        String   @id @default("default")
-  legalName String   @default("Marivan Logistics SAC")
-  tradeName String   @default("Marivan Logistics")
-  ruc       String   @default("")
-  address   String   @default("Calle Españoletto 115, departamento 101, San Borja")
-  phone     String   @default("969 3010 95")
-  email     String   @default("")
-  website   String   @default("")
-  updatedAt DateTime @updatedAt
+// ───────────────────────────── Documentos ─────────────────────────────
+
+/// Tipos de documento por empresa: quién lo sube, si el cliente lo ve por defecto
+/// y para qué embarques se pide automáticamente.
+model DocumentType {
+  id                    String             @id @default(uuid(7))
+  organizationId        String
+  organization          Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  code                  String
+  name                  String
+  description           String?
+  defaultVisibility     DocumentVisibility @default(INTERNAL)
+  clientCanUpload       Boolean            @default(false)
+  defaultResponsible    Responsible        @default(STAFF)
+  requiredForDirections Direction[]
+  requiredForModes      ServiceMode[]
+  requiredWhenCustoms   Boolean            @default(false) // solo si el embarque incluye aduana
+  sortOrder             Int                @default(0)
+  isActive              Boolean            @default(true)
+
+  documents    Document[]
+  requirements DocumentRequirement[]
+
+  @@unique([organizationId, code])
 }
 
+/// Documento con versiones. El cliente solo ve los de visibilidad CLIENT que estén FINAL
+/// o pendientes de su aprobación, y los que él mismo subió.
+model Document {
+  id                 String             @id @default(uuid(7))
+  organizationId     String
+  organization       Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  clientId           String?
+  client             Client?            @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  shipmentId         String?
+  shipment           Shipment?          @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  quoteId            String?
+  quote              Quote?             @relation(fields: [quoteId], references: [id], onDelete: SetNull)
+  typeId             String?
+  type               DocumentType?      @relation(fields: [typeId], references: [id], onDelete: SetNull)
+  title              String
+  visibility         DocumentVisibility @default(INTERNAL)
+  status             DocumentStatus     @default(DRAFT)
+  uploadedSide       PartySide          @default(STAFF)
+  currentVersionNo   Int                @default(1)
+  clientRespondedAt  DateTime?
+  clientResponseNote String?
+  createdById        String?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  versions     DocumentVersion[]
+  requirements DocumentRequirement[]
+
+  @@index([organizationId, shipmentId])
+  @@index([organizationId, clientId])
+}
+
+model DocumentVersion {
+  id             String    @id @default(uuid(7))
+  organizationId String
+  documentId     String
+  document       Document  @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  versionNo      Int
+  storageKey     String? // archivo en almacenamiento privado
+  externalUrl    String? // archivos importados del sistema anterior
+  fileName       String
+  mimeType       String?
+  sizeBytes      Int?
+  checksum       String?
+  uploadedById   String?
+  uploadedSide   PartySide @default(STAFF)
+  note           String?
+  createdAt      DateTime  @default(now())
+
+  @@unique([documentId, versionNo])
+}
+
+/// Checklist documentario del embarque.
+model DocumentRequirement {
+  id             String            @id @default(uuid(7))
+  organizationId String
+  shipmentId     String
+  shipment       Shipment          @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  typeId         String?
+  type           DocumentType?     @relation(fields: [typeId], references: [id], onDelete: SetNull)
+  documentId     String?
+  document       Document?         @relation(fields: [documentId], references: [id], onDelete: SetNull)
+  title          String
+  responsible    Responsible       @default(STAFF)
+  isRequired     Boolean           @default(true)
+  status         RequirementStatus @default(PENDING)
+  dueAt          DateTime?
+  notes          String?
+  sortOrder      Int               @default(0)
+
+  @@index([shipmentId])
+}
+
+// ───────────────────────── Facturación y cobranza ─────────────────────────
+
+/// Comprobante (una sola moneda por comprobante).
+model Invoice {
+  id                   String        @id @default(uuid(7))
+  organizationId       String
+  organization         Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  clientId             String
+  client               Client        @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  shipmentId           String?
+  shipment             Shipment?     @relation(fields: [shipmentId], references: [id], onDelete: SetNull)
+  type                 InvoiceType
+  series               String // F001, B001, R001…
+  number               Int? // se asigna al emitir
+  status               InvoiceStatus @default(DRAFT)
+  issueDate            DateTime?
+  dueDate              DateTime?
+  currency             Currency
+  exchangeRate         Decimal?      @db.Decimal(10, 4)
+  taxRate              Decimal       @db.Decimal(5, 2)
+  subtotalTaxed        Decimal       @default(0) @db.Decimal(14, 2)
+  subtotalExempt       Decimal       @default(0) @db.Decimal(14, 2)
+  subtotalUnaffected   Decimal       @default(0) @db.Decimal(14, 2)
+  subtotalReimbursable Decimal       @default(0) @db.Decimal(14, 2)
+  taxAmount            Decimal       @default(0) @db.Decimal(14, 2)
+  total                Decimal       @default(0) @db.Decimal(14, 2)
+  // Facturación electrónica (OSE / PSE)
+  provider             String?
+  providerRef          String?
+  sunatStatus          String?
+  sunatDescription     String?
+  hash                 String?
+  xmlUrl               String?
+  cdrUrl               String?
+  pdfUrl               String?
+  relatedInvoiceId     String? // comprobante que modifica una nota de crédito/débito
+  notes                String?
+  createdById          String?
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+
+  lines    InvoiceLine[]
+  payments Payment[]
+
+  @@unique([organizationId, series, number])
+  @@index([organizationId, clientId])
+}
+
+model InvoiceLine {
+  id             String          @id @default(uuid(7))
+  organizationId String
+  invoiceId      String
+  invoice        Invoice         @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  chargeId       String?
+  charge         ShipmentCharge? @relation(fields: [chargeId], references: [id], onDelete: SetNull)
+  description    String
+  taxTreatment   TaxTreatment
+  quantity       Decimal         @db.Decimal(12, 3)
+  unitValue      Decimal         @db.Decimal(14, 4) // sin IGV
+  subtotal       Decimal         @db.Decimal(14, 2)
+  taxAmount      Decimal         @default(0) @db.Decimal(14, 2)
+  total          Decimal         @db.Decimal(14, 2)
+  sortOrder      Int             @default(0)
+
+  @@index([invoiceId])
+}
+
+model Payment {
+  id             String        @id @default(uuid(7))
+  organizationId String
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  clientId       String
+  client         Client        @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  shipmentId     String?
+  shipment       Shipment?     @relation(fields: [shipmentId], references: [id], onDelete: SetNull)
+  invoiceId      String?
+  invoice        Invoice?      @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  kind           PaymentKind   @default(SETTLEMENT)
+  method         PaymentMethod @default(BANK_TRANSFER)
+  amount         Decimal       @db.Decimal(14, 2)
+  currency       Currency
+  exchangeRate   Decimal?      @db.Decimal(10, 4)
+  bank           String?
+  reference      String? // N° de operación
+  paidAt         DateTime
+  notes          String?
+  createdById    String?
+  createdAt      DateTime      @default(now())
+
+  @@index([organizationId, clientId])
+  @@index([shipmentId])
+}
+
+model ExchangeRate {
+  id             String       @id @default(uuid(7))
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  date           DateTime     @db.Date
+  buy            Decimal      @db.Decimal(10, 4) // PEN por USD
+  sell           Decimal      @db.Decimal(10, 4)
+  source         String       @default("SUNAT")
+
+  @@unique([organizationId, date])
+}
+
+// ─────────────────────── Historial, avisos y enlaces ───────────────────────
+
+/// Línea de tiempo de todo lo que pasa (cambios de estado, hitos, documentos,
+/// cotizaciones enviadas/aceptadas, notas). Lo marcado CLIENT aparece en el portal.
+model ActivityEvent {
+  id             String          @id @default(uuid(7))
+  organizationId String
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  type           String // shipment.status_changed, quote.sent, document.uploaded, note…
+  clientId       String?
+  client         Client?         @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  shipmentId     String?
+  shipment       Shipment?       @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  quoteId        String?
+  quote          Quote?          @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  documentId     String?
+  actorUserId    String?
+  actorSide      PartySide       @default(STAFF)
+  visibility     EventVisibility @default(INTERNAL)
+  title          String
+  body           String?         @db.Text
+  data           Json?
+  createdAt      DateTime        @default(now())
+
+  notifications NotificationOutbox[]
+
+  @@index([organizationId, shipmentId, createdAt])
+  @@index([organizationId, clientId, createdAt])
+  @@index([organizationId, quoteId, createdAt])
+}
+
+/// Cola de avisos (correo / WhatsApp). Un proceso aparte los envía y registra el resultado.
+model NotificationOutbox {
+  id             String              @id @default(uuid(7))
+  organizationId String
+  organization   Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  eventId        String?
+  event          ActivityEvent?      @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  channel        NotificationChannel
+  recipient      String
+  contactId      String?
+  subject        String?
+  template       String
+  payload        Json
+  status         NotificationStatus  @default(PENDING)
+  attempts       Int                 @default(0)
+  lastError      String?
+  scheduledAt    DateTime            @default(now())
+  sentAt         DateTime?
+  createdAt      DateTime            @default(now())
+
+  @@index([status, scheduledAt])
+}
+
+/// Enlace sin login, con vencimiento y revocable (seguimiento o aceptación de cotización).
+model ShareLink {
+  id             String         @id @default(uuid(7))
+  organizationId String
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  scope          ShareLinkScope
+  shipmentId     String?
+  shipment       Shipment?      @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  quoteId        String?
+  quote          Quote?         @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  tokenHash      String         @unique
+  expiresAt      DateTime
+  revokedAt      DateTime?
+  lastUsedAt     DateTime?
+  createdById    String?
+  createdAt      DateTime       @default(now())
+}
+
+/// Correlativos atómicos por empresa (UPDATE … RETURNING), p. ej. "QUOTE:2026", "SHIPMENT:M:2026", "INVOICE:F001".
+model NumberSequence {
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  key            String
+  lastValue      Int          @default(0)
+  updatedAt      DateTime     @updatedAt
+
+  @@id([organizationId, key])
+}
+
+/// Trazabilidad de la migración desde el sistema anterior (evita importar dos veces).
+model LegacyIdMap {
+  entity         String
+  legacyId       String
+  newId          String
+  organizationId String
+  importedAt     DateTime @default(now())
+
+  @@id([entity, legacyId])
+}

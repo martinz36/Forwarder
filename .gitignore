@@ -23,3 +23,14 @@ Thumbs.db
 # IDE / Editor
 .vscode/
 .idea/
+
+# Prisma client generado
+src/generated/
+
+# Next.js
+.next/
+next-env.d.ts
+*.tsbuildinfo
+
+# Configuración local de Claude Code
+.claude/

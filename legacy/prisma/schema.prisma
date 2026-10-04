@@ -1,0 +1,363 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-1.0.x", "rhel-openssl-3.0.x", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ExpedientStatus {
+  OPEN
+  QUOTING
+  IN_TRANSIT
+  CLOSED
+}
+
+enum QuotationStatus {
+  DRAFT
+  SENT
+  ACCEPTED
+  REJECTED
+}
+
+enum OperationStatus {
+  COORDINANDO_ORIGEN
+  POR_RECOGER
+  EN_ALMACEN_ORIGEN
+  EN_TRANSITO
+  EN_ADUANA_DESTINO
+  EN_REPARTO
+  ENTREGADO
+  LIQUIDADO
+}
+
+enum CustomsChannel {
+  VERDE
+  NARANJA
+  ROJO
+}
+
+enum DocumentType {
+  BL
+  FACTURA_COMERCIAL
+  PACKING_LIST
+  DAM
+  LIQUIDACION
+  OTRO
+}
+
+enum LiquidationStatus {
+  DRAFT
+  FINAL
+  BILLED
+}
+
+model Client {
+  id             String       @id @default(cuid())
+  portalToken    String?      @unique @default(uuid())
+  documentType   String       @default("RUC")
+  documentNumber String       @unique
+  businessName   String
+  contactName    String?
+  email          String?
+  phone          String?
+  address        String?
+  status         String       @default("ACTIVE")
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  expedients     Expedient[]
+  quotations     Quotation[]
+  notes          ClientNote[]
+}
+
+model ClientNote {
+  id        String   @id @default(cuid())
+  clientId  String
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  content   String   @db.Text
+  createdBy String?  @default("BROKER")
+  createdAt DateTime @default(now())
+}
+
+model Expedient {
+  id            String          @id @default(cuid())
+  code          String          @unique
+  externalCode  String?         @unique
+  transportMode String?         @default("FCL")
+  clientId      String
+  client        Client          @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  status        ExpedientStatus @default(OPEN)
+  loadType      String?         @default("FCL")
+  notes         String?         @db.Text
+  quotations    Quotation[]
+  operations    Operation[]
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+}
+
+model Quotation {
+  id              String          @id @default(cuid())
+  code            String          @unique
+  expedientId     String?
+  expedient       Expedient?      @relation(fields: [expedientId], references: [id], onDelete: SetNull)
+  clientId        String
+  client          Client          @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  status          QuotationStatus @default(DRAFT)
+  validUntil      DateTime?
+  totalUsd        Float           @default(0)
+  totalPen        Float           @default(0)
+  profitUsd       Float           @default(0)
+  profitPen       Float           @default(0)
+
+  // Pre-Alerta exact headers & Shipment metadata fields
+  modality        String?         @default("IMPORTACIÓN MARÍTIMA")
+  incoterm        String?
+  origin          String?         // LUG. EMBARQUE / POL
+  destination     String?         // PUERTO / DESTINO / POD
+  shippingType    String?         // TIPO DE ENVÍO
+  shippingLine    String?         // NAVE / LÍNEA
+  frequency       String?
+  transitTime     String?         // TIEMPO TRÁNSITO
+  etd             String?         // E.T.D
+  eta             String?         // E.T.A
+  blNro           String?         // BL/Nro
+  shipper         String?         // SHIPPER
+  mercaderia      String?         // MERCADERIA
+  formaPago       String?         // FORMA DE PAGO
+  cargoType       String?
+  packagesCount   String?         // BULTOS / PALETA
+  grossWeight     String?         // PESO
+  volume          String?         // VOLUMEN
+  loadType        String?
+  containersCount String?         // CONTENEDOR(ES)
+  notes           String?         @db.Text
+
+  polId           String?
+  polPort         Port?           @relation("PolPort", fields: [polId], references: [id], onDelete: SetNull)
+  podId           String?
+  podPort         Port?           @relation("PodPort", fields: [podId], references: [id], onDelete: SetNull)
+  shipperId       String?
+  shipperPartner  Partner?        @relation("ShipperPartner", fields: [shipperId], references: [id], onDelete: SetNull)
+  carrierId       String?
+  carrierPartner  Partner?        @relation("CarrierPartner", fields: [carrierId], references: [id], onDelete: SetNull)
+
+  items           QuotationItem[]
+  operation       Operation?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+}
+
+model Port {
+  id            String      @id @default(cuid())
+  code          String      @unique
+  name          String
+  country       String      @default("")
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  polQuotations Quotation[] @relation("PolPort")
+  podQuotations Quotation[] @relation("PodPort")
+}
+
+model Partner {
+  id                String      @id @default(cuid())
+  name              String      @unique
+  type              String      @default("SHIPPER") // 'SHIPPER', 'CARRIER', 'CONSIGNEE', etc.
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  shipperQuotations Quotation[] @relation("ShipperPartner")
+  carrierQuotations Quotation[] @relation("CarrierPartner")
+}
+
+model QuotationItem {
+  id          String    @id @default(cuid())
+  quotationId String
+  quotation   Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  description String
+  category    String    @default("GASTOS_LOCALES")
+  currency    String    @default("USD")
+  unitCost    Float     @default(0)
+  unitPrice   Float
+  quantity    Int
+  total       Float
+  isTaxable   Boolean   @default(true)
+  isAdvance   Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model ConceptCatalog {
+  id              String   @id @default(cuid())
+  name            String   @unique
+  category        String   @default("GASTOS_LOCALES")
+  defaultCurrency String   @default("USD")
+  defaultCost     Float    @default(0)
+  defaultPrice    Float    @default(0)
+  isTaxable       Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Operation {
+  id                String             @id @default(cuid())
+  expedientId       String?
+  expedient         Expedient?         @relation(fields: [expedientId], references: [id], onDelete: SetNull)
+  quotationId       String             @unique
+  quotation         Quotation          @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  status            OperationStatus    @default(EN_TRANSITO)
+  incoterm          String?            @default("FOB")
+  blNumber          String?
+  etd               DateTime?
+  eta               DateTime?
+  customsChannel    CustomsChannel?
+  sharedToken       String             @unique @default(uuid())
+
+  // Logistics Checklist Milestones
+  hblApproved       Boolean            @default(false)
+  customsDocsSent   Boolean            @default(false)
+  taxesPaid         Boolean            @default(false)
+  transportDocsSent Boolean            @default(false)
+  cargoDelivered    Boolean            @default(false)
+
+  charges           OperationCharge[]
+  documents         Document[]
+  checklistItems    ChecklistItem[]
+  paymentRecords    PaymentRecord[]
+  liquidation       Liquidation?
+  commercialInvoice CommercialInvoice?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+}
+
+model ChecklistItem {
+  id           String    @id @default(cuid())
+  operationId  String
+  operation    Operation @relation(fields: [operationId], references: [id], onDelete: Cascade)
+  title        String
+  description  String?
+  documentType String    @default("OTRO")
+  isCompleted  Boolean   @default(false)
+  isRequired   Boolean   @default(true)
+  order        Int       @default(0)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model OperationCharge {
+  id            String    @id @default(cuid())
+  operationId   String
+  operation     Operation @relation(fields: [operationId], references: [id], onDelete: Cascade)
+  description   String
+  category      String    @default("GASTOS_LOCALES")
+  currency      String    @default("USD")
+  unitCost      Float
+  unitPrice     Float
+  quantity      Int
+  totalCost     Float
+  totalPrice    Float
+  isExtraCharge Boolean   @default(false)
+  isTaxable     Boolean   @default(true)
+  isAdvance     Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model PaymentRecord {
+  id              String    @id @default(cuid())
+  operationId     String
+  operation       Operation @relation(fields: [operationId], references: [id], onDelete: Cascade)
+  concept         String
+  amount          Float
+  currency        String    @default("USD")
+  bank            String?
+  operationNumber String?
+  paymentDate     DateTime  @default(now())
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model Document {
+  id           String       @id @default(cuid())
+  operationId  String
+  operation    Operation    @relation(fields: [operationId], references: [id], onDelete: Cascade)
+  name         String
+  fileUrl      String
+  documentType DocumentType @default(OTRO)
+  isPublic     Boolean      @default(false)
+  isDraft      Boolean      @default(true)
+  uploadedBy   String       @default("BROKER")
+  uploadedAt   DateTime     @default(now())
+}
+
+model Liquidation {
+  id                 String            @id @default(cuid())
+  operationId        String            @unique
+  operation          Operation         @relation(fields: [operationId], references: [id], onDelete: Cascade)
+  status             LiquidationStatus @default(DRAFT)
+  subtotalTaxableUsd Float             @default(0)
+  igvUsd             Float             @default(0)
+  totalTaxableUsd    Float             @default(0)
+  totalNonTaxableUsd Float             @default(0)
+  grandTotalUsd      Float             @default(0)
+
+  subtotalTaxablePen Float             @default(0)
+  igvPen             Float             @default(0)
+  totalTaxablePen    Float             @default(0)
+  totalNonTaxablePen Float             @default(0)
+  grandTotalPen      Float             @default(0)
+
+  invoiceNumber      String?
+  sunatPdfUrl        String?
+  sunatCdrStatus     String?           @default("PENDING")
+  sunatNotes         String?
+
+  receiptNumber      String?
+  receiptGeneratedAt DateTime?
+
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+}
+
+model CommercialInvoice {
+  id            String        @id @default(cuid())
+  operationId   String        @unique
+  operation     Operation     @relation(fields: [operationId], references: [id], onDelete: Cascade)
+  invoiceNumber String?
+  fobTotal      Float         @default(0)
+  cifTotal      Float         @default(0)
+  exchangeRate  Float         @default(3.75)
+  items         InvoiceItem[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+model InvoiceItem {
+  id                  String            @id @default(cuid())
+  commercialInvoiceId String
+  commercialInvoice   CommercialInvoice @relation(fields: [commercialInvoiceId], references: [id], onDelete: Cascade)
+  sku                 String?
+  description         String
+  quantity            Int               @default(1)
+  unitFob             Float             @default(0)
+  totalFob            Float             @default(0)
+  allocatedExpenseUsd Float             @default(0)
+  finalUnitCostUsd    Float             @default(0)
+  allocatedExpensePen Float             @default(0)
+  finalUnitCostPen    Float             @default(0)
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+}
+
+model CompanyProfile {
+  id        String   @id @default("default")
+  legalName String   @default("Marivan Logistics SAC")
+  tradeName String   @default("Marivan Logistics")
+  ruc       String   @default("")
+  address   String   @default("Calle Españoletto 115, departamento 101, San Borja")
+  phone     String   @default("969 3010 95")
+  email     String   @default("")
+  website   String   @default("")
+  updatedAt DateTime @updatedAt
+}
+
