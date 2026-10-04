@@ -423,3 +423,87 @@ describe("reabrir", () => {
     await assert.rejects(() => reopenExpediente(db, actor, lost.id), DomainError, "solo desde no concretado");
   });
 });
+
+describe("mejoras de proceso", () => {
+  let shipmentId: string;
+
+  test("cada cargo elige en qué documento se cobra (almacén en el aviso de llegada)", async () => {
+    const { setChargeBilling, billingOf } = await import("../src/server/billing");
+    const s = await createExpediente(db, actor, {
+      newClient: { taxIdType: "RUC", taxId: "20999999999", legalName: "Ferretería Lima SAC" },
+      direction: "IMPORT", mode: "SEA_LCL", incoterm: "FOB", includesFreight: true, includesCustoms: true, includesInland: true, includesInsurance: false,
+      grossWeightKg: 1200, volumeCbm: 2.5, cargoValue: 10000,
+    });
+    shipmentId = s.id;
+    const q = await createQuote(db, actor, s.id, (await template("Importación marítima LCL")).id);
+    const v = await db.quoteVersion.findFirstOrThrow({ where: { quoteId: q.id } });
+    const draft = await draftOf(v.id);
+    draft.lines = draft.lines.map((l) => ({ ...l, unitPrice: l.unitPrice || 50, unitCost: l.unitCost || 40 }));
+    await saveDraft(db, actor, v.id, draft);
+    await sendVersion(db, actor, v.id);
+    await respondQuote(db, actor, q.id, "ACCEPTED");
+
+    const almacen = await db.shipmentCharge.findFirstOrThrow({ where: { shipmentId, description: "Almacén" } });
+    assert.equal(billingOf(almacen), "CUSTOMS_SETTLEMENT", "por sección va a aduanas");
+    await setChargeBilling(db, actor, almacen.id, "ARRIVAL_NOTICE");
+    const al = await issueStatement(db, actor, shipmentId, "ARRIVAL_NOTICE");
+    assert.ok((al.lines as { description: string }[]).some((l) => l.description === "Almacén"));
+    const la = await issueStatement(db, actor, shipmentId, "CUSTOMS_SETTLEMENT");
+    assert.ok(!(la.lines as { description: string }[]).some((l) => l.description === "Almacén"));
+  });
+
+  test("recalcular con el volumen final verificado", async () => {
+    const { recalcCharges } = await import("../src/server/billing");
+    const before = await db.shipmentCharge.findFirstOrThrow({ where: { shipmentId, description: "Flete internacional LCL" } });
+    assert.equal(before.quantity.toString(), "2.5");
+    await updateExpediente(db, actor, shipmentId, { grossWeightKg: 1200, volumeCbm: 3.1 });
+    const changes = await recalcCharges(db, actor, shipmentId);
+    assert.deepEqual(changes.map((c) => [c.description, c.oldQuantity, c.newQuantity]), [["Flete internacional LCL", "2.5", "3.1"]]);
+    const after = await db.shipmentCharge.findUniqueOrThrow({ where: { id: before.id } });
+    assert.equal(after.totalPrice.toString(), (Math.round(3.1 * Number(before.unitPrice) * 100) / 100).toString());
+    assert.equal(after.source, "ADJUSTMENT");
+    assert.deepEqual(await recalcCharges(db, actor, shipmentId), [], "una segunda vez no cambia nada");
+  });
+
+  test("aceptar fuera de vigencia exige reconfirmar la tarifa; la nueva versión renueva la vigencia", async () => {
+    const s = await createExpediente(db, actor, {
+      newClient: { taxIdType: "RUC", taxId: "20111111111", legalName: "Cliente Tardío SAC" },
+      direction: "IMPORT", mode: "SEA_LCL", includesFreight: true, includesCustoms: true, includesInland: false, includesInsurance: false,
+    });
+    const q = await createQuote(db, actor, s.id, null);
+    const v = await db.quoteVersion.findFirstOrThrow({ where: { quoteId: q.id } });
+    await saveDraft(db, actor, v.id, { lines: [{ description: "Comisión", group: "CUSTOMS", taxTreatment: "TAXED", basis: "PER_SHIPMENT", quantity: 1, currency: "USD", unitCost: 0, unitPrice: 200, isOptional: false }] });
+    await sendVersion(db, actor, v.id);
+    await db.quoteVersion.update({ where: { id: v.id }, data: { validUntil: new Date(Date.now() - 5 * 86_400_000) } });
+    await assert.rejects(() => respondQuote(db, actor, q.id, "ACCEPTED"), /venció/);
+
+    const v2 = await createNewVersion(db, actor, q.id);
+    const daysLeft = Math.round((v2.validUntil!.getTime() - Date.now()) / 86_400_000);
+    assert.ok(daysLeft >= 9, `la v2 trae vigencia nueva (${daysLeft} días)`);
+
+    await respondQuote(db, actor, q.id, "ACCEPTED", null, { rateReconfirmed: true });
+    const event = await db.activityEvent.findFirstOrThrow({ where: { quoteId: q.id, type: "quote.accepted" } });
+    assert.match(event.body ?? "", /tarifa reconfirmada/);
+  });
+
+  test("pendientes del día con datos reales", async () => {
+    const { getPendings } = await import("../src/server/pendings");
+    const s = await createExpediente(db, actor, {
+      newClient: { taxIdType: "RUC", taxId: "20222222222", legalName: "Llega Pronto SAC" },
+      direction: "IMPORT", mode: "SEA_LCL", includesFreight: true, includesCustoms: true, includesInland: false, includesInsurance: false,
+    });
+    const q = await createQuote(db, actor, s.id, null);
+    const v = await db.quoteVersion.findFirstOrThrow({ where: { quoteId: q.id } });
+    await saveDraft(db, actor, v.id, { lines: [{ description: "Flete", group: "FREIGHT", taxTreatment: "REIMBURSABLE", basis: "PER_SHIPMENT", quantity: 1, currency: "USD", unitCost: 0, unitPrice: 500, isOptional: false }] });
+    await sendVersion(db, actor, v.id);
+    await respondQuote(db, actor, q.id, "ACCEPTED");
+    await updateExpediente(db, actor, s.id, { eta: new Date(Date.now() + 2 * 86_400_000) });
+    const list = await getPendings(db, actor.organizationId);
+    const mine = list.filter((p) => p.reference === s.number);
+    // Llega en 2 días: falta el aviso de llegada y los documentos que debe enviar el cliente (aduana incluida)
+    assert.deepEqual(mine.map((p) => `${p.kind}${p.urgent ? "!" : ""}`).sort(), ["arrival_notice_missing!", "client_documents!"]);
+    assert.match(mine.find((p) => p.kind === "client_documents")!.text, /Factura comercial/);
+    // La otra agencia no ve estos pendientes
+    assert.equal((await getPendings(db, otherActor.organizationId)).filter((p) => p.reference === s.number).length, 0);
+  });
+});

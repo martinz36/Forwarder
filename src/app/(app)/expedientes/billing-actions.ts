@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getDb } from "@/server/db";
-import { addCharge, addPayment, deleteCharge, deletePayment, issueStatement, updateCharge, voidStatement } from "@/server/billing";
+import { addCharge, addPayment, deleteCharge, deletePayment, issueStatement, recalcCharges, setChargeBilling, updateCharge, voidStatement } from "@/server/billing";
 import { date, editorActor, num, oneOf, str, toActionError, type ActionState } from "@/server/action-utils";
 
 const GROUPS = ["ORIGIN", "FREIGHT", "INSURANCE", "DESTINATION", "CUSTOMS", "INLAND_TRANSPORT", "STORAGE", "DUTIES_TAXES", "OTHER"] as const;
@@ -110,4 +110,32 @@ export async function voidStatementAction(_: ActionState, fd: FormData): Promise
   }
   refresh(fd);
   return { ok: "Documento anulado" };
+}
+
+export async function setChargeBillingAction(_: ActionState, fd: FormData): Promise<ActionState> {
+  try {
+    await setChargeBilling(
+      getDb(),
+      await editorActor(),
+      str(fd, "chargeId") ?? "",
+      oneOf(fd, "billedIn", ["ARRIVAL_NOTICE", "CUSTOMS_SETTLEMENT"] as const, "ARRIVAL_NOTICE"),
+    );
+  } catch (err) {
+    return toActionError(err);
+  }
+  refresh(fd);
+  return { ok: "Documento de cobro actualizado" };
+}
+
+export async function recalcChargesAction(_: ActionState, fd: FormData): Promise<ActionState> {
+  try {
+    const changes = await recalcCharges(getDb(), await editorActor(), str(fd, "shipmentId") ?? "");
+    refresh(fd);
+    if (changes.length === 0) return { ok: "Sin cambios: las cantidades ya coinciden con la carga del expediente." };
+    return {
+      ok: `Actualizados: ${changes.map((c) => `${c.description} ${c.oldQuantity} → ${c.newQuantity} (${c.currency} ${c.oldTotal} → ${c.newTotal})`).join(" · ")}`,
+    };
+  } catch (err) {
+    return toActionError(err);
+  }
 }

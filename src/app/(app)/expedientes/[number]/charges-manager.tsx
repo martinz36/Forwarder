@@ -2,8 +2,8 @@
 
 import { useActionState, useState } from "react";
 import type { ChargeGroup, Currency, TaxTreatment } from "@/generated/prisma/enums";
-import { addChargeAction, deleteChargeAction, updateChargeAction } from "../billing-actions";
-import { FormError } from "@/components/form";
+import { addChargeAction, deleteChargeAction, recalcChargesAction, setChargeBillingAction, updateChargeAction } from "../billing-actions";
+import { ActionForm, FormError } from "@/components/form";
 import { GROUPS, TAX } from "@/lib/labels";
 import { formatMoney, formatQuantity } from "@/lib/format";
 
@@ -35,6 +35,54 @@ export interface ConceptPick {
 const SMALL_INPUT = "tnum w-full rounded-sm border border-rule bg-surface px-2 py-1 text-right text-sm focus:border-navy focus:outline-none";
 const STAGE = { ARRIVAL_NOTICE: "Aviso de llegada", CUSTOMS_SETTLEMENT: "Liq. aduanas" };
 
+/** Documento en que se cobra el cargo; se guarda al cambiar. */
+function BillingSelect({ chargeId, number, value }: { chargeId: string; number: string; value: ChargeView["stage"] }) {
+  const [state, action, pending] = useActionState(setChargeBillingAction, undefined);
+  // Controlado y sin reinicio del formulario: si no, el select vuelve al valor anterior tras guardar.
+  const [current, setCurrent] = useState(value);
+  const shown = state?.error && !pending ? value : current;
+  return (
+    <ActionForm action={action} className="inline-flex items-center gap-1">
+      <input type="hidden" name="chargeId" value={chargeId} />
+      <input type="hidden" name="number" value={number} />
+      <label className="sr-only" htmlFor={`billing-${chargeId}`}>Se cobra en</label>
+      <span aria-hidden>→</span>
+      <select
+        id={`billing-${chargeId}`}
+        name="billedIn"
+        value={shown}
+        disabled={pending}
+        onChange={(e) => {
+          setCurrent(e.currentTarget.value as ChargeView["stage"]);
+          e.currentTarget.form?.requestSubmit();
+        }}
+        className="rounded-sm border border-transparent bg-transparent py-0 text-xs text-ink-3 hover:border-rule focus:border-navy focus:outline-none"
+      >
+        <option value="ARRIVAL_NOTICE">Aviso de llegada</option>
+        <option value="CUSTOMS_SETTLEMENT">Liq. aduanas</option>
+      </select>
+      {state?.error && <span className="text-bad">{state.error}</span>}
+    </ActionForm>
+  );
+}
+
+/** Recalcula cantidades con el peso, volumen o contenedores finales del expediente. */
+function RecalcButton({ shipmentId, number }: { shipmentId: string; number: string }) {
+  const [state, action, pending] = useActionState(recalcChargesAction, undefined);
+  return (
+    <form action={action} className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-rule bg-paper/40 px-4 py-2 text-sm">
+      <input type="hidden" name="shipmentId" value={shipmentId} />
+      <input type="hidden" name="number" value={number} />
+      <button disabled={pending} className="press font-medium text-navy hover:underline disabled:opacity-60">
+        {pending ? "Recalculando…" : "Recalcular con peso / volumen final"}
+      </button>
+      <span className="text-xs text-ink-3">Usa los datos de carga del expediente (p. ej. lo verificado por el depósito).</span>
+      {state?.ok && <span className="basis-full text-xs text-ok">{state.ok}</span>}
+      {state?.error && <span className="basis-full text-xs text-bad">{state.error}</span>}
+    </form>
+  );
+}
+
 function ChargeRow({ c, number, editable }: { c: ChargeView; number: string; editable: boolean }) {
   const [editing, setEditing] = useState(false);
   const [updateState, update, updating] = useActionState(updateChargeAction, undefined);
@@ -49,7 +97,7 @@ function ChargeRow({ c, number, editable }: { c: ChargeView; number: string; edi
           <div className="flex flex-wrap gap-x-2 text-xs text-ink-3">
             <span>{GROUPS.find((g) => g.group === c.group)?.label}</span>
             <span className={c.taxTreatment === "TAXED" ? "" : "text-warn"}>{TAX[c.taxTreatment]}</span>
-            <span>→ {STAGE[c.stage]}</span>
+            {editable ? <BillingSelect key={c.stage} chargeId={c.id} number={number} value={c.stage} /> : <span>→ {STAGE[c.stage]}</span>}
             {c.source === "EXTRA" && <span className="font-medium text-signal">Adicional</span>}
             {c.source === "ADJUSTMENT" && <span className="font-medium text-signal">Ajustado</span>}
           </div>
@@ -252,6 +300,7 @@ export function ChargesManager({
 }) {
   return (
     <div className="overflow-hidden rounded-md border border-rule bg-surface">
+      {editable && charges.length > 0 && <RecalcButton shipmentId={shipmentId} number={number} />}
       {charges.length === 0 ? (
         <p className="px-4 py-6 text-center text-sm text-ink-3">Aún no hay cargos. Se cargan al aceptar la cotización.</p>
       ) : (

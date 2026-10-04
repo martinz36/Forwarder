@@ -15,7 +15,8 @@ import { NewQuoteForm } from "./new-quote-form";
 import { ReopenButton } from "./reopen-button";
 import { ChargesManager } from "./charges-manager";
 import { BillingPanel } from "./billing-panel";
-import { chargeStage, computeBalance } from "@/server/billing";
+import { billingOf, computeBalance } from "@/server/billing";
+import { quoteDisplayStatus } from "@/lib/quote-status";
 
 type Props = { params: Promise<{ number: string }> };
 
@@ -128,7 +129,7 @@ export default async function ExpedientePage({ params }: Props) {
                             .map(([cur, t]) => formatMoney(t.total, cur))
                             .join(" + ") || "—"}
                         </span>
-                        <Badge tone={QUOTE_STATUS[q.status].tone}>{QUOTE_STATUS[q.status].label}</Badge>
+                        {(() => { const st = quoteDisplayStatus(q.status, v?.validUntil); return <Badge tone={st.tone}>{st.label}</Badge>; })()}
                       </Link>
                     </li>
                   );
@@ -255,7 +256,7 @@ export default async function ExpedientePage({ params }: Props) {
         <>
           <Section
             title="Cargos del expediente"
-            description="Los de la cotización aceptada más los adicionales. Lo de origen, flete y destino va al aviso de llegada; aduanas, almacén y transporte, a la liquidación de aduanas."
+            description="Los de la cotización aceptada más los adicionales. Lo de origen, flete y destino va al aviso de llegada; aduanas, almacén y transporte, a la liquidación de aduanas. Puedes cambiarlo en cada cargo."
           >
             <ChargesManager
               shipmentId={s.id}
@@ -282,7 +283,7 @@ export default async function ExpedientePage({ params }: Props) {
                 totalCost: c.totalCost.toString(),
                 totalPrice: c.totalPrice.toString(),
                 source: c.source,
-                stage: chargeStage(c.group),
+                stage: billingOf(c),
               }))}
             />
             {s.charges.length > 0 && (

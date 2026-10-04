@@ -11,15 +11,19 @@ Todo nace del **expediente**: su número (L-2026-0006) es la referencia para los
 | 1. Solicitud | **Nueva solicitud**: cliente (o cliente nuevo), modalidad, incoterm, origen, peso / volumen / bultos o contenedores. | Expediente en "En cotización" con hito "Solicitud recibida". |
 | 2. Tarifa del agente | Marcas "Tarifa solicitada al agente" y "Tarifa recibida" con su fecha. | Historial con fechas (solo interno). |
 | 3. Cotización | **Crear cotización** desde plantilla: se precargan los conceptos según el incoterm y se calculan las cantidades. Pones costos del agente, aplicas margen, guardas. **Ver PDF**. | Borrador editable con totales e IGV. |
-| 4. Envío | **Marcar como enviada**: la versión queda congelada con tus condiciones; se descarga el PDF para enviarlo. | Hito "Cotización enviada". Para cambiar precios: **Nueva versión**. |
-| 5. Respuesta | **Registrar respuesta**: aceptada / no aceptada. Si acepta, el expediente pasa a operación con sus cargos, hitos operativos y checklist de documentos. | Estado "Orden confirmada" o "No concretado". |
+| 4. Envío | **Marcar como enviada**: la versión queda congelada con tus condiciones; se descarga el PDF para enviarlo. | Hito "Cotización enviada". Vigencia de 10 días (Configuración). Para cambiar precios: **Nueva versión**, que renueva la vigencia. |
+| 5. Respuesta | **Registrar respuesta**: aceptada / no aceptada. Si acepta, el expediente pasa a operación con sus cargos, hitos operativos y checklist de documentos. Si la cotización ya venció, el sistema pide marcar **Tarifa reconfirmada con el agente** (o hacer una nueva versión). | Estado "Orden confirmada" o "No concretado"; si se aceptó vencida, queda anotado en el historial. |
 | 6. Operación | **Editar datos**: naviera, agente, BL, nave, ETD/ETA, DAM, canal, levante. Marcas hitos con fecha (recojo, zarpe, arribo…). | Cada hito mueve el estado y queda en el historial; los visibles al cliente generan un aviso en cola. |
-| 7. Aviso de llegada | Ajustas cargos si hubo variación (**Editar** o **Agregar cargo adicional**) y **Emitir aviso de llegada**: gastos de origen, flete y destino, con tus cuentas para depósito. | AL-2026-0001 con PDF; hito "Aviso de llegada enviado". |
+| 7. Aviso de llegada | Si el depósito verificó otro peso / volumen, lo corriges en **Editar datos** y usas **Recalcular con peso / volumen final**. Ajustas cargos si hubo variación (**Editar** o **Agregar cargo adicional**) y **Emitir aviso de llegada**: gastos de origen, flete y destino, con tus cuentas para depósito. | AL-2026-0001 con PDF; hito "Aviso de llegada enviado". |
 | 8. Depósito | **Registrar depósito del cliente** (monto, banco, N° de operación). | Saldo por moneda; hito "Depósito recibido". |
 | 9. Aduana | Canal rojo / naranja → agregas los costos extra. **Emitir liquidación de aduanas**: comisión, operativos, almacén, transporte, aforo. | LA-2026-0001 con PDF. |
 | 10. Cierre | **Emitir liquidación final** (todo lo cobrado contra los depósitos, con el saldo) y **recibo de reembolso** (lo no afecto). | LF / RI con PDF. La factura de lo afecto irá por Nubefact. |
 
 Un documento emitido no se edita: si algo cambia, se emite de nuevo y el anterior queda anulado.
+
+Cada cargo dice en qué documento se cobra (aviso de llegada o liquidación de aduanas). Por defecto sale de su sección; se puede cambiar en cada cargo (`ShipmentCharge.billedIn`). El concepto también admite un valor por defecto (`ChargeConcept.billedIn`), aún sin pantalla para editarlo.
+
+El **Panel** muestra los **Pendientes de hoy**: solicitudes sin cotizar, cotizaciones por vencer o vencidas, avisos de llegada por emitir (ETA a 7 días o menos), avisos sin depósito, canal rojo / naranja sin levante, días libres de contenedor, documentos del cliente que faltan cerca del arribo y saldos por cobrar de carga ya entregada.
 
 ## Principios
 

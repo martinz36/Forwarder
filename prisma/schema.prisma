@@ -204,6 +204,12 @@ enum CustomsChannel {
   RED
 }
 
+/// Documento de cobro en que va un cargo (aviso de llegada o liquidación de aduanas).
+enum ChargeBilling {
+  ARRIVAL_NOTICE
+  CUSTOMS_SETTLEMENT
+}
+
 enum ChargeSource {
   QUOTE // viene de la cotización aceptada
   EXTRA // cargo adicional durante la operación
@@ -590,24 +596,25 @@ model Location {
 
 /// Concepto de cobro (flete, visto bueno, comisión de aduana…) con sus valores por defecto.
 model ChargeConcept {
-  id              String       @id @default(uuid(7))
+  id              String         @id @default(uuid(7))
   organizationId  String
-  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization    Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   code            String?
   name            String
   nameEn          String?
   description     String?
   group           ChargeGroup
   taxTreatment    TaxTreatment
-  defaultBasis    ChargeBasis  @default(PER_SHIPMENT)
-  defaultCurrency Currency     @default(USD)
-  defaultCost     Decimal?     @db.Decimal(14, 4)
-  defaultPrice    Decimal?     @db.Decimal(14, 4)
-  defaultMinPrice Decimal?     @db.Decimal(14, 2)
-  isActive        Boolean      @default(true)
-  sortOrder       Int          @default(0)
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
+  defaultBasis    ChargeBasis    @default(PER_SHIPMENT)
+  defaultCurrency Currency       @default(USD)
+  defaultCost     Decimal?       @db.Decimal(14, 4)
+  defaultPrice    Decimal?       @db.Decimal(14, 4)
+  defaultMinPrice Decimal?       @db.Decimal(14, 2)
+  billedIn        ChargeBilling? // documento de cobro por defecto (null = según la sección)
+  isActive        Boolean        @default(true)
+  sortOrder       Int            @default(0)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
 
   rateLines     RateCardLine[]
   templateLines QuoteTemplateLine[]
@@ -1101,6 +1108,7 @@ model ShipmentCharge {
   approvedAt          DateTime?
   approvedByContactId String?
   requiresAdvance     Boolean        @default(false) // se pide como anticipo antes del levante
+  billedIn            ChargeBilling? // en qué documento se cobra; null = según la sección
   supplierInvoiceRef  String? // factura del proveedor que respalda el costo
   costPaidAt          DateTime?
   notes               String?

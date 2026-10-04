@@ -3,22 +3,27 @@ import type { Db } from "@/server/db";
 import type { Prisma } from "@/generated/prisma/client";
 import type {
   ChargeBasis,
+  ChargeBilling,
   ChargeGroup,
   Currency,
+  EquipmentType,
   PaymentKind,
   PaymentMethod,
   StatementType,
   TaxTreatment,
 } from "@/generated/prisma/enums";
-import { lineAmount, round2 } from "@/lib/pricing/quantity";
+import { computeQuantity, lineAmount, round2 } from "@/lib/pricing/quantity";
 import { computeTotals, type Totals } from "@/lib/pricing/totals";
 import { nextSequence } from "@/server/sequences";
 import { DomainError, setMilestone, type Actor } from "@/server/expedientes";
 
 /** Qué documento cobra cada sección: la agencia de carga (aviso de llegada) o la de aduanas. */
 export const FREIGHT_GROUPS: ChargeGroup[] = ["ORIGIN", "FREIGHT", "INSURANCE", "DESTINATION"];
-export const chargeStage = (group: ChargeGroup): "ARRIVAL_NOTICE" | "CUSTOMS_SETTLEMENT" =>
+export const chargeStage = (group: ChargeGroup): ChargeBilling =>
   FREIGHT_GROUPS.includes(group) ? "ARRIVAL_NOTICE" : "CUSTOMS_SETTLEMENT";
+
+/** Documento en que se cobra un cargo: lo elegido en el cargo o, si no, según su sección. */
+export const billingOf = (c: { group: ChargeGroup; billedIn?: ChargeBilling | null }): ChargeBilling => c.billedIn ?? chargeStage(c.group);
 
 export const STATEMENT_PREFIX: Record<StatementType, string> = {
   ARRIVAL_NOTICE: "AL",
@@ -33,6 +38,7 @@ export interface ChargeInput {
   group: ChargeGroup;
   taxTreatment: TaxTreatment;
   basis?: ChargeBasis;
+  billedIn?: ChargeBilling | null;
   quantity: number;
   currency: Currency;
   unitCost: number;
@@ -56,6 +62,9 @@ export async function addCharge(db: Db, actor: Actor, shipmentId: string, input:
   return db.$transaction(async (tx) => {
     const shipment = await shipmentFor(tx, actor, shipmentId);
     const last = await tx.shipmentCharge.findFirst({ where: { shipmentId }, orderBy: { sortOrder: "desc" } });
+    const concept = input.conceptId
+      ? await tx.chargeConcept.findFirst({ where: { id: input.conceptId, organizationId: actor.organizationId }, select: { billedIn: true } })
+      : null;
     const charge = await tx.shipmentCharge.create({
       data: {
         organizationId: actor.organizationId,
@@ -66,6 +75,7 @@ export async function addCharge(db: Db, actor: Actor, shipmentId: string, input:
         group: input.group,
         taxTreatment: input.taxTreatment,
         basis: input.basis ?? "MANUAL",
+        billedIn: input.billedIn ?? concept?.billedIn ?? null,
         quantity: String(input.quantity),
         currency: input.currency,
         unitCost: String(input.unitCost),
@@ -261,9 +271,9 @@ export async function issueStatement(db: Db, actor: Actor, shipmentId: string, t
     const charges = await tx.shipmentCharge.findMany({ where: { shipmentId }, orderBy: { sortOrder: "asc" } });
     const selected = charges.filter((c) =>
       type === "ARRIVAL_NOTICE"
-        ? chargeStage(c.group) === "ARRIVAL_NOTICE"
+        ? billingOf(c) === "ARRIVAL_NOTICE"
         : type === "CUSTOMS_SETTLEMENT"
-          ? chargeStage(c.group) === "CUSTOMS_SETTLEMENT"
+          ? billingOf(c) === "CUSTOMS_SETTLEMENT"
           : type === "REIMBURSEMENT_RECEIPT"
             ? c.taxTreatment === "REIMBURSABLE"
             : true,
@@ -346,4 +356,82 @@ export async function voidStatement(db: Db, actor: Actor, statementId: string) {
   const statement = await db.statement.findFirst({ where: { id: statementId, organizationId: actor.organizationId } });
   if (!statement) throw new DomainError("El documento no existe.");
   await db.statement.update({ where: { id: statement.id }, data: { status: "VOID" } });
+}
+
+/** Cambia el documento en que se cobra un cargo (aviso de llegada o liquidación de aduanas). */
+export async function setChargeBilling(db: Db, actor: Actor, chargeId: string, billedIn: ChargeBilling) {
+  const charge = await db.shipmentCharge.findFirst({ where: { id: chargeId, organizationId: actor.organizationId } });
+  if (!charge) throw new DomainError("El cargo no existe.");
+  await db.shipmentCharge.update({ where: { id: charge.id }, data: { billedIn } });
+}
+
+export interface RecalcChange {
+  description: string;
+  currency: Currency;
+  oldQuantity: string;
+  newQuantity: string;
+  oldTotal: string;
+  newTotal: string;
+}
+
+/** Bases que dependen de los datos de la carga (las demás no se recalculan). */
+const CARGO_BASES: ChargeBasis[] = ["PER_WM", "PER_CBM", "PER_TON", "PER_KG", "PER_CHARGEABLE_KG", "PER_CONTAINER", "PER_PACKAGE", "PERCENT_FOB", "PERCENT_CIF"];
+
+/**
+ * Recalcula las cantidades de los cargos con el peso, volumen, bultos, contenedores y valor
+ * actuales del expediente (p. ej. lo verificado por el depósito). Mantiene precios unitarios y mínimos.
+ */
+export async function recalcCharges(db: Db, actor: Actor, shipmentId: string): Promise<RecalcChange[]> {
+  return db.$transaction(async (tx) => {
+    const shipment = await tx.shipment.findFirst({
+      where: { id: shipmentId, organizationId: actor.organizationId },
+      include: { containers: true, charges: { include: { quoteLine: { select: { minPrice: true } } } } },
+    });
+    if (!shipment) throw new DomainError("El expediente no existe.");
+    const counts = shipment.containers.reduce<Record<string, number>>((acc, c) => ({ ...acc, [c.equipment]: (acc[c.equipment] ?? 0) + 1 }), {});
+    const cargo = {
+      grossWeightKg: shipment.grossWeightKg,
+      volumeCbm: shipment.volumeCbm,
+      chargeableWeightKg: shipment.chargeableWeightKg,
+      packages: shipment.packages,
+      containers: Object.entries(counts).map(([equipment, quantity]) => ({ equipment: equipment as EquipmentType, quantity })),
+      cifValue: shipment.cargoValue,
+      fobValue: shipment.cargoValue,
+    };
+    const changes: RecalcChange[] = [];
+    for (const c of shipment.charges) {
+      if (!CARGO_BASES.includes(c.basis)) continue;
+      const qty = computeQuantity(c.basis, cargo);
+      if (!qty || qty.equals(new Decimal(c.quantity.toString()))) continue;
+      const minPrice = c.quoteLine?.minPrice ?? null;
+      const newTotal = lineAmount({ quantity: qty, unitAmount: c.unitPrice, minAmount: minPrice });
+      const newCost = lineAmount({ quantity: qty, unitAmount: c.unitCost });
+      await tx.shipmentCharge.update({
+        where: { id: c.id },
+        data: { quantity: qty.toString(), totalPrice: newTotal.toFixed(2), totalCost: newCost.toFixed(2), source: c.source === "QUOTE" ? "ADJUSTMENT" : c.source },
+      });
+      changes.push({
+        description: c.description,
+        currency: c.currency,
+        oldQuantity: c.quantity.toString(),
+        newQuantity: qty.toString(),
+        oldTotal: c.totalPrice.toString(),
+        newTotal: newTotal.toFixed(2),
+      });
+    }
+    if (changes.length) {
+      await tx.activityEvent.create({
+        data: {
+          organizationId: actor.organizationId,
+          clientId: shipment.clientId,
+          shipmentId,
+          type: "charges.recalculated",
+          title: `Cargos recalculados con la carga final (${changes.length})`,
+          body: changes.map((x) => `${x.description}: ${x.oldQuantity} → ${x.newQuantity}`).join(" · "),
+          actorUserId: actor.userId,
+        },
+      });
+    }
+    return changes;
+  });
 }

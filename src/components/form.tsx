@@ -177,6 +177,7 @@ export function SubmitButton({
   name,
   value,
   pending: pendingProp,
+  disabled = false,
 }: {
   children: React.ReactNode;
   pendingLabel: string;
@@ -186,15 +187,19 @@ export function SubmitButton({
   value?: string;
   /** Con ActionForm, el estado de envío viene de useActionState. */
   pending?: boolean;
+  /** Deshabilitado sin cambiar el texto (p. ej. mientras otro botón del mismo formulario envía). */
+  disabled?: boolean;
 }) {
   const status = useFormStatus();
-  const pending = pendingProp ?? status.pending;
+  // Con varios botones en un formulario, solo el que se pulsó muestra «Guardando…».
+  const clicked = !name || !status.data || status.data.get(name) === value;
+  const pending = pendingProp ?? (status.pending && clicked);
   return (
     <button
       type="submit"
       name={name}
       value={value}
-      disabled={pending}
+      disabled={pending || disabled || status.pending}
       className={`${buttonClass(variant)} ${full ? "w-full" : ""} disabled:cursor-progress disabled:opacity-70`}
     >
       {pending ? pendingLabel : children}

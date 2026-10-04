@@ -103,7 +103,9 @@ export async function respondQuoteAction(_: ActionState, fd: FormData): Promise<
   const number = str(fd, "number") ?? "";
   const decision = oneOf(fd, "decision", ["ACCEPTED", "REJECTED"] as const, "ACCEPTED");
   try {
-    await respondQuote(getDb(), await editorActor(), str(fd, "quoteId") ?? "", decision, str(fd, "note"));
+    await respondQuote(getDb(), await editorActor(), str(fd, "quoteId") ?? "", decision, str(fd, "note"), {
+      rateReconfirmed: fd.get("rateReconfirmed") === "on",
+    });
   } catch (err) {
     return toActionError(err);
   }

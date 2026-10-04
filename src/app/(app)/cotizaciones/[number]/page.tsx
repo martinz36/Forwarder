@@ -9,6 +9,7 @@ import { DIRECTION, EQUIPMENT, MODE, QUOTE_STATUS, type Tone } from "@/lib/label
 import { formatDate, formatDateTime, formatMoney, formatVolume, formatWeight } from "@/lib/format";
 import type { Totals } from "@/lib/pricing/totals";
 import { QuoteActions } from "./quote-actions";
+import { quoteDisplayStatus } from "@/lib/quote-status";
 
 const VERSION_STATUS: Record<string, { label: string; tone: Tone }> = {
   DRAFT: { label: "Borrador", tone: "neutral" },
@@ -51,7 +52,8 @@ export default async function QuotePage({ params }: Props) {
 
   const v = quote.versions[0];
   if (!v) notFound();
-  const status = QUOTE_STATUS[quote.status];
+  const status = quoteDisplayStatus(quote.status, v.validUntil);
+  const expired = status.label === "Vencida";
   const place = (loc: { name: string; code: string } | null, text: string | null) =>
     loc ? `${loc.name} (${loc.code})` : text;
 
@@ -88,6 +90,7 @@ export default async function QuotePage({ params }: Props) {
           status={v.status}
           editable={canEdit(role)}
           shipmentNumber={quote.shipment?.number ?? null}
+          expired={expired}
         />
       </div>
 

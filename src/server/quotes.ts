@@ -5,6 +5,10 @@ import { nextQuoteNumber } from "@/server/sequences";
 import { buildQuoteLines, type RateCandidate } from "@/lib/pricing/resolve";
 import { lineAmount } from "@/lib/pricing/quantity";
 import { computeTotals } from "@/lib/pricing/totals";
+import { isExpired } from "@/lib/quote-status";
+import { formatDate } from "@/lib/format";
+
+export { isExpired };
 import { DomainError, planOperation, setMilestone, type Actor } from "@/server/expedientes";
 
 type Tx = Prisma.TransactionClient;
@@ -298,6 +302,7 @@ export async function createNewVersion(db: Db, actor: Actor, quoteId: string) {
         ...rest,
         totals: (totals ?? undefined) as Prisma.InputJsonValue | undefined,
         versionNo: versionNo + 1,
+        validUntil: addDays(new Date(), (await tx.organization.findUniqueOrThrow({ where: { id: actor.organizationId } })).quoteValidityDays),
         status: "DRAFT",
         createdById: actor.userId,
         lines: { create: lines.map(({ id: _l, versionId: _v, ...l }) => l) },
@@ -310,7 +315,14 @@ export async function createNewVersion(db: Db, actor: Actor, quoteId: string) {
 }
 
 /** Registra la respuesta del cliente. Si acepta, el expediente pasa a operación con sus cargos e hitos. */
-export async function respondQuote(db: Db, actor: Actor, quoteId: string, decision: "ACCEPTED" | "REJECTED", note?: string | null) {
+export async function respondQuote(
+  db: Db,
+  actor: Actor,
+  quoteId: string,
+  decision: "ACCEPTED" | "REJECTED",
+  note?: string | null,
+  opts: { rateReconfirmed?: boolean } = {},
+) {
   return db.$transaction(async (tx) => {
     const quote = await tx.quote.findFirst({
       where: { id: quoteId, organizationId: actor.organizationId },
@@ -318,6 +330,13 @@ export async function respondQuote(db: Db, actor: Actor, quoteId: string, decisi
     });
     const version = quote?.versions[0];
     if (!quote || !version) throw new DomainError("Primero marca la cotización como enviada.");
+    // Condiciones: si se acepta fuera de vigencia, la tarifa se reconfirma con el agente.
+    const lateAcceptance = decision === "ACCEPTED" && isExpired(version.validUntil);
+    if (lateAcceptance && !opts.rateReconfirmed) {
+      throw new DomainError(
+        `La cotización venció el ${formatDate(version.validUntil)}. Reconfirma la tarifa con el agente y marca «Tarifa reconfirmada» para aceptarla (o crea una nueva versión).`,
+      );
+    }
     const now = new Date();
 
     await tx.quoteVersion.update({
@@ -360,6 +379,10 @@ export async function respondQuote(db: Db, actor: Actor, quoteId: string, decisi
         });
         await tx.client.updateMany({ where: { id: shipment.clientId, status: "PROSPECT" }, data: { status: "ACTIVE" } });
         // Cargos del expediente = líneas aceptadas (las opcionales no, salvo que luego se agreguen).
+        const conceptIds = version.lines.map((l) => l.conceptId).filter((id): id is string => Boolean(id));
+        const conceptBilling = new Map(
+          (await tx.chargeConcept.findMany({ where: { id: { in: conceptIds } }, select: { id: true, billedIn: true } })).map((c) => [c.id, c.billedIn]),
+        );
         await tx.shipmentCharge.createMany({
           data: version.lines
             .filter((l) => !l.isOptional)
@@ -368,6 +391,7 @@ export async function respondQuote(db: Db, actor: Actor, quoteId: string, decisi
               shipmentId: shipment.id,
               conceptId: l.conceptId,
               quoteLineId: l.id,
+              billedIn: l.conceptId ? (conceptBilling.get(l.conceptId) ?? null) : null,
               providerId: l.providerId,
               source: "QUOTE" as const,
               description: l.description,
@@ -403,7 +427,7 @@ export async function respondQuote(db: Db, actor: Actor, quoteId: string, decisi
         quoteId: quote.id,
         type: decision === "ACCEPTED" ? "quote.accepted" : "quote.rejected",
         title: `Cotización ${quote.number} ${decision === "ACCEPTED" ? "aceptada" : "no aceptada"}`,
-        body: note?.trim() || null,
+        body: [note?.trim(), lateAcceptance ? "Aceptada fuera de vigencia: tarifa reconfirmada con el agente" : null].filter(Boolean).join(" · ") || null,
         visibility: "CLIENT",
         actorUserId: actor.userId,
       },

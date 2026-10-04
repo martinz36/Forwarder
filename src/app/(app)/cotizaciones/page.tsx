@@ -5,7 +5,8 @@ import { getDb } from "@/server/db";
 import { Badge, Code, Empty, PageHeader, Panel } from "@/components/ui";
 import { buttonClass } from "@/components/button";
 import { canEdit } from "@/server/action-utils";
-import { MODE, QUOTE_STATUS } from "@/lib/labels";
+import { MODE } from "@/lib/labels";
+import { quoteDisplayStatus } from "@/lib/quote-status";
 import { formatDate, formatMoney } from "@/lib/format";
 import type { Totals } from "@/lib/pricing/totals";
 
@@ -73,7 +74,7 @@ export default async function QuotesPage() {
                       </span>
                       <span className="text-sm text-ink-3">{formatDate(q.createdAt)}</span>
                       <span className="flex items-center gap-2 justify-self-end md:justify-self-start">
-                        <Badge tone={QUOTE_STATUS[q.status].tone}>{QUOTE_STATUS[q.status].label}</Badge>
+                        {(() => { const st = quoteDisplayStatus(q.status, v?.validUntil); return <Badge tone={st.tone}>{st.label}</Badge>; })()}
                       </span>
                     </Link>
                   </li>

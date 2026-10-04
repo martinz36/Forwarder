@@ -7,6 +7,7 @@ import { Badge, Code, Empty, PageHeader, Panel, Section, TextLink } from "@/comp
 import { buttonClass } from "@/components/button";
 import { MODE, SHIPMENT_STATUS } from "@/lib/labels";
 import { formatDate } from "@/lib/format";
+import { getPendings } from "@/server/pendings";
 
 const ACTIVE: ShipmentStatus[] = ["CONFIRMED", "AT_ORIGIN", "IN_TRANSIT", "AT_DESTINATION", "CUSTOMS_CLEARANCE", "RELEASED", "OUT_FOR_DELIVERY", "DELIVERED"];
 
@@ -54,10 +55,11 @@ export default async function DashboardPage() {
     milestones: { where: { status: "PENDING" as const }, orderBy: { sortOrder: "asc" as const }, take: 1, select: { name: true } },
   };
 
-  const [quoting, active, clients] = await Promise.all([
+  const [quoting, active, clients, pendings] = await Promise.all([
     db.shipment.findMany({ where: { organizationId, status: "QUOTING" }, orderBy: { createdAt: "desc" }, include }),
     db.shipment.findMany({ where: { organizationId, status: { in: ACTIVE } }, orderBy: [{ eta: "asc" }, { createdAt: "desc" }], include }),
     db.client.count({ where: { organizationId } }),
+    getPendings(db, organizationId),
   ]);
 
   const figures = [
@@ -88,6 +90,37 @@ export default async function DashboardPage() {
           </Link>
         ))}
       </dl>
+
+      <Section
+        title="Pendientes de hoy"
+        description="Lo que requiere acción: avisos de llegada por emitir, depósitos, canales, días libres, cotizaciones por vencer."
+        aside={pendings.length > 0 ? <span className="tnum text-sm text-ink-3">{pendings.length}</span> : undefined}
+      >
+        {pendings.length === 0 ? (
+          <Empty title="Nada pendiente por ahora" />
+        ) : (
+          <Panel>
+            <ul className="divide-y divide-rule">
+              {pendings.map((p, i) => (
+                <li key={`${p.kind}-${p.reference}-${i}`}>
+                  <Link href={p.href} className="press flex items-start gap-3 px-4 py-3 hover:bg-paper/50 sm:items-center">
+                    <span
+                      aria-label={p.urgent ? "Urgente" : undefined}
+                      className={`mt-1.5 h-2 w-2 shrink-0 rounded-full sm:mt-0 ${p.urgent ? "bg-signal" : "bg-warn/60"}`}
+                    />
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-ink">{p.text}</span>
+                      <span className="block truncate text-xs text-ink-3">
+                        <Code>{p.reference}</Code> · {p.client}
+                      </span>
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </Panel>
+        )}
+      </Section>
 
       <Section title="En cotización" description="Solicitudes esperando tarifa del agente o respuesta del cliente." aside={<TextLink href="/expedientes?estado=cotizacion">Ver todas</TextLink>}>
         {quoting.length === 0 ? <Empty title="Nada pendiente de cotizar" /> : <ExpedienteList rows={quoting} />}
