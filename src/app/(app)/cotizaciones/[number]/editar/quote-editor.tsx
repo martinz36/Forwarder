@@ -70,6 +70,19 @@ const LABEL = "text-xs font-medium text-ink-3";
 const BASIS_OPTIONS = (Object.keys(BASIS) as ChargeBasis[]).map((b) => ({ value: b, label: BASIS[b] || "manual" }));
 const TAX_OPTIONS = (Object.keys(TAX) as TaxTreatment[]).map((t) => ({ value: t, label: TAX[t] }));
 
+/** Dato de la carga que necesita cada unidad de cobro (para avisar si falta). */
+const MISSING_DATA: Partial<Record<ChargeBasis, string>> = {
+  PER_WM: "el peso o el volumen",
+  PER_CBM: "el volumen",
+  PER_TON: "el peso",
+  PER_KG: "el peso",
+  PER_CHARGEABLE_KG: "el peso o el volumen",
+  PER_CONTAINER: "indicar los contenedores en el expediente",
+  PER_PACKAGE: "el número de bultos",
+  PERCENT_CIF: "el valor de la mercadería",
+  PERCENT_FOB: "el valor de la mercadería",
+};
+
 let keySeq = 0;
 const newKey = () => `n${++keySeq}`;
 const n = (v: string) => (v.trim() === "" ? 0 : Number(v));
@@ -424,6 +437,11 @@ export function QuoteEditor({
                   Opcional
                 </label>
                 <span className="tnum text-xs text-ink-3">Costo total {formatMoney(l.totalCost, l.currency)}</span>
+                {MISSING_DATA[l.basis] && computeQuantity(l.basis, cargo) === null && (
+                  <span role="note" className="text-xs font-medium text-warn">
+                    Falta {MISSING_DATA[l.basis]} para calcular la cantidad
+                  </span>
+                )}
                 <span className="ml-auto flex items-center gap-1">
                   <button type="button" onClick={() => move(l.key, -1)} disabled={i === 0} aria-label="Subir" className="press rounded-sm px-2 py-1 text-ink-3 hover:bg-ink/5 disabled:opacity-30">
                     ↑

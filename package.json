@@ -16,7 +16,7 @@
     "env:setup": "tsx scripts/setup-env.ts",
     "legacy:import": "tsx scripts/import-legacy.ts",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test src/lib/pricing/*.test.ts src/server/*.test.ts scripts/legacy/*.test.ts",
+    "test": "tsx --test --test-concurrency=1 src/lib/pricing/*.test.ts src/server/*.test.ts scripts/legacy/*.test.ts tests/*.test.ts",
     "invite:create": "tsx scripts/create-invitation.ts",
     "dev:user": "tsx scripts/dev-seed-user.ts",
     "defaults:sync": "tsx scripts/sync-defaults.ts"
@@ -37,6 +37,8 @@
     "zod": "4.6.5"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "0.5.8",
+    "@electric-sql/pglite-socket": "0.2.11",
     "@tailwindcss/postcss": "4.3.3",
     "@types/node": "26.6.4",
     "@types/pg": "8.23.1",
@@ -45,7 +47,8 @@
     "postcss": "8.5.28",
     "tailwindcss": "4.3.3",
     "tsx": "4.23.15",
-    "typescript": "6.0.3"
+    "typescript": "6.0.3",
+    "unpdf": "1.8.1"
   },
   "allowScripts": {
     "@prisma/engines@7.10.0": true,

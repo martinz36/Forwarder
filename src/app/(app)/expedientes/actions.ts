@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getDb } from "@/server/db";
-import { createExpediente, setMilestone, updateExpediente, type CargoInput } from "@/server/expedientes";
+import { createExpediente, reopenExpediente, setMilestone, updateExpediente, type CargoInput } from "@/server/expedientes";
 import { createQuote } from "@/server/quotes";
 import { bool, date, editorActor, int, num, oneOf, str, toActionError, type ActionState } from "@/server/action-utils";
 import type { EquipmentType, PartnerType } from "@/generated/prisma/enums";
@@ -159,4 +159,14 @@ export async function createQuoteAction(_: ActionState, fd: FormData): Promise<A
   }
   revalidatePath("/cotizaciones");
   redirect(`/cotizaciones/${number}/editar`);
+}
+
+export async function reopenExpedienteAction(_: ActionState, fd: FormData): Promise<ActionState> {
+  try {
+    await reopenExpediente(getDb(), await editorActor(), str(fd, "shipmentId") ?? "");
+  } catch (err) {
+    return toActionError(err);
+  }
+  revalidatePath(`/expedientes/${str(fd, "number")}`);
+  return { ok: "Expediente reabierto" };
 }

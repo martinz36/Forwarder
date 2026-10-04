@@ -21,7 +21,8 @@ export const s = StyleSheet.create({
   brand: { fontSize: 16, fontFamily: "Helvetica-Bold", color: NAVY },
   muted: { color: INK3 },
   small: { fontSize: 7.5, color: INK3, marginTop: 1 },
-  docTitle: { fontSize: 8, color: INK3, letterSpacing: 1.2, textAlign: "right" },
+  // Sin espaciado amplio entre letras: el PDF debe poder buscarse ("aviso de llegada").
+  docTitle: { fontSize: 8.5, fontFamily: "Helvetica-Bold", color: INK3, textAlign: "right" },
   docNumber: { fontSize: 15, fontFamily: "Courier-Bold", color: INK, textAlign: "right", marginTop: 3, marginBottom: 4, lineHeight: 1.1 },
   rule: { borderBottomWidth: 1, borderBottomColor: RULE, marginVertical: 12 },
   accent: { borderBottomWidth: 2, borderBottomColor: SIGNAL, width: 36, marginTop: 6 },

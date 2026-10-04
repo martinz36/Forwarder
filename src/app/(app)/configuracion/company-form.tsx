@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import { updateOrganizationAction } from "./actions";
-import { Field, FormError, FormSection, SubmitButton, TextArea } from "@/components/form";
+import { ActionForm, Field, FormError, FormSection, SubmitButton, TextArea } from "@/components/form";
 
 export interface CompanyDefaults {
   legalName: string;
@@ -19,9 +19,9 @@ export interface CompanyDefaults {
 }
 
 export function CompanyForm({ d }: { d: CompanyDefaults }) {
-  const [state, action] = useActionState(updateOrganizationAction, undefined);
+  const [state, action, pending] = useActionState(updateOrganizationAction, undefined);
   return (
-    <form action={action} className="space-y-8">
+    <ActionForm action={action} className="space-y-8">
       <FormSection title="Empresa" description="Aparece en el encabezado de cotizaciones, avisos de llegada y liquidaciones.">
         <Field label="Razón social" name="legalName" defaultValue={d.legalName} required />
         <Field label="Nombre comercial" name="name" defaultValue={d.name} required />
@@ -58,10 +58,10 @@ export function CompanyForm({ d }: { d: CompanyDefaults }) {
       <div className="flex flex-col-reverse gap-3 border-t border-rule pt-5 sm:flex-row sm:items-center sm:justify-end">
         {state?.ok && <p className="text-sm text-ok">{state.ok}</p>}
         <FormError message={state?.error} />
-        <SubmitButton pendingLabel="Guardando…" full={false}>
+        <SubmitButton pending={pending} pendingLabel="Guardando…" full={false}>
           Guardar configuración
         </SubmitButton>
       </div>
-    </form>
+    </ActionForm>
   );
 }

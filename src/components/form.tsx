@@ -1,7 +1,37 @@
 "use client";
 
+import { useTransition } from "react";
 import { useFormStatus } from "react-dom";
 import { buttonClass } from "@/components/button";
+
+/**
+ * Formulario que llama a una acción del servidor sin el reinicio automático de React 19
+ * (que borra todo lo escrito aunque la acción devuelva un error).
+ */
+export function ActionForm({
+  action,
+  className,
+  children,
+}: {
+  action: (formData: FormData) => void;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  const [, startTransition] = useTransition();
+  return (
+    <form
+      className={className}
+      onSubmit={(e) => {
+        e.preventDefault();
+        const submitter = (e.nativeEvent as SubmitEvent).submitter as HTMLElement | null;
+        const data = new FormData(e.currentTarget, submitter);
+        startTransition(() => action(data));
+      }}
+    >
+      {children}
+    </form>
+  );
+}
 
 
 const CONTROL =
@@ -146,6 +176,7 @@ export function SubmitButton({
   full = true,
   name,
   value,
+  pending: pendingProp,
 }: {
   children: React.ReactNode;
   pendingLabel: string;
@@ -153,8 +184,11 @@ export function SubmitButton({
   full?: boolean;
   name?: string;
   value?: string;
+  /** Con ActionForm, el estado de envío viene de useActionState. */
+  pending?: boolean;
 }) {
-  const { pending } = useFormStatus();
+  const status = useFormStatus();
+  const pending = pendingProp ?? status.pending;
   return (
     <button
       type="submit"

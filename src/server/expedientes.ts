@@ -373,3 +373,23 @@ export async function planOperation(tx: Tx, organizationId: string, shipmentId: 
     });
   }
 }
+
+/** Vuelve a "En cotización" un expediente no concretado (el cliente regresó). */
+export async function reopenExpediente(db: Db, actor: Actor, shipmentId: string) {
+  return db.$transaction(async (tx) => {
+    const shipment = await tx.shipment.findFirst({ where: { id: shipmentId, organizationId: actor.organizationId } });
+    if (!shipment) throw new DomainError("El expediente no existe.");
+    if (shipment.status !== "LOST") throw new DomainError("Solo se reabre un expediente no concretado.");
+    await tx.shipment.update({ where: { id: shipment.id }, data: { status: "QUOTING", statusChangedAt: new Date() } });
+    await tx.activityEvent.create({
+      data: {
+        organizationId: actor.organizationId,
+        clientId: shipment.clientId,
+        shipmentId: shipment.id,
+        type: "shipment.reopened",
+        title: "Expediente reabierto",
+        actorUserId: actor.userId,
+      },
+    });
+  });
+}

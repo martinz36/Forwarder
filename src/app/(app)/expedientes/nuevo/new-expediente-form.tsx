@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { createExpedienteAction } from "../actions";
-import { Check, Field, FormError, FormSection, SelectField, SubmitButton, TextArea } from "@/components/form";
+import { ActionForm, Check, Field, FormError, FormSection, SelectField, SubmitButton, TextArea } from "@/components/form";
 import { EQUIPMENT_OPTIONS, INCOTERMS, TAX_ID_OPTIONS } from "@/lib/catalog";
 
 type Option = { value: string; label: string };
@@ -64,13 +64,13 @@ export function NewExpedienteForm({
   locations: Option[];
   defaultDestinationId?: string;
 }) {
-  const [state, action] = useActionState(createExpedienteAction, undefined);
+  const [state, action, pending] = useActionState(createExpedienteAction, undefined);
   const [clientMode, setClientMode] = useState(clients.length ? "existing" : "new");
   const [direction, setDirection] = useState("IMPORT");
   const [mode, setMode] = useState("SEA_LCL");
 
   return (
-    <form action={action} className="space-y-8">
+    <ActionForm action={action} className="space-y-8">
       <FormSection title="Cliente">
         <div className="sm:col-span-2 lg:col-span-3">
           <Segmented
@@ -183,10 +183,10 @@ export function NewExpedienteForm({
 
       <div className="flex flex-col-reverse gap-3 border-t border-rule pt-5 sm:flex-row sm:items-center sm:justify-end">
         <FormError message={state?.error} />
-        <SubmitButton pendingLabel="Abriendo…" full={false}>
+        <SubmitButton pending={pending} pendingLabel="Abriendo…" full={false}>
           Abrir expediente
         </SubmitButton>
       </div>
-    </form>
+    </ActionForm>
   );
 }

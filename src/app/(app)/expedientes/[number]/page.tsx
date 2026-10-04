@@ -12,6 +12,7 @@ import { formatDate, formatDateTime, formatMoney, formatVolume, formatWeight } f
 import { computeTotals, type Totals } from "@/lib/pricing/totals";
 import { Milestones } from "./milestones";
 import { NewQuoteForm } from "./new-quote-form";
+import { ReopenButton } from "./reopen-button";
 import { ChargesManager } from "./charges-manager";
 import { BillingPanel } from "./billing-panel";
 import { chargeStage, computeBalance } from "@/server/billing";
@@ -99,6 +100,7 @@ export default async function ExpedientePage({ params }: Props) {
         aside={
           <>
             <Badge tone={status.tone}>{status.label}</Badge>
+            {editable && s.status === "LOST" && <ReopenButton shipmentId={s.id} number={s.number} />}
             {editable && (
               <Link href={`/expedientes/${s.number}/editar`} className={buttonClass("secondary")}>
                 Editar datos

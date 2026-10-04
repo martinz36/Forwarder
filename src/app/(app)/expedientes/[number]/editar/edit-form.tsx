@@ -3,7 +3,7 @@
 import { useActionState, useState } from "react";
 import Link from "next/link";
 import { updateExpedienteAction } from "../../actions";
-import { Field, FormError, FormSection, SelectField, SubmitButton, TextArea } from "@/components/form";
+import { ActionForm, Field, FormError, FormSection, SelectField, SubmitButton, TextArea } from "@/components/form";
 import { buttonClass } from "@/components/button";
 import { CHANNEL_OPTIONS, EQUIPMENT_OPTIONS, INCOTERMS, REGIME_OPTIONS } from "@/lib/catalog";
 
@@ -93,11 +93,11 @@ export function EditExpedienteForm({
   agents: Option[];
   warehouses: Option[];
 }) {
-  const [state, action] = useActionState(updateExpedienteAction.bind(null, shipmentId, number), undefined);
+  const [state, action, pending] = useActionState(updateExpedienteAction.bind(null, shipmentId, number), undefined);
   const isAir = d.mode === "AIR";
 
   return (
-    <form action={action} className="space-y-8">
+    <ActionForm action={action} className="space-y-8">
       <input type="hidden" name="mode" value={d.mode} />
 
       <FormSection title="Transporte">
@@ -174,10 +174,10 @@ export function EditExpedienteForm({
         <Link href={`/expedientes/${number}`} className={buttonClass("quiet")}>
           Cancelar
         </Link>
-        <SubmitButton pendingLabel="Guardando…" full={false}>
+        <SubmitButton pending={pending} pendingLabel="Guardando…" full={false}>
           Guardar cambios
         </SubmitButton>
       </div>
-    </form>
+    </ActionForm>
   );
 }
