@@ -23,6 +23,7 @@ export const QUOTE_STATUS: Record<QuoteStatus, { label: string; tone: Tone }> = 
 };
 
 export const SHIPMENT_STATUS: Record<ShipmentStatus, { label: string; tone: Tone }> = {
+  QUOTING: { label: "En cotización", tone: "warn" },
   CONFIRMED: { label: "Orden confirmada", tone: "info" },
   AT_ORIGIN: { label: "En origen", tone: "info" },
   IN_TRANSIT: { label: "En tránsito", tone: "info" },
@@ -32,6 +33,7 @@ export const SHIPMENT_STATUS: Record<ShipmentStatus, { label: string; tone: Tone
   OUT_FOR_DELIVERY: { label: "En reparto", tone: "info" },
   DELIVERED: { label: "Entregado", tone: "ok" },
   CLOSED: { label: "Cerrado", tone: "neutral" },
+  LOST: { label: "No concretado", tone: "neutral" },
   CANCELLED: { label: "Anulado", tone: "bad" },
 };
 

@@ -633,6 +633,137 @@ async function importAll(tx: Tx, legacy: Legacy) {
     });
   }
 
+  // ── Expedientes sin operación (solicitudes abiertas o cotizaciones que no se concretaron).
+  //    En el modelo nuevo toda cotización vive dentro de un expediente.
+  //    Antes, el correlativo se lleva al último número usado para no repetir códigos antiguos.
+  for (const e of legacy.expedients) {
+    const m = String(e.externalCode ?? "").match(/^([MALT])-(\d{4})-(\d+)$/);
+    if (m) await bumpSequence(tx, organizationId, sequenceKeys.shipment(Number(m[2])), Number(m[3]));
+  }
+  const quotingDefs = applicableMilestones(
+    milestoneDefs,
+    { direction: "IMPORT", mode: "SEA_LCL", includesFreight: true, includesCustoms: true, includesInland: true },
+    "QUOTING",
+  );
+
+  async function openLegacyExpediente(input: {
+    clientId: string;
+    number: string | null;
+    mode: ReturnType<typeof parseServiceMode>["mode"];
+    createdAt: Date;
+    notes: string | null;
+    quotes: { id: string; status: string }[];
+  }) {
+    const number =
+      input.number && /^[MALT]-\d{4}-\d+$/.test(input.number) &&
+      !(await tx.shipment.findUnique({ where: { organizationId_number: { organizationId, number: input.number } } }))
+        ? input.number
+        : await nextShipmentNumber(tx, organizationId, input.mode, input.createdAt);
+    const lost = input.quotes.length > 0 && input.quotes.every((q) => q.status === "REJECTED");
+    const sent = input.quotes.some((q) => q.status !== "DRAFT");
+    const firstVersion = input.quotes[0]
+      ? await tx.quoteVersion.findFirst({ where: { quoteId: input.quotes[0].id }, orderBy: { versionNo: "asc" } })
+      : null;
+    const shipment = await tx.shipment.create({
+      data: {
+        organizationId,
+        number,
+        clientId: input.clientId,
+        contactId: primaryContact.get(input.clientId) ?? (await tx.contact.findFirst({ where: { clientId: input.clientId, isPrimary: true } }))?.id,
+        status: lost ? "LOST" : "QUOTING",
+        statusChangedAt: input.createdAt,
+        direction: firstVersion?.direction ?? "IMPORT",
+        mode: firstVersion?.mode ?? input.mode,
+        incoterm: firstVersion?.incoterm,
+        includesFreight: firstVersion?.includesFreight ?? true,
+        includesCustoms: firstVersion?.includesCustoms ?? true,
+        includesInland: firstVersion?.includesInland ?? false,
+        includesInsurance: firstVersion?.includesInsurance ?? false,
+        originId: firstVersion?.originId,
+        destinationId: firstVersion?.destinationId,
+        pickupAddress: firstVersion?.originId ? null : firstVersion?.originText,
+        deliveryAddress: firstVersion?.destinationId ? null : firstVersion?.destinationText,
+        commodity: firstVersion?.commodity,
+        grossWeightKg: firstVersion?.grossWeightKg,
+        volumeCbm: firstVersion?.volumeCbm,
+        packages: firstVersion?.packages,
+        packageType: firstVersion?.packageType,
+        internalNotes: input.notes,
+        createdAt: input.createdAt,
+      },
+    });
+    await tx.shipmentMilestone.createMany({
+      data: quotingDefs.map((d) => {
+        const done = d.code === "REQUEST_RECEIVED" || (sent && ["AGENT_RATE_REQUESTED", "AGENT_RATE_RECEIVED", "QUOTE_SENT"].includes(d.code));
+        return {
+          organizationId,
+          shipmentId: shipment.id,
+          definitionId: d.id,
+          name: d.name,
+          clientLabel: d.clientLabel,
+          setsStatus: d.setsStatus,
+          clientVisible: d.clientVisible,
+          notifyClient: d.notifyClient,
+          sortOrder: d.sortOrder,
+          status: done ? ("DONE" as const) : ("PENDING" as const),
+          completedAt: d.code === "REQUEST_RECEIVED" ? input.createdAt : null,
+          note: done && d.code !== "REQUEST_RECEIVED" ? "Sin fecha (importado)" : null,
+        };
+      }),
+    });
+    if (input.quotes.length) {
+      await tx.quote.updateMany({ where: { id: { in: input.quotes.map((q) => q.id) } }, data: { shipmentId: shipment.id } });
+    }
+    await tx.activityEvent.create({
+      data: {
+        organizationId,
+        clientId: input.clientId,
+        shipmentId: shipment.id,
+        type: "shipment.imported",
+        title: "Importado del sistema anterior",
+        createdAt: input.createdAt,
+      },
+    });
+    count(report.created, "Expedientes en cotización");
+    return shipment;
+  }
+
+  for (const e of legacy.expedients) {
+    if (ids.get("Expedient", e.id)) { count(report.skipped, "Expedientes"); continue; }
+    const operation = legacy.operations.find((o) => o.expedientId === e.id);
+    const fromOperation = operation ? ids.get("Operation", operation.id) : undefined;
+    if (fromOperation) { await ids.set("Expedient", e.id, fromOperation); continue; }
+    const clientId = ids.get("Client", e.clientId);
+    if (!clientId) { warn(`Expediente ${e.externalCode ?? e.code}: su cliente no existe, se omite.`); continue; }
+    const quoteIds = legacy.quotations
+      .filter((q) => q.expedientId === e.id)
+      .map((q) => ids.get("Quotation", q.id))
+      .filter((id): id is string => Boolean(id));
+    const quotes = await tx.quote.findMany({ where: { id: { in: quoteIds }, shipmentId: null }, select: { id: true, status: true } });
+    const shipment = await openLegacyExpediente({
+      clientId,
+      number: text(e.externalCode),
+      mode: parseServiceMode({ loadType: e.loadType, transportMode: e.transportMode }).mode,
+      createdAt: e.createdAt,
+      notes: text(e.notes),
+      quotes,
+    });
+    await ids.set("Expedient", e.id, shipment.id);
+  }
+
+  // Cotizaciones que no tenían expediente: se les abre uno.
+  for (const q of await tx.quote.findMany({ where: { organizationId, shipmentId: null }, orderBy: { createdAt: "asc" } })) {
+    const firstVersion = await tx.quoteVersion.findFirst({ where: { quoteId: q.id }, orderBy: { versionNo: "asc" } });
+    await openLegacyExpediente({
+      clientId: q.clientId,
+      number: null,
+      mode: firstVersion?.mode ?? "SEA_LCL",
+      createdAt: q.createdAt,
+      notes: null,
+      quotes: [{ id: q.id, status: q.status }],
+    });
+  }
+
   // ── Correlativos: continuar después de los números ya usados
   for (const q of legacy.quotations) {
     const m = String(q.code).match(/^COT-(\d{4})-(\d+)$/);

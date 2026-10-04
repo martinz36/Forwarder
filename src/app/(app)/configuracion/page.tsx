@@ -3,11 +3,12 @@ import { requireTenant } from "@/server/tenant";
 import { getDb } from "@/server/db";
 import { Badge, Facts, PageHeader, Panel, Section } from "@/components/ui";
 import { BASIS, DIRECTION, GROUPS, MODE, TAX } from "@/lib/labels";
+import { CompanyForm } from "./company-form";
 
 export const metadata: Metadata = { title: "Configuración" };
 
 export default async function SettingsPage() {
-  const { organization: org } = await requireTenant();
+  const { organization: org, role } = await requireTenant();
   const db = getDb();
   const [templates, concepts] = await Promise.all([
     db.quoteTemplate.findMany({
@@ -21,27 +22,38 @@ export default async function SettingsPage() {
 
   return (
     <>
-      <PageHeader title="Configuración" meta={<span>Por ahora solo lectura; la edición llega con el módulo de cotizaciones.</span>} />
+      <PageHeader title="Configuración" meta={<span>Datos de la empresa, condiciones, cuentas para depósito y plantillas.</span>} />
 
-      <Section title="Empresa">
-        <Facts
-          items={[
-            { label: "Razón social", value: org.legalName },
-            { label: "Nombre comercial", value: org.name },
-            { label: "RUC", value: org.taxId || <span className="text-warn">Falta registrar</span>, mono: true },
-            { label: "Dirección", value: org.address },
-            { label: "Teléfono", value: org.phone },
-            { label: "Correo", value: org.email },
-            { label: "IGV", value: `${org.taxRate.toString()}%` },
-            { label: "Validez de cotizaciones", value: `${org.quoteValidityDays} días` },
-            { label: "Margen sugerido", value: `${org.defaultMarkupPct.toString()}% sobre el costo` },
-          ]}
-        />
-      </Section>
-
-      <Section title="Condiciones generales" description="Se imprimen en todas las cotizaciones.">
-        <p className="whitespace-pre-line rounded-md border border-rule bg-surface px-4 py-3 text-sm text-ink-2">{org.quoteTerms}</p>
-      </Section>
+      {role === "OWNER" || role === "ADMIN" ? (
+        <div className="mt-6 rounded-md border border-rule bg-surface p-4 sm:p-6">
+          <CompanyForm
+            d={{
+              legalName: org.legalName,
+              name: org.name,
+              taxId: org.taxId,
+              address: org.address,
+              phone: org.phone,
+              email: org.email,
+              website: org.website,
+              quoteValidityDays: org.quoteValidityDays,
+              defaultMarkupPct: org.defaultMarkupPct.toString(),
+              quoteTerms: org.quoteTerms,
+              paymentInstructions: org.paymentInstructions,
+            }}
+          />
+        </div>
+      ) : (
+        <Section title="Empresa">
+          <Facts
+            items={[
+              { label: "Razón social", value: org.legalName },
+              { label: "Nombre comercial", value: org.name },
+              { label: "RUC", value: org.taxId, mono: true },
+              { label: "Validez de cotizaciones", value: `${org.quoteValidityDays} días` },
+            ]}
+          />
+        </Section>
+      )}
 
       <Section title="Plantillas de cotización" description="Los conceptos que se cargan solos según el tipo de servicio.">
         <div className="grid gap-4 md:grid-cols-2">

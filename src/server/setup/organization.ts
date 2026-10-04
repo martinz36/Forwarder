@@ -112,7 +112,17 @@ async function installTemplates(tx: Prisma.TransactionClient, organizationId: st
 }
 
 async function installMilestones(tx: Prisma.TransactionClient, organizationId: string) {
-  for (const [index, m] of DEFAULT_MILESTONES.entries()) {
+  // Los comerciales van antes de la orden con orden negativo; los operativos conservan 0, 10, 20…
+  // Los que traen orden fijo se intercalan sin mover a los demás (ya instalados en empresas existentes).
+  const quoting = DEFAULT_MILESTONES.filter((m) => m.phase === "QUOTING");
+  const operation = DEFAULT_MILESTONES.filter((m) => m.phase !== "QUOTING" && m.sortOrder === undefined);
+  const fixed = DEFAULT_MILESTONES.filter((m) => m.phase !== "QUOTING" && m.sortOrder !== undefined);
+  const ordered = [
+    ...quoting.map((m, i) => ({ m, sortOrder: (i - quoting.length) * 10 })),
+    ...operation.map((m, i) => ({ m, sortOrder: i * 10 })),
+    ...fixed.map((m) => ({ m, sortOrder: m.sortOrder! })),
+  ];
+  for (const { m, sortOrder } of ordered) {
     await tx.milestoneDefinition.upsert({
       where: { organizationId_code: { organizationId, code: m.code } },
       create: {
@@ -128,7 +138,8 @@ async function installMilestones(tx: Prisma.TransactionClient, organizationId: s
         setsStatus: m.setsStatus,
         clientVisible: m.clientVisible ?? true,
         notifyClient: m.notifyClient ?? false,
-        sortOrder: index * 10,
+        phase: m.phase ?? "OPERATION",
+        sortOrder,
       },
       update: {},
     });

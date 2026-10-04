@@ -163,20 +163,33 @@ export interface DefaultMilestone {
   setsStatus?: ShipmentStatus;
   clientVisible?: boolean;
   notifyClient?: boolean;
+  /** QUOTING: etapa comercial, se crean con el expediente. OPERATION: se crean al aceptar la cotización. */
+  phase?: "QUOTING" | "OPERATION";
+  /** Orden fijo (para hitos agregados después sin mover los existentes). */
+  sortOrder?: number;
 }
 
 const BOTH: Direction[] = ["IMPORT", "EXPORT"];
 
 export const DEFAULT_MILESTONES: DefaultMilestone[] = [
-  { code: "ORDER_CONFIRMED", name: "Orden confirmada", clientLabel: "Orden confirmada", directions: BOTH, setsStatus: "CONFIRMED", notifyClient: true },
+  // Etapa comercial
+  { code: "REQUEST_RECEIVED", name: "Solicitud recibida", clientLabel: "Recibimos tu solicitud de cotización", directions: BOTH, setsStatus: "QUOTING", phase: "QUOTING" },
+  { code: "AGENT_RATE_REQUESTED", name: "Tarifa solicitada al agente", clientLabel: "Tarifa solicitada", directions: BOTH, requiresFreight: true, clientVisible: false, phase: "QUOTING" },
+  { code: "AGENT_RATE_RECEIVED", name: "Tarifa del agente recibida", clientLabel: "Tarifa recibida", directions: BOTH, requiresFreight: true, clientVisible: false, phase: "QUOTING" },
+  { code: "QUOTE_SENT", name: "Cotización enviada al cliente", clientLabel: "Te enviamos la cotización", directions: BOTH, notifyClient: true, phase: "QUOTING" },
+  // Operación
+  { code: "ORDER_CONFIRMED", name: "Cotización aceptada · orden confirmada", clientLabel: "Orden confirmada", directions: BOTH, setsStatus: "CONFIRMED", notifyClient: true },
   // Importación
   { code: "IMP_PICKUP", name: "Carga recogida en proveedor", clientLabel: "Carga recogida en origen", directions: ["IMPORT"], requiresFreight: true, setsStatus: "AT_ORIGIN", notifyClient: true },
   { code: "IMP_PREALERT", name: "Pre-alerta y documentos de embarque recibidos", clientLabel: "Documentos de embarque recibidos", directions: ["IMPORT"], requiresFreight: true },
   { code: "IMP_DEPARTED", name: "Zarpe / despegue confirmado", clientLabel: "Tu carga salió de origen", directions: ["IMPORT"], requiresFreight: true, setsStatus: "IN_TRANSIT", notifyClient: true },
+  { code: "ARRIVAL_NOTICE_SENT", name: "Aviso de llegada enviado", clientLabel: "Te enviamos el aviso de llegada", directions: ["IMPORT"], requiresFreight: true, notifyClient: true, sortOrder: 33 },
+  { code: "FUNDS_RECEIVED", name: "Depósito del cliente recibido", clientLabel: "Recibimos tu depósito", directions: BOTH, notifyClient: true, sortOrder: 36 },
   { code: "IMP_ARRIVED", name: "Arribo a destino", clientLabel: "Tu carga llegó a destino", directions: ["IMPORT"], setsStatus: "AT_DESTINATION", notifyClient: true },
   { code: "IMP_DAM_NUMBERED", name: "DAM numerada", clientLabel: "Declaración aduanera presentada", directions: ["IMPORT"], requiresCustoms: true, setsStatus: "CUSTOMS_CLEARANCE", notifyClient: true },
   { code: "IMP_CHANNEL", name: "Canal de control asignado", clientLabel: "Canal de control asignado", directions: ["IMPORT"], requiresCustoms: true, notifyClient: true },
   { code: "IMP_TAXES_PAID", name: "Tributos cancelados", clientLabel: "Impuestos pagados", directions: ["IMPORT"], requiresCustoms: true },
+  { code: "CUSTOMS_SETTLEMENT_SENT", name: "Liquidación de aduanas enviada", clientLabel: "Te enviamos la liquidación de aduanas", directions: BOTH, requiresCustoms: true, notifyClient: true, sortOrder: 75 },
   { code: "IMP_RELEASED", name: "Levante autorizado", clientLabel: "Levante autorizado", directions: ["IMPORT"], requiresCustoms: true, setsStatus: "RELEASED", notifyClient: true },
   { code: "IMP_OUT_FOR_DELIVERY", name: "Salida a almacén del cliente", clientLabel: "En camino a tu almacén", directions: ["IMPORT"], requiresInland: true, setsStatus: "OUT_FOR_DELIVERY", notifyClient: true },
   { code: "IMP_DELIVERED", name: "Carga entregada", clientLabel: "Carga entregada", directions: ["IMPORT"], setsStatus: "DELIVERED", notifyClient: true },
@@ -218,6 +231,7 @@ export const DEFAULT_DOCUMENT_TYPES: DefaultDocumentType[] = [
   { code: "INSURANCE_POLICY", name: "Póliza o certificado de seguro", visibility: "CLIENT", clientCanUpload: true },
   { code: "PERMITS", name: "Permisos y autorizaciones (VUCE)", visibility: "CLIENT", clientCanUpload: true, responsible: "CLIENT" },
   { code: "TECH_SHEET", name: "Ficha técnica / catálogo", visibility: "CLIENT", clientCanUpload: true, responsible: "CLIENT" },
+  { code: "AGENT_QUOTE", name: "Tarifa / cotización del agente", visibility: "INTERNAL", responsible: "THIRD_PARTY" },
   { code: "PREALERT", name: "Pre-alerta del agente", visibility: "INTERNAL", responsible: "THIRD_PARTY" },
   { code: "ARRIVAL_NOTICE", name: "Aviso de llegada", visibility: "CLIENT" },
   { code: "DAM", name: "DAM / declaración aduanera", visibility: "CLIENT", requiredForDirections: BOTH, requiredForModes: ALL_MODES, requiredWhenCustoms: true },

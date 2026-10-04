@@ -16,13 +16,15 @@
     "env:setup": "tsx scripts/setup-env.ts",
     "legacy:import": "tsx scripts/import-legacy.ts",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test src/lib/pricing/*.test.ts scripts/legacy/*.test.ts",
+    "test": "tsx --test src/lib/pricing/*.test.ts src/server/*.test.ts scripts/legacy/*.test.ts",
     "invite:create": "tsx scripts/create-invitation.ts",
-    "dev:user": "tsx scripts/dev-seed-user.ts"
+    "dev:user": "tsx scripts/dev-seed-user.ts",
+    "defaults:sync": "tsx scripts/sync-defaults.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "7.10.0",
     "@prisma/client": "7.10.0",
+    "@react-pdf/renderer": "4.9.0",
     "better-auth": "1.7.7",
     "decimal.js": "10.6.0",
     "dotenv": "18.0.5",
@@ -31,7 +33,8 @@
     "prisma": "7.10.0",
     "react": "19.3.0",
     "react-dom": "19.3.0",
-    "server-only": "0.0.1"
+    "server-only": "0.0.1",
+    "zod": "4.6.5"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "4.3.3",

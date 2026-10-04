@@ -4,7 +4,8 @@ Software propio del usuario: ERP/CRM para agencia de carga y aduanas en Perú (M
 
 ## Estado
 
-- Rama `v2`: reconstrucción completa. `main` tiene el sistema anterior (en producción, sin login).
+- Rama `v2`: reconstrucción completa (flujo expediente → cotización → operación → cobranza ya funcional). `main` tiene el sistema anterior (en producción, sin login).
+- Scripts: `npm run env:setup` (arma conexiones desde NEON_URL), `db:migrate`, `legacy:import [--dry-run]`, `defaults:sync`, `invite:create -- --url=…`, `test`.
 - `legacy/`: código del sistema anterior, solo como referencia para portar PDFs y piezas. Excluido de TypeScript. Borrar cuando ya no se necesite.
 - Modelo de datos y decisiones: `docs/modelo-de-datos.md`.
 

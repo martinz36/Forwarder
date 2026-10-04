@@ -1,6 +1,7 @@
 import type { ChargeBasis, ChargeGroup, Currency, TaxTreatment } from "@/generated/prisma/enums";
-import { BASIS, GROUPS, TAX } from "@/lib/labels";
-import { formatMoney, formatQuantity } from "@/lib/format";
+import { GROUPS, TAX } from "@/lib/labels";
+import { formatMoney } from "@/lib/format";
+import { describeLine } from "@/lib/pricing/display";
 import type { Totals } from "@/lib/pricing/totals";
 
 export interface LineView {
@@ -19,7 +20,9 @@ export interface LineView {
 }
 
 function LineRows({ lines }: { lines: LineView[] }) {
-  return lines.map((l) => (
+  return lines.map((l) => {
+    const shown = describeLine(l);
+    return (
     <tr key={l.id} className="border-t border-rule align-top">
       <td className="py-2.5 pl-4 pr-3">
         <div className="text-ink">{l.description}</div>
@@ -29,17 +32,18 @@ function LineRows({ lines }: { lines: LineView[] }) {
         </div>
       </td>
       <td className="tnum hidden whitespace-nowrap px-3 py-2.5 text-right text-ink-2 sm:table-cell">
-        {formatQuantity(l.quantity)} {BASIS[l.basis]}
+        {shown.quantity}
       </td>
       <td className="tnum hidden whitespace-nowrap px-3 py-2.5 text-right text-ink-2 md:table-cell">
-        {formatMoney(l.unitPrice, l.currency)}
+        {shown.unitPrice}
       </td>
-      <td className="tnum whitespace-nowrap px-3 py-2.5 text-right font-medium text-ink">{formatMoney(l.totalPrice, l.currency)}</td>
+      <td className="tnum whitespace-nowrap px-3 py-2.5 text-right font-medium text-ink">{shown.total}</td>
       <td className="tnum hidden whitespace-nowrap py-2.5 pl-3 pr-4 text-right text-ink-3 lg:table-cell">
         {formatMoney(l.totalCost, l.currency)}
       </td>
     </tr>
-  ));
+    );
+  });
 }
 
 /** Líneas agrupadas por sección, con las opcionales aparte. El costo es interno (solo personal). */
@@ -87,7 +91,7 @@ export function LinesTable({ lines }: { lines: LineView[] }) {
 
 /** Resumen por moneda. Margen visible solo para el personal. */
 export function TotalsBox({ totals, taxRate }: { totals: Totals; taxRate: { toString(): string } }) {
-  const currencies = (Object.keys(totals) as Currency[]).filter((c) => totals[c]);
+  const currencies = (Object.keys(totals) as Currency[]).filter((c) => totals[c]).sort((a) => (a === "USD" ? -1 : 1));
   if (!currencies.length) return null;
   return (
     <div className="grid gap-3 sm:grid-cols-2">

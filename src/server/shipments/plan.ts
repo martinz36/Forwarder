@@ -1,7 +1,8 @@
-import type { Direction, Responsible, ServiceMode, ShipmentStatus } from "@/generated/prisma/enums";
+import type { Direction, MilestonePhase, Responsible, ServiceMode, ShipmentStatus } from "@/generated/prisma/enums";
 
 /** Orden del estado general; sirve para saber qué hitos ya quedaron atrás. */
 export const STATUS_RANK: Record<ShipmentStatus, number> = {
+  QUOTING: -1,
   CONFIRMED: 0,
   AT_ORIGIN: 1,
   IN_TRANSIT: 2,
@@ -11,7 +12,8 @@ export const STATUS_RANK: Record<ShipmentStatus, number> = {
   OUT_FOR_DELIVERY: 6,
   DELIVERED: 7,
   CLOSED: 8,
-  CANCELLED: -1,
+  LOST: -2,
+  CANCELLED: -2,
 };
 
 export interface ShipmentScope {
@@ -32,18 +34,20 @@ export interface MilestoneDef {
   requiresCustoms: boolean;
   requiresInland: boolean;
   setsStatus: ShipmentStatus | null;
+  phase: MilestonePhase;
   clientVisible: boolean;
   notifyClient: boolean;
   sortOrder: number;
   isActive: boolean;
 }
 
-/** Hitos que aplican a un embarque según dirección, modo y servicios contratados. */
-export function applicableMilestones<T extends MilestoneDef>(defs: T[], scope: ShipmentScope): T[] {
+/** Hitos que aplican a un expediente según dirección, modo y servicios contratados (opcionalmente de una sola etapa). */
+export function applicableMilestones<T extends MilestoneDef>(defs: T[], scope: ShipmentScope, phase?: MilestonePhase): T[] {
   return defs
     .filter(
       (d) =>
         d.isActive &&
+        (!phase || d.phase === phase) &&
         d.directions.includes(scope.direction) &&
         (d.modes.length === 0 || d.modes.includes(scope.mode)) &&
         (!d.requiresFreight || scope.includesFreight) &&

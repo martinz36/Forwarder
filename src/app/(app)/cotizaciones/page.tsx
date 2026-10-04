@@ -3,6 +3,8 @@ import Link from "next/link";
 import { requireTenant } from "@/server/tenant";
 import { getDb } from "@/server/db";
 import { Badge, Code, Empty, PageHeader, Panel } from "@/components/ui";
+import { buttonClass } from "@/components/button";
+import { canEdit } from "@/server/action-utils";
 import { MODE, QUOTE_STATUS } from "@/lib/labels";
 import { formatDate, formatMoney } from "@/lib/format";
 import type { Totals } from "@/lib/pricing/totals";
@@ -10,7 +12,7 @@ import type { Totals } from "@/lib/pricing/totals";
 export const metadata: Metadata = { title: "Cotizaciones" };
 
 export default async function QuotesPage() {
-  const { organization } = await requireTenant();
+  const { organization, role } = await requireTenant();
   const quotes = await getDb().quote.findMany({
     where: { organizationId: organization.id },
     orderBy: { createdAt: "desc" },
@@ -23,7 +25,17 @@ export default async function QuotesPage() {
 
   return (
     <>
-      <PageHeader title="Cotizaciones" meta={<span>{quotes.length} en total</span>} />
+      <PageHeader
+        title="Cotizaciones"
+        meta={<span>{quotes.length} en total · cada cotización vive dentro de su expediente</span>}
+        aside={
+          canEdit(role) && (
+            <Link href="/expedientes/nuevo" className={buttonClass("primary")}>
+              Nueva solicitud
+            </Link>
+          )
+        }
+      />
       <div className="mt-6">
         {quotes.length === 0 ? (
           <Empty title="Aún no hay cotizaciones" />

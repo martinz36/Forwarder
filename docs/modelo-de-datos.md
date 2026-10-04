@@ -1,11 +1,30 @@
-# Forwarder v2 — modelo de datos
+# Forwarder v2 — modelo de datos y flujo de trabajo
 
-Documento para validar el modelo antes de construir las pantallas. El esquema completo está en [`prisma/schema.prisma`](../prisma/schema.prisma).
+El esquema completo está en [`prisma/schema.prisma`](../prisma/schema.prisma).
+
+## Flujo de trabajo (cómo se usa)
+
+Todo nace del **expediente**: su número (L-2026-0006) es la referencia para los correos con el cliente y el agente.
+
+| Fase | Qué haces en el sistema | Qué queda registrado |
+|---|---|---|
+| 1. Solicitud | **Nueva solicitud**: cliente (o cliente nuevo), modalidad, incoterm, origen, peso / volumen / bultos o contenedores. | Expediente en "En cotización" con hito "Solicitud recibida". |
+| 2. Tarifa del agente | Marcas "Tarifa solicitada al agente" y "Tarifa recibida" con su fecha. | Historial con fechas (solo interno). |
+| 3. Cotización | **Crear cotización** desde plantilla: se precargan los conceptos según el incoterm y se calculan las cantidades. Pones costos del agente, aplicas margen, guardas. **Ver PDF**. | Borrador editable con totales e IGV. |
+| 4. Envío | **Marcar como enviada**: la versión queda congelada con tus condiciones; se descarga el PDF para enviarlo. | Hito "Cotización enviada". Para cambiar precios: **Nueva versión**. |
+| 5. Respuesta | **Registrar respuesta**: aceptada / no aceptada. Si acepta, el expediente pasa a operación con sus cargos, hitos operativos y checklist de documentos. | Estado "Orden confirmada" o "No concretado". |
+| 6. Operación | **Editar datos**: naviera, agente, BL, nave, ETD/ETA, DAM, canal, levante. Marcas hitos con fecha (recojo, zarpe, arribo…). | Cada hito mueve el estado y queda en el historial; los visibles al cliente generan un aviso en cola. |
+| 7. Aviso de llegada | Ajustas cargos si hubo variación (**Editar** o **Agregar cargo adicional**) y **Emitir aviso de llegada**: gastos de origen, flete y destino, con tus cuentas para depósito. | AL-2026-0001 con PDF; hito "Aviso de llegada enviado". |
+| 8. Depósito | **Registrar depósito del cliente** (monto, banco, N° de operación). | Saldo por moneda; hito "Depósito recibido". |
+| 9. Aduana | Canal rojo / naranja → agregas los costos extra. **Emitir liquidación de aduanas**: comisión, operativos, almacén, transporte, aforo. | LA-2026-0001 con PDF. |
+| 10. Cierre | **Emitir liquidación final** (todo lo cobrado contra los depósitos, con el saldo) y **recibo de reembolso** (lo no afecto). | LF / RI con PDF. La factura de lo afecto irá por Nubefact. |
+
+Un documento emitido no se edita: si algo cambia, se emite de nuevo y el anterior queda anulado.
 
 ## Principios
 
 1. **Multiempresa desde el día uno.** Cada agencia es una `Organization`. Todo dato de negocio lleva `organizationId`, y los valores únicos (RUC de cliente, N° de cotización, códigos de concepto) son únicos *dentro* de cada agencia. Dos agencias pueden tener al mismo importador como cliente.
-2. **El embarque es el eje.** La cotización vende; al aceptarse genera el **embarque** (`Shipment`), que concentra hitos, documentos, aduana, cargos y cobranza.
+2. **El expediente es el eje.** Nace con la solicitud del cliente (`Shipment` en estado `QUOTING`); dentro viven sus cotizaciones y, al aceptarse una, pasa a operación con hitos, documentos, aduana, cargos y cobranza.
 3. **Lo enviado no se edita.** Una cotización tiene versiones (v1, v2…). La versión enviada o aceptada queda congelada; cambiar precios crea una versión nueva.
 4. **Un solo estado del embarque**, con hitos que lo mueven y dejan historial con fecha.
 5. **Dinero exacto.** Montos en decimal (no flotante); USD y PEN nunca se mezclan en un mismo total ni en un mismo comprobante.
@@ -81,7 +100,7 @@ Además: cantidad mínima (p. ej. mínimo 1 W/M) y monto mínimo (p. ej. 0,30% C
 
 ## Estados del embarque y hitos
 
-Estado general: Orden confirmada → En origen → En tránsito → En destino → En despacho → Levante → En reparto → Entregado → Cerrado (o Anulado).
+Estado general: En cotización → Orden confirmada → En origen → En tránsito → En destino → En despacho → Levante → En reparto → Entregado → Cerrado (o No concretado / Anulado).
 
 Los **hitos** se copian al crear el embarque según dirección, modo y servicios contratados. Al completar un hito con fecha, el estado avanza y, si el hito lo indica, se avisa al cliente con un texto pensado para él ("Tu carga llegó a destino").
 

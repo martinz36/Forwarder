@@ -162,7 +162,8 @@ enum QuoteVersionStatus {
 /// Estado general del embarque (uno solo, para filtros y reportes).
 /// El detalle fino lo dan los hitos (ShipmentMilestone).
 enum ShipmentStatus {
-  CONFIRMED // orden generada, coordinando
+  QUOTING // solicitud recibida, en cotización
+  CONFIRMED // cotización aceptada, coordinando
   AT_ORIGIN
   IN_TRANSIT
   AT_DESTINATION
@@ -171,7 +172,14 @@ enum ShipmentStatus {
   OUT_FOR_DELIVERY
   DELIVERED
   CLOSED // liquidado y cerrado
+  LOST // cotización no aceptada
   CANCELLED
+}
+
+/// Hitos de la etapa comercial (antes de la orden) u operativos (después).
+enum MilestonePhase {
+  QUOTING
+  OPERATION
 }
 
 enum MilestoneStatus {
@@ -289,6 +297,19 @@ enum NotificationStatus {
   CANCELLED
 }
 
+/// Documentos de cobranza que se emiten al cliente.
+enum StatementType {
+  ARRIVAL_NOTICE // aviso de llegada: gastos de la agencia de carga
+  CUSTOMS_SETTLEMENT // liquidación de la agencia de aduanas
+  FINAL_SETTLEMENT // liquidación final: todo lo cobrado vs. depósitos
+  REIMBURSEMENT_RECEIPT // recibo interno de gastos reembolsables
+}
+
+enum StatementStatus {
+  ISSUED
+  VOID
+}
+
 enum ShareLinkScope {
   TRACKING // seguimiento de un embarque, sin datos financieros
   QUOTE // ver y aceptar/rechazar una cotización
@@ -298,28 +319,29 @@ enum ShareLinkScope {
 
 /// La agencia de carga / aduanas que usa el sistema (el "tenant").
 model Organization {
-  id                String    @id @default(uuid(7))
-  slug              String    @unique
-  name              String // nombre comercial
-  legalName         String
-  taxIdType         TaxIdType @default(RUC)
-  taxId             String?
-  address           String?
-  city              String?
-  country           String    @default("PE")
-  phone             String?
-  email             String?
-  website           String?
-  logoUrl           String?
-  brandColor        String?
-  timezone          String    @default("America/Lima")
-  baseCurrency      Currency  @default(USD)
-  taxRate           Decimal   @default(18) @db.Decimal(5, 2) // IGV %
-  defaultMarkupPct  Decimal   @default(15) @db.Decimal(6, 2) // margen sugerido cuando solo hay costo
-  quoteValidityDays Int       @default(15)
-  quoteTerms        String?   @db.Text // condiciones generales impresas en cada cotización
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  id                  String    @id @default(uuid(7))
+  slug                String    @unique
+  name                String // nombre comercial
+  legalName           String
+  taxIdType           TaxIdType @default(RUC)
+  taxId               String?
+  address             String?
+  city                String?
+  country             String    @default("PE")
+  phone               String?
+  email               String?
+  website             String?
+  logoUrl             String?
+  brandColor          String?
+  timezone            String    @default("America/Lima")
+  baseCurrency        Currency  @default(USD)
+  taxRate             Decimal   @default(18) @db.Decimal(5, 2) // IGV %
+  defaultMarkupPct    Decimal   @default(15) @db.Decimal(6, 2) // margen sugerido cuando solo hay costo
+  quoteValidityDays   Int       @default(15)
+  quoteTerms          String?   @db.Text // condiciones generales impresas en cada cotización
+  paymentInstructions String?   @db.Text // cuentas bancarias para depósito (aviso de llegada y liquidaciones)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 
   memberships    Membership[]
   invitations    Invitation[]
@@ -342,6 +364,7 @@ model Organization {
   notifications  NotificationOutbox[]
   shareLinks     ShareLink[]
   sequences      NumberSequence[]
+  statements     Statement[]
 }
 
 // Usuario, sesión, cuenta y verificación siguen el formato de Better Auth.
@@ -874,7 +897,7 @@ model Shipment {
   contactId       String?
   contact         Contact?       @relation(fields: [contactId], references: [id], onDelete: SetNull)
   clientReference String? // orden de compra / referencia del cliente
-  status          ShipmentStatus @default(CONFIRMED)
+  status          ShipmentStatus @default(QUOTING)
   statusChangedAt DateTime       @default(now())
   ownerId         String? // responsable operativo
 
@@ -948,6 +971,7 @@ model Shipment {
   payments           Payment[]
   events             ActivityEvent[]
   shareLinks         ShareLink[]
+  statements         Statement[]
 
   @@unique([organizationId, number])
   @@index([organizationId, status])
@@ -984,6 +1008,7 @@ model MilestoneDefinition {
   requiresFreight Boolean         @default(false)
   requiresCustoms Boolean         @default(false)
   requiresInland  Boolean         @default(false)
+  phase           MilestonePhase  @default(OPERATION)
   setsStatus      ShipmentStatus? // al completarse, mueve el estado del embarque
   clientVisible   Boolean         @default(true)
   notifyClient    Boolean         @default(false)
@@ -1427,4 +1452,30 @@ model LegacyIdMap {
   importedAt     DateTime @default(now())
 
   @@id([entity, legacyId])
+}
+
+/// Aviso de llegada, liquidaciones y recibo interno. Guarda una copia de los cargos tal como se
+/// emitieron: si luego cambian, se anula y se emite uno nuevo.
+model Statement {
+  id             String          @id @default(uuid(7))
+  organizationId String
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  shipmentId     String
+  shipment       Shipment        @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  clientId       String
+  type           StatementType
+  number         String // AL-2026-0001, LA-, LF-, RI-
+  status         StatementStatus @default(ISSUED)
+  issuedAt       DateTime        @default(now())
+  dueAt          DateTime?
+  lines          Json // copia de los cargos incluidos
+  totals         Json // por moneda (computeTotals)
+  payments       Json? // depósitos considerados (liquidación final)
+  balance        Json? // saldo por moneda (liquidación final)
+  notes          String?         @db.Text
+  createdById    String?
+  createdAt      DateTime        @default(now())
+
+  @@unique([organizationId, number])
+  @@index([shipmentId])
 }
